@@ -29,13 +29,13 @@ const subjectColors = {
   fizica: 'from-violet-500 to-violet-700',
 };
 
-// Lesson type
-type Lesson = {
+// Lesson type definition
+interface Lesson {
   id: number;
   title: string | null;
   duration: string | null;
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
-};
+}
 
 // Mock data per subject - 10 slots each
 const lessonsPerSubject: Record<Subject, Lesson[]> = {
