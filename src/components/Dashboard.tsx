@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import AddLessonModal from '@/components/AddLessonModal';
 
 const subjectIcons = {
   informatica: Code,
@@ -34,58 +35,51 @@ interface Lesson {
   id: number;
   title: string | null;
   duration: string | null;
+  description?: string;
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
 }
 
-// Mock data per subject - 10 slots each
-const lessonsPerSubject: Record<Subject, Lesson[]> = {
+// Initial empty lessons template - 10 slots each
+const createEmptyLessons = (): Lesson[] => 
+  Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    title: null,
+    duration: null,
+    status: 'not-uploaded' as const,
+  }));
+
+// Initial mock data per subject
+const initialLessonsData: Record<Subject, Lesson[]> = {
   informatica: [
     { id: 1, title: 'Introducere în algoritmi', duration: '45 min', status: 'completed' },
     { id: 2, title: 'Structuri de date fundamentale', duration: '60 min', status: 'in-progress' },
-    { id: 3, title: null, duration: null, status: 'not-uploaded' },
-    { id: 4, title: null, duration: null, status: 'not-uploaded' },
-    { id: 5, title: null, duration: null, status: 'not-uploaded' },
-    { id: 6, title: null, duration: null, status: 'not-uploaded' },
-    { id: 7, title: null, duration: null, status: 'not-uploaded' },
-    { id: 8, title: null, duration: null, status: 'not-uploaded' },
-    { id: 9, title: null, duration: null, status: 'not-uploaded' },
-    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+    ...Array.from({ length: 8 }, (_, i) => ({
+      id: i + 3,
+      title: null,
+      duration: null,
+      status: 'not-uploaded' as const,
+    })),
   ],
   romana: [
     { id: 1, title: 'Introducere în literatura română', duration: '50 min', status: 'completed' },
-    { id: 2, title: null, duration: null, status: 'not-uploaded' },
-    { id: 3, title: null, duration: null, status: 'not-uploaded' },
-    { id: 4, title: null, duration: null, status: 'not-uploaded' },
-    { id: 5, title: null, duration: null, status: 'not-uploaded' },
-    { id: 6, title: null, duration: null, status: 'not-uploaded' },
-    { id: 7, title: null, duration: null, status: 'not-uploaded' },
-    { id: 8, title: null, duration: null, status: 'not-uploaded' },
-    { id: 9, title: null, duration: null, status: 'not-uploaded' },
-    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+    ...Array.from({ length: 9 }, (_, i) => ({
+      id: i + 2,
+      title: null,
+      duration: null,
+      status: 'not-uploaded' as const,
+    })),
   ],
-  matematica: [
-    { id: 1, title: null, duration: null, status: 'not-uploaded' },
-    { id: 2, title: null, duration: null, status: 'not-uploaded' },
-    { id: 3, title: null, duration: null, status: 'not-uploaded' },
-    { id: 4, title: null, duration: null, status: 'not-uploaded' },
-    { id: 5, title: null, duration: null, status: 'not-uploaded' },
-    { id: 6, title: null, duration: null, status: 'not-uploaded' },
-    { id: 7, title: null, duration: null, status: 'not-uploaded' },
-    { id: 8, title: null, duration: null, status: 'not-uploaded' },
-    { id: 9, title: null, duration: null, status: 'not-uploaded' },
-    { id: 10, title: null, duration: null, status: 'not-uploaded' },
-  ],
+  matematica: createEmptyLessons(),
   fizica: [
     { id: 1, title: 'Mecanica - Introducere', duration: '55 min', status: 'completed' },
     { id: 2, title: 'Cinematica', duration: '60 min', status: 'in-progress' },
     { id: 3, title: 'Dinamica', duration: '65 min', status: 'locked' },
-    { id: 4, title: null, duration: null, status: 'not-uploaded' },
-    { id: 5, title: null, duration: null, status: 'not-uploaded' },
-    { id: 6, title: null, duration: null, status: 'not-uploaded' },
-    { id: 7, title: null, duration: null, status: 'not-uploaded' },
-    { id: 8, title: null, duration: null, status: 'not-uploaded' },
-    { id: 9, title: null, duration: null, status: 'not-uploaded' },
-    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+    ...Array.from({ length: 7 }, (_, i) => ({
+      id: i + 4,
+      title: null,
+      duration: null,
+      status: 'not-uploaded' as const,
+    })),
   ],
 };
 
@@ -94,11 +88,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+  const [lessonsData, setLessonsData] = useState<Record<Subject, Lesson[]>>(initialLessonsData);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
 
   const isProfessor = role === 'profesor';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
   const subjectName = subject ? subjectNames[subject] : 'Materie';
   const subjectColor = subject ? subjectColors[subject] : 'from-gray-500 to-gray-700';
+  
+  const currentLessons = subject ? lessonsData[subject] : [];
 
   const handleSubjectChange = (newSubject: Subject) => {
     setSubject(newSubject);
@@ -109,6 +108,38 @@ const Dashboard = () => {
     setRole(null);
     setSubject(null);
     navigate('/');
+  };
+
+  const handleAddLesson = (lessonId: number) => {
+    setSelectedLessonId(lessonId);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveLesson = (lessonData: { title: string; duration: string; description: string }) => {
+    if (!subject || selectedLessonId === null) return;
+    
+    setLessonsData(prev => ({
+      ...prev,
+      [subject]: prev[subject].map(lesson => 
+        lesson.id === selectedLessonId 
+          ? { ...lesson, title: lessonData.title, duration: lessonData.duration, description: lessonData.description, status: 'locked' as const }
+          : lesson
+      ),
+    }));
+    setSelectedLessonId(null);
+  };
+
+  const handleDeleteLesson = (lessonId: number) => {
+    if (!subject) return;
+    
+    setLessonsData(prev => ({
+      ...prev,
+      [subject]: prev[subject].map(lesson => 
+        lesson.id === lessonId 
+          ? { ...lesson, title: null, duration: null, description: undefined, status: 'not-uploaded' as const }
+          : lesson
+      ),
+    }));
   };
 
   return (
@@ -296,10 +327,10 @@ const Dashboard = () => {
         <section className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
           <div className="space-y-4">
-            {(subject ? lessonsPerSubject[subject] : []).map((lesson, index) => (
+            {currentLessons.map((lesson, index) => (
               <div 
                 key={lesson.id}
-                className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${lesson.status === 'locked' || lesson.status === 'not-uploaded' ? 'opacity-60' : ''}`}
+                className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${lesson.status === 'not-uploaded' ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -328,16 +359,26 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2">
                     {isProfessor ? (
                       lesson.status === 'not-uploaded' ? (
-                        <Button variant="gold" size="sm" className="gap-2">
+                        <Button 
+                          variant="gold" 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => handleAddLesson(lesson.id)}
+                        >
                           <Plus className="w-4 h-4" />
                           Adaugă lecție
                         </Button>
                       ) : (
                         <>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleAddLesson(lesson.id)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive"
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </>
@@ -360,6 +401,17 @@ const Dashboard = () => {
             ))}
           </div>
         </section>
+
+        {/* Add Lesson Modal */}
+        <AddLessonModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedLessonId(null);
+          }}
+          onSave={handleSaveLesson}
+          lessonNumber={selectedLessonId || 1}
+        />
       </main>
     </div>
   );
