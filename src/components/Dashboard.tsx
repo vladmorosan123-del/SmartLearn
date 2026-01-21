@@ -29,14 +29,65 @@ const subjectColors = {
   fizica: 'from-violet-500 to-violet-700',
 };
 
-// Mock data
-const lessons = [
-  { id: 1, title: 'Introducere în algoritmi', duration: '45 min', status: 'completed' },
-  { id: 2, title: 'Structuri de date fundamentale', duration: '60 min', status: 'in-progress' },
-  { id: 3, title: 'Recursivitate și divide et impera', duration: '55 min', status: 'locked' },
-  { id: 4, title: 'Grafuri și arbori', duration: '70 min', status: 'locked' },
-  { id: 5, title: 'Programare dinamică', duration: '65 min', status: 'locked' },
-];
+// Lesson type
+type Lesson = {
+  id: number;
+  title: string | null;
+  duration: string | null;
+  status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
+};
+
+// Mock data per subject - 10 slots each
+const lessonsPerSubject: Record<Subject, Lesson[]> = {
+  informatica: [
+    { id: 1, title: 'Introducere în algoritmi', duration: '45 min', status: 'completed' },
+    { id: 2, title: 'Structuri de date fundamentale', duration: '60 min', status: 'in-progress' },
+    { id: 3, title: null, duration: null, status: 'not-uploaded' },
+    { id: 4, title: null, duration: null, status: 'not-uploaded' },
+    { id: 5, title: null, duration: null, status: 'not-uploaded' },
+    { id: 6, title: null, duration: null, status: 'not-uploaded' },
+    { id: 7, title: null, duration: null, status: 'not-uploaded' },
+    { id: 8, title: null, duration: null, status: 'not-uploaded' },
+    { id: 9, title: null, duration: null, status: 'not-uploaded' },
+    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+  ],
+  romana: [
+    { id: 1, title: 'Introducere în literatura română', duration: '50 min', status: 'completed' },
+    { id: 2, title: null, duration: null, status: 'not-uploaded' },
+    { id: 3, title: null, duration: null, status: 'not-uploaded' },
+    { id: 4, title: null, duration: null, status: 'not-uploaded' },
+    { id: 5, title: null, duration: null, status: 'not-uploaded' },
+    { id: 6, title: null, duration: null, status: 'not-uploaded' },
+    { id: 7, title: null, duration: null, status: 'not-uploaded' },
+    { id: 8, title: null, duration: null, status: 'not-uploaded' },
+    { id: 9, title: null, duration: null, status: 'not-uploaded' },
+    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+  ],
+  matematica: [
+    { id: 1, title: null, duration: null, status: 'not-uploaded' },
+    { id: 2, title: null, duration: null, status: 'not-uploaded' },
+    { id: 3, title: null, duration: null, status: 'not-uploaded' },
+    { id: 4, title: null, duration: null, status: 'not-uploaded' },
+    { id: 5, title: null, duration: null, status: 'not-uploaded' },
+    { id: 6, title: null, duration: null, status: 'not-uploaded' },
+    { id: 7, title: null, duration: null, status: 'not-uploaded' },
+    { id: 8, title: null, duration: null, status: 'not-uploaded' },
+    { id: 9, title: null, duration: null, status: 'not-uploaded' },
+    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+  ],
+  fizica: [
+    { id: 1, title: 'Mecanica - Introducere', duration: '55 min', status: 'completed' },
+    { id: 2, title: 'Cinematica', duration: '60 min', status: 'in-progress' },
+    { id: 3, title: 'Dinamica', duration: '65 min', status: 'locked' },
+    { id: 4, title: null, duration: null, status: 'not-uploaded' },
+    { id: 5, title: null, duration: null, status: 'not-uploaded' },
+    { id: 6, title: null, duration: null, status: 'not-uploaded' },
+    { id: 7, title: null, duration: null, status: 'not-uploaded' },
+    { id: 8, title: null, duration: null, status: 'not-uploaded' },
+    { id: 9, title: null, duration: null, status: 'not-uploaded' },
+    { id: 10, title: null, duration: null, status: 'not-uploaded' },
+  ],
+};
 
 const Dashboard = () => {
   const { role, subject, setSubject, setRole } = useApp();
@@ -245,47 +296,63 @@ const Dashboard = () => {
         <section className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
           <div className="space-y-4">
-            {lessons.map((lesson, index) => (
+            {(subject ? lessonsPerSubject[subject] : []).map((lesson, index) => (
               <div 
                 key={lesson.id}
-                className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${lesson.status === 'locked' ? 'opacity-60' : ''}`}
+                className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${lesson.status === 'locked' || lesson.status === 'not-uploaded' ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                       lesson.status === 'completed' ? 'bg-emerald-500/20 text-emerald-500' :
                       lesson.status === 'in-progress' ? 'bg-gold/20 text-gold' :
+                      lesson.status === 'not-uploaded' ? 'bg-muted text-muted-foreground' :
                       'bg-muted text-muted-foreground'
                     }`}>
                       <span className="font-bold">{index + 1}</span>
                     </div>
                     <div>
-                      <h3 className="font-medium text-foreground">{lesson.title}</h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        {lesson.duration}
-                      </p>
+                      {lesson.status === 'not-uploaded' ? (
+                        <h3 className="font-medium text-muted-foreground italic">Lecția nu a fost încărcată</h3>
+                      ) : (
+                        <>
+                          <h3 className="font-medium text-foreground">{lesson.title}</h3>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            {lesson.duration}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {isProfessor ? (
-                      <>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="w-4 h-4" />
+                      lesson.status === 'not-uploaded' ? (
+                        <Button variant="gold" size="sm" className="gap-2">
+                          <Plus className="w-4 h-4" />
+                          Adaugă lecție
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )
                     ) : (
-                      <Button 
-                        variant={lesson.status === 'locked' ? 'outline' : 'gold'} 
-                        size="sm"
-                        disabled={lesson.status === 'locked'}
-                      >
-                        {lesson.status === 'completed' ? 'Revizuiește' : 
-                         lesson.status === 'in-progress' ? 'Continuă' : 'Blocat'}
-                      </Button>
+                      lesson.status !== 'not-uploaded' && (
+                        <Button 
+                          variant={lesson.status === 'locked' ? 'outline' : 'gold'} 
+                          size="sm"
+                          disabled={lesson.status === 'locked'}
+                        >
+                          {lesson.status === 'completed' ? 'Revizuiește' : 
+                           lesson.status === 'in-progress' ? 'Continuă' : 'Blocat'}
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>
