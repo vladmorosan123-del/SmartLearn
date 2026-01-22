@@ -81,9 +81,41 @@ const ModeleBac = () => {
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [newModel, setNewModel] = useState({ title: '', year: new Date().getFullYear(), description: '', pdfUrl: '' });
   const [viewingModel, setViewingModel] = useState<{ title: string; pdfUrl?: string } | null>(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   const isProfessor = role === 'profesor';
   const currentModels = bacData[selectedSubject];
+
+  // Get unique years from uploaded models
+  const availableYears = [...new Set(
+    currentModels
+      .filter(m => m.status === 'uploaded' && m.year)
+      .map(m => m.year!)
+  )].sort((a, b) => b - a);
+
+  // Filter models based on search and year filter
+  const filteredModels = currentModels.filter(model => {
+    // Always show not-uploaded slots for professors
+    if (model.status === 'not-uploaded' && isProfessor) {
+      // Hide if searching or filtering by year
+      if (searchQuery.trim() || selectedYear) return false;
+      return true;
+    }
+    
+    // For uploaded models, apply filters
+    if (model.status === 'uploaded') {
+      const matchesSearch = !searchQuery.trim() || 
+        model.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        model.year?.toString().includes(searchQuery);
+      
+      const matchesYear = !selectedYear || model.year === selectedYear;
+      
+      return matchesSearch && matchesYear;
+    }
+    
+    return false;
+  });
 
   const handleAddModel = (slotId: number) => {
     setSelectedSlotId(slotId);
@@ -174,19 +206,80 @@ const ModeleBac = () => {
               className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
             />
           </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            Filtrează
-          </Button>
+          <div className="relative">
+            <Button 
+              variant={selectedYear ? 'gold' : 'outline'} 
+              className="gap-2"
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            >
+              <Filter className="w-4 h-4" />
+              {selectedYear ? `Anul ${selectedYear}` : 'Filtrează'}
+            </Button>
+            
+            {showFilterDropdown && (
+              <div className="absolute top-full right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-10 min-w-[150px]">
+                <button
+                  onClick={() => {
+                    setSelectedYear(null);
+                    setShowFilterDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${!selectedYear ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
+                >
+                  Toate anii
+                </button>
+                {availableYears.map(year => (
+                  <button
+                    key={year}
+                    onClick={() => {
+                      setSelectedYear(year);
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${selectedYear === year ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
+                  >
+                    {year}
+                  </button>
+                ))}
+                {availableYears.length === 0 && (
+                  <p className="px-4 py-2 text-muted-foreground text-sm">Nu există modele încărcate</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Models List - 10 Slots */}
         <div className="space-y-4 animate-fade-up delay-300">
-          <h2 className="font-display text-2xl text-foreground mb-4">
-            Modele BAC - {subjectNames[selectedSubject]} (10 sloturi)
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-2xl text-foreground">
+              Modele BAC - {subjectNames[selectedSubject]}
+            </h2>
+            {(searchQuery || selectedYear) && (
+              <p className="text-sm text-muted-foreground">
+                {filteredModels.filter(m => m.status === 'uploaded').length} rezultate găsite
+              </p>
+            )}
+          </div>
           
-          {currentModels.map((model, index) => (
+          {filteredModels.length === 0 ? (
+            <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-medium text-foreground mb-2">Niciun rezultat găsit</h3>
+              <p className="text-muted-foreground text-sm">
+                Încearcă să modifici criteriile de căutare sau filtrare
+              </p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedYear(null);
+                }}
+              >
+                Resetează filtrele
+              </Button>
+            </div>
+          ) : (
+            filteredModels.map((model, index) => (
             <div 
               key={model.id}
               className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${model.status === 'not-uploaded' ? 'opacity-60' : ''}`}
@@ -273,7 +366,8 @@ const ModeleBac = () => {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         {/* Add Modal */}
