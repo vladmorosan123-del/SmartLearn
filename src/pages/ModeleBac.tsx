@@ -217,31 +217,45 @@ const ModeleBac = () => {
             </Button>
             
             {showFilterDropdown && (
-              <div className="absolute top-full right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-10 min-w-[150px]">
-                <button
-                  onClick={() => {
-                    setSelectedYear(null);
-                    setShowFilterDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${!selectedYear ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
-                >
-                  Toate anii
-                </button>
-                {availableYears.map(year => (
+              <div className="absolute top-full right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-50 min-w-[180px]">
+                <div className="px-3 py-2 border-b border-border">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Selectează anul</p>
+                </div>
+                <div className="max-h-[200px] overflow-y-auto">
                   <button
-                    key={year}
                     onClick={() => {
-                      setSelectedYear(year);
+                      setSelectedYear(null);
                       setShowFilterDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${selectedYear === year ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
+                    className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${!selectedYear ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
                   >
-                    {year}
+                    Toți anii
                   </button>
-                ))}
-                {availableYears.length === 0 && (
-                  <p className="px-4 py-2 text-muted-foreground text-sm">Nu există modele încărcate</p>
-                )}
+                  {Array.from({ length: 10 }, (_, i) => 2025 - i).map(year => {
+                    const hasModels = availableYears.includes(year);
+                    return (
+                      <button
+                        key={year}
+                        onClick={() => {
+                          setSelectedYear(year);
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center justify-between ${selectedYear === year ? 'bg-muted font-medium' : ''}`}
+                      >
+                        <span className={hasModels ? 'text-foreground' : 'text-muted-foreground'}>
+                          {year}
+                        </span>
+                        {hasModels ? (
+                          <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">
+                            {currentModels.filter(m => m.year === year && m.status === 'uploaded').length} modele
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">neîncărcat</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
