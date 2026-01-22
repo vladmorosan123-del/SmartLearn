@@ -5,6 +5,7 @@ import {
   Search, Filter, Calendar, Trash2, Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp, Subject } from '@/contexts/AppContext';
 import BACViewer from '@/components/BACViewer';
 
@@ -81,8 +82,8 @@ const ModeleBac = () => {
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [newModel, setNewModel] = useState({ title: '', year: new Date().getFullYear(), description: '', pdfUrl: '' });
   const [viewingModel, setViewingModel] = useState<{ title: string; pdfUrl?: string } | null>(null);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
 
   const isProfessor = role === 'profesor';
   const currentModels = bacData[selectedSubject];
@@ -93,6 +94,10 @@ const ModeleBac = () => {
       .filter(m => m.status === 'uploaded' && m.year)
       .map(m => m.year!)
   )].sort((a, b) => b - a);
+
+  const years = Array.from({ length: 10 }, (_, i) => 2025 - i);
+  const getYearCount = (year: number) =>
+    currentModels.filter(m => m.year === year && m.status === 'uploaded').length;
 
   // Filter models based on search and year filter
   const filteredModels = currentModels.filter(model => {
@@ -206,59 +211,66 @@ const ModeleBac = () => {
               className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
             />
           </div>
-          <div className="relative z-50">
-            <Button 
-              variant={selectedYear ? 'gold' : 'outline'} 
-              className="gap-2"
-              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+          <Popover open={isYearPickerOpen} onOpenChange={setIsYearPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={selectedYear ? 'gold' : 'outline'}
+                className="w-full md:w-[220px] justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  {selectedYear ? `Anul ${selectedYear}` : 'Alege anul'}
+                </span>
+                <span className="text-muted-foreground text-xs">▼</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={8}
+              className="z-[9999] w-[260px] p-0 overflow-hidden"
             >
-              <Filter className="w-4 h-4" />
-              {selectedYear ? `Anul ${selectedYear}` : 'Filtrează'}
-            </Button>
-            
-            {showFilterDropdown && (
-              <div className="absolute top-full right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-[100] min-w-[180px]">
-                <div className="px-3 py-2 border-b border-border">
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Selectează anul</p>
-                </div>
-                <div className="max-h-[200px] overflow-y-auto">
-                  <button
-                    onClick={() => {
-                      setSelectedYear(null);
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${!selectedYear ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
-                  >
-                    Toți anii
-                  </button>
-                  {Array.from({ length: 10 }, (_, i) => 2025 - i).map(year => {
-                    const hasModels = availableYears.includes(year);
-                    return (
-                      <button
-                        key={year}
-                        onClick={() => {
-                          setSelectedYear(year);
-                          setShowFilterDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center justify-between ${selectedYear === year ? 'bg-muted font-medium' : ''}`}
-                      >
-                        <span className={hasModels ? 'text-foreground' : 'text-muted-foreground'}>
-                          {year}
-                        </span>
-                        {hasModels ? (
-                          <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">
-                            {currentModels.filter(m => m.year === year && m.status === 'uploaded').length} modele
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">neîncărcat</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="px-3 py-2 border-b border-border">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Selectează anul</p>
               </div>
-            )}
-          </div>
+              <div className="max-h-[220px] overflow-y-auto">
+                <button
+                  onClick={() => {
+                    setSelectedYear(null);
+                    setIsYearPickerOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${!selectedYear ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
+                >
+                  Toți anii
+                </button>
+
+                {years.map((year) => {
+                  const hasModels = availableYears.includes(year);
+                  const count = hasModels ? getYearCount(year) : 0;
+                  return (
+                    <button
+                      key={year}
+                      onClick={() => {
+                        setSelectedYear(year);
+                        setIsYearPickerOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center justify-between ${selectedYear === year ? 'bg-muted font-medium' : ''}`}
+                    >
+                      <span className={hasModels ? 'text-foreground' : 'text-muted-foreground'}>
+                        {year}
+                      </span>
+                      {hasModels ? (
+                        <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">
+                          {count} modele
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">neîncărcat</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Models List - 10 Slots */}
