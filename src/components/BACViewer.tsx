@@ -1,13 +1,24 @@
-import { X, FileText, Upload } from 'lucide-react';
+import { X, FileText, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface BACViewerProps {
-  subjectTitle: string;
+  title: string;
   onClose: () => void;
   pdfUrl?: string;
 }
 
-const BACViewer = ({ subjectTitle, onClose, pdfUrl }: BACViewerProps) => {
+const BACViewer = ({ title, onClose, pdfUrl }: BACViewerProps) => {
+  const handleDownload = () => {
+    if (pdfUrl) {
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = `${title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -22,16 +33,29 @@ const BACViewer = ({ subjectTitle, onClose, pdfUrl }: BACViewerProps) => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center gap-3">
             <FileText className="w-5 h-5 text-gold" />
-            <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
+            <h2 className="font-display text-lg text-foreground">{title}</h2>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {pdfUrl && (
+              <Button 
+                variant="gold" 
+                size="sm"
+                className="gap-2"
+                onClick={handleDownload}
+              >
+                <Download className="w-4 h-4" />
+                Descarcă PDF
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
         
         {/* PDF Content Area */}
@@ -59,7 +83,10 @@ const BACViewer = ({ subjectTitle, onClose, pdfUrl }: BACViewerProps) => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-6 py-4 border-t border-border bg-card">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-card">
+          <p className="text-sm text-muted-foreground">
+            {pdfUrl ? 'PDF disponibil pentru vizualizare și descărcare' : 'PDF în așteptare'}
+          </p>
           <Button variant="outline" onClick={onClose}>
             Închide
           </Button>
