@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import TVCTimer from '@/components/TVCTimer';
 
 // Subjects that have TVC tests (excluding romana)
 const tvcSubjects: Subject[] = ['informatica', 'matematica', 'fizica'];
@@ -70,6 +71,7 @@ const TesteAcademii = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [newMaterial, setNewMaterial] = useState<{ title: string; type: 'subiect' | 'material' | 'pdf'; description: string }>({ title: '', type: 'subiect', description: '' });
+  const [timerSubject, setTimerSubject] = useState<string | null>(null);
 
   const isProfessor = role === 'profesor';
   const currentMaterials = tvcData[selectedSubject];
@@ -262,8 +264,12 @@ const TesteAcademii = () => {
                     )
                   ) : (
                     material.status === 'uploaded' && (
-                      <Button variant="gold" size="sm">
-                        Deschide
+                      <Button 
+                        variant="gold" 
+                        size="sm"
+                        onClick={() => material.type === 'subiect' && material.title ? setTimerSubject(material.title) : null}
+                      >
+                        {material.type === 'subiect' ? 'Începe cu Timer' : 'Deschide'}
                       </Button>
                     )
                   )}
@@ -335,6 +341,14 @@ const TesteAcademii = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Timer Modal */}
+        {timerSubject && (
+          <TVCTimer 
+            subjectTitle={timerSubject} 
+            onClose={() => setTimerSubject(null)} 
+          />
         )}
       </main>
     </div>
