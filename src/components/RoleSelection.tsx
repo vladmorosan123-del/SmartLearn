@@ -173,10 +173,10 @@ const RoleSelection = () => {
                   </li>
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span className="w-1.5 h-1.5 bg-gold rounded-full" />
-                    Încărcare modele BAC
+                    Panou de administrare complet
                   </li>
                 </ul>
-                <Button variant="navy" className="w-full">
+                <Button variant="navy" className="w-full group-hover:scale-[1.02] transition-transform">
                   Continuă ca Profesor
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>

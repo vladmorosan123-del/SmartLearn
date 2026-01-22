@@ -45,6 +45,8 @@ const SubjectSelection = () => {
 
   const handleBack = () => {
     setRole(null);
+    // Clear localStorage when going back
+    localStorage.removeItem('lm_user_role');
     navigate('/');
   };
 
