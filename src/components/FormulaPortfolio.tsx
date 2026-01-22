@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit, Calculator, Atom, FileText, BookMarked } from 'lucide-react';
+import { Plus, Trash2, Edit, Calculator, Atom, BookMarked, Image, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,12 +8,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-interface Formula {
-  id: number;
-  title: string | null;
-  formula: string | null;
-  description?: string;
-  category?: string;
+interface FormulaCategory {
+  id: string;
+  name: string;
+  imageUrl: string | null;
   status: 'uploaded' | 'not-uploaded';
 }
 
@@ -22,139 +20,76 @@ interface FormulaPortfolioProps {
   isProfessor: boolean;
 }
 
-const categoryOptions = {
+const categoryDefinitions: Record<'matematica' | 'fizica', { id: string; name: string }[]> = {
   matematica: [
-    'Algebră',
-    'Geometrie',
-    'Analiză matematică',
-    'Trigonometrie',
-    'Probabilități',
-    'Alte formule',
+    { id: 'algebra', name: 'Algebră' },
+    { id: 'geometrie', name: 'Geometrie' },
+    { id: 'analiza', name: 'Analiză Matematică' },
+    { id: 'trigonometrie', name: 'Trigonometrie' },
+    { id: 'probabilitati', name: 'Probabilități și Statistică' },
+    { id: 'combinatorica', name: 'Combinatorică' },
   ],
   fizica: [
-    'Mecanică',
-    'Termodinamică',
-    'Electricitate',
-    'Optică',
-    'Fizică nucleară',
-    'Alte formule',
+    { id: 'mecanica', name: 'Mecanică' },
+    { id: 'termodinamica', name: 'Termodinamică' },
+    { id: 'electricitate', name: 'Electricitate și Magnetism' },
+    { id: 'optica', name: 'Optică' },
+    { id: 'nucleara', name: 'Fizică Nucleară' },
+    { id: 'unde', name: 'Unde și Oscilații' },
   ],
 };
 
-const createEmptyFormulas = (): Formula[] =>
-  Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    title: null,
-    formula: null,
+const createInitialCategories = (subject: 'matematica' | 'fizica'): FormulaCategory[] =>
+  categoryDefinitions[subject].map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    imageUrl: null,
     status: 'not-uploaded' as const,
   }));
 
-const initialFormulasData: Record<'matematica' | 'fizica', Formula[]> = {
-  matematica: [
-    { id: 1, title: 'Formula rezolvării ecuației de gradul II', formula: 'x = (-b ± √(b²-4ac)) / 2a', category: 'Algebră', description: 'Pentru ecuația ax² + bx + c = 0', status: 'uploaded' },
-    { id: 2, title: 'Teorema lui Pitagora', formula: 'a² + b² = c²', category: 'Geometrie', description: 'În triunghiul dreptunghic, suma pătratelor catetelor este egală cu pătratul ipotenuzei', status: 'uploaded' },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 3,
-      title: null,
-      formula: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  fizica: [
-    { id: 1, title: 'Legea a II-a a lui Newton', formula: 'F = m × a', category: 'Mecanică', description: 'Forța este egală cu masa înmulțită cu accelerația', status: 'uploaded' },
-    { id: 2, title: 'Energia cinetică', formula: 'Ec = ½mv²', category: 'Mecanică', description: 'Energia unui corp în mișcare', status: 'uploaded' },
-    { id: 3, title: 'Legea lui Ohm', formula: 'U = I × R', category: 'Electricitate', description: 'Tensiunea este egală cu intensitatea înmulțită cu rezistența', status: 'uploaded' },
-    ...Array.from({ length: 7 }, (_, i) => ({
-      id: i + 4,
-      title: null,
-      formula: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-};
-
 const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
-  const [formulas, setFormulas] = useState<Formula[]>(initialFormulasData[subject]);
+  const [categories, setCategories] = useState<FormulaCategory[]>(createInitialCategories(subject));
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFormulaId, setSelectedFormulaId] = useState<number | null>(null);
-  const [newFormula, setNewFormula] = useState({
-    title: '',
-    formula: '',
-    description: '',
-    category: categoryOptions[subject][0],
-  });
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [viewingImage, setViewingImage] = useState<{ name: string; url: string } | null>(null);
 
   const SubjectIcon = subject === 'matematica' ? Calculator : Atom;
   const subjectName = subject === 'matematica' ? 'Matematică' : 'Fizică';
 
-  const handleAddFormula = (formulaId: number) => {
-    const existingFormula = formulas.find(f => f.id === formulaId);
-    if (existingFormula && existingFormula.status === 'uploaded') {
-      setNewFormula({
-        title: existingFormula.title || '',
-        formula: existingFormula.formula || '',
-        description: existingFormula.description || '',
-        category: existingFormula.category || categoryOptions[subject][0],
-      });
-    } else {
-      setNewFormula({
-        title: '',
-        formula: '',
-        description: '',
-        category: categoryOptions[subject][0],
-      });
-    }
-    setSelectedFormulaId(formulaId);
+  const handleUploadImage = (categoryId: string) => {
+    const existingCategory = categories.find(c => c.id === categoryId);
+    setImageUrl(existingCategory?.imageUrl || '');
+    setSelectedCategoryId(categoryId);
     setIsModalOpen(true);
   };
 
-  const handleSaveFormula = () => {
-    if (!newFormula.title.trim() || !newFormula.formula.trim() || selectedFormulaId === null) return;
+  const handleSaveImage = () => {
+    if (!imageUrl.trim() || selectedCategoryId === null) return;
 
-    setFormulas(prev =>
-      prev.map(formula =>
-        formula.id === selectedFormulaId
-          ? {
-              ...formula,
-              title: newFormula.title,
-              formula: newFormula.formula,
-              description: newFormula.description,
-              category: newFormula.category,
-              status: 'uploaded' as const,
-            }
-          : formula
+    setCategories(prev =>
+      prev.map(category =>
+        category.id === selectedCategoryId
+          ? { ...category, imageUrl: imageUrl.trim(), status: 'uploaded' as const }
+          : category
       )
     );
     setIsModalOpen(false);
-    setNewFormula({ title: '', formula: '', description: '', category: categoryOptions[subject][0] });
-    setSelectedFormulaId(null);
+    setImageUrl('');
+    setSelectedCategoryId(null);
   };
 
-  const handleDeleteFormula = (formulaId: number) => {
-    setFormulas(prev =>
-      prev.map(formula =>
-        formula.id === formulaId
-          ? { ...formula, title: null, formula: null, description: undefined, category: undefined, status: 'not-uploaded' as const }
-          : formula
+  const handleDeleteImage = (categoryId: string) => {
+    setCategories(prev =>
+      prev.map(category =>
+        category.id === categoryId
+          ? { ...category, imageUrl: null, status: 'not-uploaded' as const }
+          : category
       )
     );
   };
 
-  const handleAddNewSlot = () => {
-    const newId = formulas.length + 1;
-    setFormulas(prev => [
-      ...prev,
-      { id: newId, title: null, formula: null, status: 'not-uploaded' as const },
-    ]);
-  };
-
-  const uploadedFormulas = formulas.filter(f => f.status === 'uploaded');
-  const groupedByCategory = uploadedFormulas.reduce((acc, formula) => {
-    const cat = formula.category || 'Alte formule';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(formula);
-    return acc;
-  }, {} as Record<string, Formula[]>);
+  const uploadedCategories = categories.filter(c => c.status === 'uploaded');
 
   return (
     <section className="mt-12 animate-fade-up">
@@ -165,197 +100,138 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
           </div>
           <div>
             <h2 className="font-display text-2xl text-foreground">Portofoliu Formule</h2>
-            <p className="text-sm text-muted-foreground">Formule esențiale pentru {subjectName}</p>
+            <p className="text-sm text-muted-foreground">Formule esențiale pentru {subjectName} - organizate pe categorii</p>
           </div>
         </div>
-        {isProfessor && (
-          <Button variant="gold" size="sm" className="gap-2" onClick={handleAddNewSlot}>
-            <Plus className="w-4 h-4" />
-            Slot nou
-          </Button>
-        )}
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-2xl font-bold text-gold">{uploadedFormulas.length}</p>
-          <p className="text-xs text-muted-foreground">Formule încărcate</p>
+          <p className="text-2xl font-bold text-gold">{uploadedCategories.length}</p>
+          <p className="text-xs text-muted-foreground">Categorii încărcate</p>
         </div>
         <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-2xl font-bold text-foreground">{Object.keys(groupedByCategory).length}</p>
-          <p className="text-xs text-muted-foreground">Categorii</p>
-        </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-2xl font-bold text-foreground">{formulas.length}</p>
-          <p className="text-xs text-muted-foreground">Total sloturi</p>
-        </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-2xl font-bold text-emerald-500">{Math.round((uploadedFormulas.length / formulas.length) * 100)}%</p>
-          <p className="text-xs text-muted-foreground">Completat</p>
+          <p className="text-2xl font-bold text-foreground">{categories.length}</p>
+          <p className="text-xs text-muted-foreground">Total categorii</p>
         </div>
       </div>
 
-      {/* Formulas by Category for Students */}
-      {!isProfessor && Object.keys(groupedByCategory).length > 0 && (
-        <div className="space-y-6 mb-8">
-          {Object.entries(groupedByCategory).map(([category, categoryFormulas]) => (
-            <div key={category} className="bg-card rounded-xl p-6 border border-border">
-              <h3 className="font-display text-lg text-foreground mb-4 flex items-center gap-2">
-                <SubjectIcon className="w-5 h-5 text-gold" />
-                {category}
-              </h3>
-              <div className="grid gap-4">
-                {categoryFormulas.map(formula => (
-                  <div
-                    key={formula.id}
-                    className="bg-background rounded-lg p-4 border border-border hover:border-gold/50 transition-colors"
-                  >
-                    <h4 className="font-medium text-foreground mb-2">{formula.title}</h4>
-                    <div className="bg-muted rounded-lg p-3 mb-2 font-mono text-lg text-center text-gold">
-                      {formula.formula}
-                    </div>
-                    {formula.description && (
-                      <p className="text-sm text-muted-foreground">{formula.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Formula Slots for Professors */}
-      {isProfessor && (
-        <div className="space-y-4">
-          {formulas.map((formula, index) => (
-            <div
-              key={formula.id}
-              className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 transition-all duration-300 ${formula.status === 'not-uploaded' ? 'opacity-60' : ''}`}
-            >
+      {/* Categories Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {categories.map(category => (
+          <div
+            key={category.id}
+            className={`bg-card rounded-xl border border-border overflow-hidden transition-all duration-300 hover:border-gold/50 hover:shadow-gold ${
+              category.status === 'not-uploaded' ? 'opacity-70' : ''
+            }`}
+          >
+            {/* Category Header */}
+            <div className="p-4 border-b border-border bg-muted/30">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      formula.status === 'uploaded' ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    <span className="font-bold">{index + 1}</span>
-                  </div>
-                  <div className="flex-1">
-                    {formula.status === 'not-uploaded' ? (
-                      <h3 className="font-medium text-muted-foreground italic">Formula nu a fost adăugată</h3>
-                    ) : (
-                      <>
-                        <h3 className="font-medium text-foreground">{formula.title}</h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          <code className="text-sm bg-muted px-2 py-0.5 rounded text-gold font-mono">
-                            {formula.formula}
-                          </code>
-                          {formula.category && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              {formula.category}
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
                 <div className="flex items-center gap-2">
-                  {formula.status === 'not-uploaded' ? (
-                    <Button variant="gold" size="sm" className="gap-2" onClick={() => handleAddFormula(formula.id)}>
-                      <Plus className="w-4 h-4" />
-                      Adaugă
-                    </Button>
-                  ) : (
-                    <>
-                      <Button variant="ghost" size="icon" onClick={() => handleAddFormula(formula.id)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => handleDeleteFormula(formula.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
+                  <SubjectIcon className="w-5 h-5 text-gold" />
+                  <h3 className="font-display text-lg text-foreground">{category.name}</h3>
                 </div>
+                {isProfessor && category.status === 'uploaded' && (
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUploadImage(category.id)}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => handleDeleteImage(category.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Empty State for Students */}
-      {!isProfessor && uploadedFormulas.length === 0 && (
-        <div className="bg-card rounded-xl p-8 border border-border text-center">
-          <BookMarked className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-display text-lg text-foreground mb-2">Nicio formulă încă</h3>
-          <p className="text-muted-foreground">Profesorii nu au încărcat formule pentru {subjectName} deocamdată.</p>
-        </div>
-      )}
+            {/* Image Area */}
+            <div className="aspect-[4/3] relative">
+              {category.status === 'uploaded' && category.imageUrl ? (
+                <img
+                  src={category.imageUrl}
+                  alt={`Formule ${category.name}`}
+                  className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setViewingImage({ name: category.name, url: category.imageUrl! })}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground">
+                  <Image className="w-12 h-12 mb-2 opacity-50" />
+                  <p className="text-sm">Nicio imagine încărcată</p>
+                </div>
+              )}
+            </div>
 
-      {/* Add/Edit Formula Modal */}
+            {/* Upload Button for Professors */}
+            {isProfessor && category.status === 'not-uploaded' && (
+              <div className="p-4 border-t border-border">
+                <Button
+                  variant="gold"
+                  className="w-full gap-2"
+                  onClick={() => handleUploadImage(category.id)}
+                >
+                  <Upload className="w-4 h-4" />
+                  Încarcă imagine
+                </Button>
+              </div>
+            )}
+
+            {/* View Button for Students */}
+            {!isProfessor && category.status === 'uploaded' && (
+              <div className="p-4 border-t border-border">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => setViewingImage({ name: category.name, url: category.imageUrl! })}
+                >
+                  <Image className="w-4 h-4" />
+                  Vezi formule
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Upload Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {formulas.find(f => f.id === selectedFormulaId)?.status === 'uploaded' ? 'Editează Formula' : 'Adaugă Formulă'}
+              Încarcă imagine pentru {categories.find(c => c.id === selectedCategoryId)?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Titlu *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">URL Imagine *</label>
               <input
-                type="text"
-                placeholder="ex: Legea lui Ohm"
-                value={newFormula.title}
-                onChange={e => setNewFormula(prev => ({ ...prev, title: e.target.value }))}
+                type="url"
+                placeholder="https://example.com/formule.jpg"
+                value={imageUrl}
+                onChange={e => setImageUrl(e.target.value)}
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Introduceți URL-ul imaginii cu formulele pentru această categorie
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Formula *</label>
-              <input
-                type="text"
-                placeholder="ex: U = I × R"
-                value={newFormula.formula}
-                onChange={e => setNewFormula(prev => ({ ...prev, formula: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Categorie</label>
-              <select
-                value={newFormula.category}
-                onChange={e => setNewFormula(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-              >
-                {categoryOptions[subject].map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Descriere (opțional)</label>
-              <textarea
-                placeholder="Explicație scurtă a formulei..."
-                value={newFormula.description}
-                onChange={e => setNewFormula(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
-              />
-            </div>
+            {imageUrl && (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  className="w-full h-40 object-cover"
+                  onError={e => (e.currentTarget.style.display = 'none')}
+                />
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
@@ -364,8 +240,8 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
               <Button
                 variant="gold"
                 className="flex-1"
-                onClick={handleSaveFormula}
-                disabled={!newFormula.title.trim() || !newFormula.formula.trim()}
+                onClick={handleSaveImage}
+                disabled={!imageUrl.trim()}
               >
                 Salvează
               </Button>
@@ -373,6 +249,38 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setViewingImage(null)} />
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-12 right-0 text-white hover:bg-white/20"
+              onClick={() => setViewingImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </Button>
+            <div className="bg-card rounded-xl overflow-hidden shadow-elegant">
+              <div className="p-4 border-b border-border bg-muted/30">
+                <h3 className="font-display text-xl text-foreground flex items-center gap-2">
+                  <SubjectIcon className="w-5 h-5 text-gold" />
+                  Formule - {viewingImage.name}
+                </h3>
+              </div>
+              <div className="max-h-[70vh] overflow-auto">
+                <img
+                  src={viewingImage.url}
+                  alt={`Formule ${viewingImage.name}`}
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
