@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import BACViewer from '@/components/BACViewer';
 
 const subjectNames: Record<Subject, string> = {
   informatica: 'Informatică',
@@ -78,6 +79,7 @@ const ModeleBac = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [newModel, setNewModel] = useState({ title: '', year: new Date().getFullYear(), description: '' });
+  const [viewingModel, setViewingModel] = useState<string | null>(null);
 
   const isProfessor = role === 'profesor';
   const currentModels = bacData[selectedSubject];
@@ -241,7 +243,12 @@ const ModeleBac = () => {
                     )
                   ) : (
                     model.status === 'uploaded' && (
-                      <Button variant="gold" size="sm" className="gap-1">
+                      <Button 
+                        variant="gold" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => model.title && setViewingModel(model.title)}
+                      >
                         <Eye className="w-4 h-4" />
                         Deschide
                       </Button>
@@ -312,6 +319,14 @@ const ModeleBac = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* BAC Viewer Modal */}
+        {viewingModel && (
+          <BACViewer 
+            subjectTitle={viewingModel} 
+            onClose={() => setViewingModel(null)} 
+          />
         )}
       </main>
     </div>
