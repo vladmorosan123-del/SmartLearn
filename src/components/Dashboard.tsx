@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Shield, BookOpen, FileText, ClipboardList, Settings, LogOut, 
-  ChevronRight, Plus, Edit, Trash2, Clock, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, Eye, BookMarked
+  Shield, BookOpen, ClipboardList, Settings, LogOut, 
+  ChevronRight, Plus, Users, Award,
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useToast } from '@/hooks/use-toast';
 import AddLessonModal from '@/components/AddLessonModal';
 import Subject2Section from '@/components/Subject2Section';
 import AddTemplateModal from '@/components/AddTemplateModal';
 import PDFViewer from '@/components/PDFViewer';
 import FormulaPortfolio from '@/components/FormulaPortfolio';
+import LessonCard, { Lesson } from '@/components/LessonCard';
+import StatsCard from '@/components/StatsCard';
+import SearchInput from '@/components/SearchInput';
+import EmptyState from '@/components/EmptyState';
 
 const subjectIcons = {
   informatica: Code,
@@ -20,7 +25,7 @@ const subjectIcons = {
   fizica: Atom,
 };
 
-const subjectNames = {
+const subjectNames: Record<Subject, string> = {
   informatica: 'Informatică',
   romana: 'Limba Română',
   matematica: 'Matematică',
@@ -33,16 +38,6 @@ const subjectColors = {
   matematica: 'from-emerald-500 to-emerald-700',
   fizica: 'from-violet-500 to-violet-700',
 };
-
-// Lesson type definition
-interface Lesson {
-  id: number;
-  title: string | null;
-  duration: string | null;
-  description?: string;
-  pdfUrl?: string;
-  status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
-}
 
 // Subject 2 Template type
 interface Subject2Template {
@@ -58,14 +53,6 @@ const createEmptyLessons = (): Lesson[] =>
     id: i + 1,
     title: null,
     duration: null,
-    status: 'not-uploaded' as const,
-  }));
-
-// Initial empty Subject 2 templates - 10 slots
-const createEmptyTemplates = (): Subject2Template[] => 
-  Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    title: null,
     status: 'not-uploaded' as const,
   }));
 
@@ -105,13 +92,15 @@ const initialLessonsData: Record<Subject, Lesson[]> = {
 };
 
 const Dashboard = () => {
-  const { role, subject, setSubject, setRole } = useApp();
+  const { role, subject, setSubject, clearSession } = useApp();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [lessonsData, setLessonsData] = useState<Record<Subject, Lesson[]>>(initialLessonsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Subject 2 state (for Romanian only)
   const [subject2Templates, setSubject2Templates] = useState<Subject2Template[]>([
@@ -134,6 +123,25 @@ const Dashboard = () => {
   
   const currentLessons = subject ? lessonsData[subject] : [];
 
+  // Filtered lessons based on search
+  const filteredLessons = useMemo(() => {
+    if (!searchQuery.trim()) return currentLessons;
+    return currentLessons.filter(lesson => 
+      lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [currentLessons, searchQuery]);
+
+  // Stats calculations
+  const uploadedLessons = currentLessons.filter(l => l.status !== 'not-uploaded').length;
+  const completedLessons = currentLessons.filter(l => l.status === 'completed').length;
+  const totalDuration = currentLessons
+    .filter(l => l.duration)
+    .reduce((acc, l) => {
+      const minutes = parseInt(l.duration?.replace(/\D/g, '') || '0');
+      return acc + minutes;
+    }, 0);
+
   // Subject 2 handlers
   const handleAddTemplate = (templateId: number) => {
     setSelectedTemplateId(templateId);
@@ -149,6 +157,7 @@ const Dashboard = () => {
         : template
     ));
     setSelectedTemplateId(null);
+    toast({ title: 'Șablon salvat', description: 'Șablonul a fost salvat cu succes.' });
   };
 
   const handleDeleteTemplate = (templateId: number) => {
@@ -157,17 +166,19 @@ const Dashboard = () => {
         ? { ...template, title: null, description: undefined, status: 'not-uploaded' as const }
         : template
     ));
+    toast({ title: 'Șablon șters', description: 'Șablonul a fost șters.' });
   };
 
   const handleSubjectChange = (newSubject: Subject) => {
     setSubject(newSubject);
     setShowSubjectDropdown(false);
+    setSearchQuery('');
   };
 
   const handleLogout = () => {
-    setRole(null);
-    setSubject(null);
+    clearSession();
     navigate('/');
+    toast({ title: 'Deconectat', description: 'Te-ai deconectat cu succes.' });
   };
 
   const handleAddLesson = (lessonId: number) => {
@@ -181,7 +192,6 @@ const Dashboard = () => {
     const currentSubjectLessons = lessonsData[subject];
     const newLessonId = currentSubjectLessons.length + 1;
     
-    // Add new empty lesson slot
     setLessonsData(prev => ({
       ...prev,
       [subject]: [
@@ -195,7 +205,6 @@ const Dashboard = () => {
       ],
     }));
     
-    // Open modal for the new lesson
     setSelectedLessonId(newLessonId);
     setIsModalOpen(true);
   };
@@ -212,6 +221,7 @@ const Dashboard = () => {
       ),
     }));
     setSelectedLessonId(null);
+    toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
   };
 
   const handleDeleteLesson = (lessonId: number) => {
@@ -225,6 +235,7 @@ const Dashboard = () => {
           : lesson
       ),
     }));
+    toast({ title: 'Lecție ștearsă', description: 'Lecția a fost ștearsă.' });
   };
 
   return (
@@ -278,7 +289,7 @@ const Dashboard = () => {
 
           {/* Navigation */}
           <nav className="flex-1 space-y-2">
-            <a href="#" className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent text-primary-foreground">
+            <a href="#lectii" className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent text-primary-foreground">
               <BookOpen className="w-5 h-5" />
               <span>Lecții</span>
             </a>
@@ -383,150 +394,79 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-up delay-100">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">12</p>
-                <p className="text-sm text-muted-foreground">Lecții disponibile</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-up delay-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gold/10 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-gold" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">8h 30m</p>
-                <p className="text-sm text-muted-foreground">Timp total studiu</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-up delay-300">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">156</p>
-                <p className="text-sm text-muted-foreground">Elevi înscriși</p>
-              </div>
-            </div>
-          </div>
+          <StatsCard
+            icon={BookOpen}
+            iconColor="text-primary"
+            iconBg="bg-primary/10"
+            value={uploadedLessons}
+            label="Lecții disponibile"
+            delay="delay-100"
+          />
+          <StatsCard
+            icon={Search}
+            iconColor="text-gold"
+            iconBg="bg-gold/10"
+            value={`${totalDuration} min`}
+            label="Timp total studiu"
+            delay="delay-200"
+          />
+          <StatsCard
+            icon={Users}
+            iconColor="text-emerald-500"
+            iconBg="bg-emerald-500/10"
+            value={completedLessons}
+            label="Lecții completate"
+            delay="delay-300"
+          />
+        </div>
+
+        {/* Search */}
+        <div className="mb-6 animate-fade-up delay-400">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Caută lecții după titlu..."
+          />
         </div>
 
         {/* Lessons List */}
-        <section className="animate-fade-up delay-400">
+        <section id="lectii" className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
-          <div className="space-y-4">
-            {currentLessons.map((lesson, index) => (
-              <div 
-                key={lesson.id}
-                className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${lesson.status === 'not-uploaded' ? 'opacity-60' : ''}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      lesson.status === 'completed' ? 'bg-emerald-500/20 text-emerald-500' :
-                      lesson.status === 'in-progress' ? 'bg-gold/20 text-gold' :
-                      lesson.status === 'not-uploaded' ? 'bg-muted text-muted-foreground' :
-                      'bg-muted text-muted-foreground'
-                    }`}>
-                      <span className="font-bold">{index + 1}</span>
-                    </div>
-                    <div>
-                      {lesson.status === 'not-uploaded' ? (
-                        <h3 className="font-medium text-muted-foreground italic">Lecția nu a fost încărcată</h3>
-                      ) : (
-                        <>
-                          <h3 className="font-medium text-foreground">{lesson.title}</h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {lesson.duration}
-                            </p>
-                            {lesson.pdfUrl && (
-                              <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                PDF atașat
-                              </span>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isProfessor ? (
-                      lesson.status === 'not-uploaded' ? (
-                        <Button 
-                          variant="gold" 
-                          size="sm" 
-                          className="gap-2"
-                          onClick={() => handleAddLesson(lesson.id)}
-                        >
-                          <Plus className="w-4 h-4" />
-                          Adaugă lecție
-                        </Button>
-                      ) : (
-                        <>
-                          {lesson.pdfUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="gap-1"
-                              onClick={() => setViewingPDF(lesson.title)}
-                            >
-                              <Eye className="w-4 h-4" />
-                              Vezi PDF
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" onClick={() => handleAddLesson(lesson.id)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive"
-                            onClick={() => handleDeleteLesson(lesson.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )
-                    ) : (
-                      lesson.status !== 'not-uploaded' && (
-                        <div className="flex items-center gap-2">
-                          {lesson.pdfUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="gap-1"
-                              onClick={() => setViewingPDF(lesson.title)}
-                            >
-                              <Eye className="w-4 h-4" />
-                              Vezi PDF
-                            </Button>
-                          )}
-                          <Button 
-                            variant={lesson.status === 'locked' ? 'outline' : 'gold'} 
-                            size="sm"
-                            disabled={lesson.status === 'locked'}
-                          >
-                            {lesson.status === 'completed' ? 'Revizuiește' : 
-                             lesson.status === 'in-progress' ? 'Continuă' : 'Blocat'}
-                          </Button>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          
+          {filteredLessons.length === 0 ? (
+            searchQuery ? (
+              <EmptyState
+                icon={Search}
+                title="Niciun rezultat"
+                description={`Nu am găsit lecții care să conțină "${searchQuery}"`}
+                actionLabel="Șterge căutarea"
+                onAction={() => setSearchQuery('')}
+              />
+            ) : (
+              <EmptyState
+                icon={BookOpen}
+                title="Nicio lecție încă"
+                description="Nu există lecții încărcate pentru această materie."
+                actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
+                onAction={isProfessor ? handleAddNewLesson : undefined}
+              />
+            )
+          ) : (
+            <div className="space-y-4">
+              {filteredLessons.map((lesson, index) => (
+                <LessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  index={currentLessons.findIndex(l => l.id === lesson.id)}
+                  isProfessor={isProfessor}
+                  onAdd={handleAddLesson}
+                  onEdit={handleAddLesson}
+                  onDelete={handleDeleteLesson}
+                  onViewPDF={(title) => setViewingPDF(title)}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Subject 2 Section - Only for Romanian */}
