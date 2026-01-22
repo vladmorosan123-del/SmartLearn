@@ -9,6 +9,7 @@ import SubjectSelection from "./components/SubjectSelection";
 import Dashboard from "./components/Dashboard";
 import ModeleBac from "./pages/ModeleBac";
 import TesteAcademii from "./pages/TesteAcademii";
+import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/modele-bac" element={<ModeleBac />} />
             <Route path="/teste-academii" element={<TesteAcademii />} />
+            <Route path="/admin" element={<AdminPanel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
