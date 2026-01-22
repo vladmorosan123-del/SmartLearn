@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Shield, BookOpen, FileText, ClipboardList, Settings, LogOut, 
   ChevronRight, Plus, Edit, Trash2, Clock, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, Eye
+  Code, BookText, Calculator, Atom, Menu, X, Eye, BookMarked
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -11,6 +11,7 @@ import AddLessonModal from '@/components/AddLessonModal';
 import Subject2Section from '@/components/Subject2Section';
 import AddTemplateModal from '@/components/AddTemplateModal';
 import PDFViewer from '@/components/PDFViewer';
+import FormulaPortfolio from '@/components/FormulaPortfolio';
 
 const subjectIcons = {
   informatica: Code,
@@ -297,6 +298,15 @@ const Dashboard = () => {
                 <span>TVC Academii</span>
               </a>
             )}
+            {(subject === 'matematica' || subject === 'fizica') && (
+              <a 
+                href="#portofoliu-formule"
+                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
+              >
+                <BookMarked className="w-5 h-5" />
+                <span>Portofoliu Formule</span>
+              </a>
+            )}
             {isProfessor && (
               <a 
                 onClick={() => navigate('/admin')}
@@ -528,6 +538,13 @@ const Dashboard = () => {
             onDelete={handleDeleteTemplate}
             onView={(title) => setViewingPDF(title)}
           />
+        )}
+
+        {/* Formula Portfolio - Only for Math and Physics */}
+        {(subject === 'matematica' || subject === 'fizica') && (
+          <div id="portofoliu-formule">
+            <FormulaPortfolio subject={subject} isProfessor={isProfessor} />
+          </div>
         )}
 
         {/* Add Lesson Modal */}
