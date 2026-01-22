@@ -8,6 +8,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import AddLessonModal from '@/components/AddLessonModal';
+import Subject2Section from '@/components/Subject2Section';
+import AddTemplateModal from '@/components/AddTemplateModal';
+import PDFViewer from '@/components/PDFViewer';
 
 const subjectIcons = {
   informatica: Code,
@@ -39,12 +42,28 @@ interface Lesson {
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
 }
 
+// Subject 2 Template type
+interface Subject2Template {
+  id: number;
+  title: string | null;
+  description?: string;
+  status: 'uploaded' | 'not-uploaded';
+}
+
 // Initial empty lessons template - 10 slots each
 const createEmptyLessons = (): Lesson[] => 
   Array.from({ length: 10 }, (_, i) => ({
     id: i + 1,
     title: null,
     duration: null,
+    status: 'not-uploaded' as const,
+  }));
+
+// Initial empty Subject 2 templates - 10 slots
+const createEmptyTemplates = (): Subject2Template[] => 
+  Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    title: null,
     status: 'not-uploaded' as const,
   }));
 
@@ -91,13 +110,52 @@ const Dashboard = () => {
   const [lessonsData, setLessonsData] = useState<Record<Subject, Lesson[]>>(initialLessonsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
-
+  
+  // Subject 2 state (for Romanian only)
+  const [subject2Templates, setSubject2Templates] = useState<Subject2Template[]>([
+    { id: 1, title: 'Șablon Comentariu Literar - Poezie', description: 'Structura comentariului pentru poezie', status: 'uploaded' },
+    { id: 2, title: 'Șablon Eseu Argumentativ', description: 'Model pentru eseul argumentativ', status: 'uploaded' },
+    ...Array.from({ length: 8 }, (_, i) => ({
+      id: i + 3,
+      title: null,
+      status: 'not-uploaded' as const,
+    })),
+  ]);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [viewingPDF, setViewingPDF] = useState<string | null>(null);
+  
   const isProfessor = role === 'profesor';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
   const subjectName = subject ? subjectNames[subject] : 'Materie';
   const subjectColor = subject ? subjectColors[subject] : 'from-gray-500 to-gray-700';
   
   const currentLessons = subject ? lessonsData[subject] : [];
+
+  // Subject 2 handlers
+  const handleAddTemplate = (templateId: number) => {
+    setSelectedTemplateId(templateId);
+    setIsTemplateModalOpen(true);
+  };
+
+  const handleSaveTemplate = (data: { title: string; description: string }) => {
+    if (selectedTemplateId === null) return;
+    
+    setSubject2Templates(prev => prev.map(template => 
+      template.id === selectedTemplateId 
+        ? { ...template, title: data.title, description: data.description, status: 'uploaded' as const }
+        : template
+    ));
+    setSelectedTemplateId(null);
+  };
+
+  const handleDeleteTemplate = (templateId: number) => {
+    setSubject2Templates(prev => prev.map(template => 
+      template.id === templateId 
+        ? { ...template, title: null, description: undefined, status: 'not-uploaded' as const }
+        : template
+    ));
+  };
 
   const handleSubjectChange = (newSubject: Subject) => {
     setSubject(newSubject);
@@ -404,6 +462,17 @@ const Dashboard = () => {
           </div>
         </section>
 
+        {/* Subject 2 Section - Only for Romanian */}
+        {subject === 'romana' && (
+          <Subject2Section
+            templates={subject2Templates}
+            isProfessor={isProfessor}
+            onAdd={handleAddTemplate}
+            onDelete={handleDeleteTemplate}
+            onView={(title) => setViewingPDF(title)}
+          />
+        )}
+
         {/* Add Lesson Modal */}
         <AddLessonModal
           isOpen={isModalOpen}
@@ -414,6 +483,25 @@ const Dashboard = () => {
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonId || 1}
         />
+
+        {/* Add Template Modal */}
+        <AddTemplateModal
+          isOpen={isTemplateModalOpen}
+          onClose={() => {
+            setIsTemplateModalOpen(false);
+            setSelectedTemplateId(null);
+          }}
+          onSave={handleSaveTemplate}
+          slotNumber={selectedTemplateId || 1}
+        />
+
+        {/* PDF Viewer */}
+        {viewingPDF && (
+          <PDFViewer
+            title={viewingPDF}
+            onClose={() => setViewingPDF(null)}
+          />
+        )}
       </main>
     </div>
   );
