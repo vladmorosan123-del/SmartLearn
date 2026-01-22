@@ -206,7 +206,7 @@ const ModeleBac = () => {
               className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
             />
           </div>
-          <div className="relative">
+          <div className="relative z-50">
             <Button 
               variant={selectedYear ? 'gold' : 'outline'} 
               className="gap-2"
@@ -217,7 +217,7 @@ const ModeleBac = () => {
             </Button>
             
             {showFilterDropdown && (
-              <div className="absolute top-full right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-50 min-w-[180px]">
+              <div className="absolute top-full right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-[100] min-w-[180px]">
                 <div className="px-3 py-2 border-b border-border">
                   <p className="text-xs font-medium text-muted-foreground uppercase">Selectează anul</p>
                 </div>
