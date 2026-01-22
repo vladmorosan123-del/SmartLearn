@@ -20,6 +20,7 @@ interface BacModel {
   title: string | null;
   year?: number;
   description?: string;
+  pdfUrl?: string;
   status: 'uploaded' | 'not-uploaded';
 }
 
@@ -78,8 +79,8 @@ const ModeleBac = () => {
   const [bacData, setBacData] = useState(initialBacData);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
-  const [newModel, setNewModel] = useState({ title: '', year: new Date().getFullYear(), description: '' });
-  const [viewingModel, setViewingModel] = useState<string | null>(null);
+  const [newModel, setNewModel] = useState({ title: '', year: new Date().getFullYear(), description: '', pdfUrl: '' });
+  const [viewingModel, setViewingModel] = useState<{ title: string; pdfUrl?: string } | null>(null);
 
   const isProfessor = role === 'profesor';
   const currentModels = bacData[selectedSubject];
@@ -96,12 +97,12 @@ const ModeleBac = () => {
       ...prev,
       [selectedSubject]: prev[selectedSubject].map(item =>
         item.id === selectedSlotId
-          ? { ...item, title: newModel.title, year: newModel.year, description: newModel.description, status: 'uploaded' as const }
+          ? { ...item, title: newModel.title, year: newModel.year, description: newModel.description, pdfUrl: newModel.pdfUrl || undefined, status: 'uploaded' as const }
           : item
       ),
     }));
     setIsAddModalOpen(false);
-    setNewModel({ title: '', year: new Date().getFullYear(), description: '' });
+    setNewModel({ title: '', year: new Date().getFullYear(), description: '', pdfUrl: '' });
     setSelectedSlotId(null);
   };
 
@@ -247,7 +248,7 @@ const ModeleBac = () => {
                         variant="gold" 
                         size="sm" 
                         className="gap-1"
-                        onClick={() => model.title && setViewingModel(model.title)}
+                        onClick={() => model.title && setViewingModel({ title: model.title, pdfUrl: model.pdfUrl })}
                       >
                         <Eye className="w-4 h-4" />
                         Deschide
@@ -298,9 +299,23 @@ const ModeleBac = () => {
                     placeholder="Descriere scurtă..."
                     value={newModel.description}
                     onChange={(e) => setNewModel(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
+                    rows={2}
                     className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Link PDF (opțional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://exemplu.com/subiect.pdf"
+                    value={newModel.pdfUrl}
+                    onChange={(e) => setNewModel(prev => ({ ...prev, pdfUrl: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Introdu linkul către fișierul PDF (Google Drive, Dropbox, etc.)
+                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-2">
@@ -324,7 +339,8 @@ const ModeleBac = () => {
         {/* BAC Viewer Modal */}
         {viewingModel && (
           <BACViewer 
-            title={viewingModel} 
+            title={viewingModel.title} 
+            pdfUrl={viewingModel.pdfUrl}
             onClose={() => setViewingModel(null)} 
           />
         )}
