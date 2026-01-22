@@ -9,10 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import AddLessonModal from '@/components/AddLessonModal';
-import Subject2Section from '@/components/Subject2Section';
-import AddTemplateModal from '@/components/AddTemplateModal';
 import PDFViewer from '@/components/PDFViewer';
-import FormulaPortfolio from '@/components/FormulaPortfolio';
 import LessonCard, { Lesson } from '@/components/LessonCard';
 import StatsCard from '@/components/StatsCard';
 import SearchInput from '@/components/SearchInput';
@@ -39,13 +36,6 @@ const subjectColors = {
   fizica: 'from-violet-500 to-violet-700',
 };
 
-// Subject 2 Template type
-interface Subject2Template {
-  id: number;
-  title: string | null;
-  description?: string;
-  status: 'uploaded' | 'not-uploaded';
-}
 
 // Initial empty lessons template - 10 slots each
 const createEmptyLessons = (): Lesson[] => 
@@ -101,19 +91,6 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Subject 2 state (for Romanian only)
-  const [subject2Templates, setSubject2Templates] = useState<Subject2Template[]>([
-    { id: 1, title: 'Șablon Comentariu Literar - Poezie', description: 'Structura comentariului pentru poezie', status: 'uploaded' },
-    { id: 2, title: 'Șablon Eseu Argumentativ', description: 'Model pentru eseul argumentativ', status: 'uploaded' },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 3,
-      title: null,
-      status: 'not-uploaded' as const,
-    })),
-  ]);
-  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [viewingPDF, setViewingPDF] = useState<string | null>(null);
   
   const isProfessor = role === 'profesor';
@@ -141,33 +118,6 @@ const Dashboard = () => {
       const minutes = parseInt(l.duration?.replace(/\D/g, '') || '0');
       return acc + minutes;
     }, 0);
-
-  // Subject 2 handlers
-  const handleAddTemplate = (templateId: number) => {
-    setSelectedTemplateId(templateId);
-    setIsTemplateModalOpen(true);
-  };
-
-  const handleSaveTemplate = (data: { title: string; description: string }) => {
-    if (selectedTemplateId === null) return;
-    
-    setSubject2Templates(prev => prev.map(template => 
-      template.id === selectedTemplateId 
-        ? { ...template, title: data.title, description: data.description, status: 'uploaded' as const }
-        : template
-    ));
-    setSelectedTemplateId(null);
-    toast({ title: 'Șablon salvat', description: 'Șablonul a fost salvat cu succes.' });
-  };
-
-  const handleDeleteTemplate = (templateId: number) => {
-    setSubject2Templates(prev => prev.map(template => 
-      template.id === templateId 
-        ? { ...template, title: null, description: undefined, status: 'not-uploaded' as const }
-        : template
-    ));
-    toast({ title: 'Șablon șters', description: 'Șablonul a fost șters.' });
-  };
 
   const handleSubjectChange = (newSubject: Subject) => {
     setSubject(newSubject);
@@ -311,12 +261,30 @@ const Dashboard = () => {
             )}
             {(subject === 'matematica' || subject === 'fizica') && (
               <a 
-                href="#portofoliu-formule"
+                onClick={() => navigate('/portofoliu-formule')}
                 className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
               >
                 <BookMarked className="w-5 h-5" />
                 <span>Portofoliu Formule</span>
               </a>
+            )}
+            {subject === 'romana' && (
+              <>
+                <a 
+                  onClick={() => navigate('/subiect2-bac')}
+                  className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
+                >
+                  <ClipboardList className="w-5 h-5" />
+                  <span>Subiectul II BAC</span>
+                </a>
+                <a 
+                  onClick={() => navigate('/eseuri-bac')}
+                  className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
+                >
+                  <BookMarked className="w-5 h-5" />
+                  <span>Eseuri BAC</span>
+                </a>
+              </>
             )}
             {isProfessor && (
               <a 
@@ -469,24 +437,6 @@ const Dashboard = () => {
           )}
         </section>
 
-        {/* Subject 2 Section - Only for Romanian */}
-        {subject === 'romana' && (
-          <Subject2Section
-            templates={subject2Templates}
-            isProfessor={isProfessor}
-            onAdd={handleAddTemplate}
-            onDelete={handleDeleteTemplate}
-            onView={(title) => setViewingPDF(title)}
-          />
-        )}
-
-        {/* Formula Portfolio - Only for Math and Physics */}
-        {(subject === 'matematica' || subject === 'fizica') && (
-          <div id="portofoliu-formule">
-            <FormulaPortfolio subject={subject} isProfessor={isProfessor} />
-          </div>
-        )}
-
         {/* Add Lesson Modal */}
         <AddLessonModal
           isOpen={isModalOpen}
@@ -496,17 +446,6 @@ const Dashboard = () => {
           }}
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonId || 1}
-        />
-
-        {/* Add Template Modal */}
-        <AddTemplateModal
-          isOpen={isTemplateModalOpen}
-          onClose={() => {
-            setIsTemplateModalOpen(false);
-            setSelectedTemplateId(null);
-          }}
-          onSave={handleSaveTemplate}
-          slotNumber={selectedTemplateId || 1}
         />
 
         {/* PDF Viewer */}
