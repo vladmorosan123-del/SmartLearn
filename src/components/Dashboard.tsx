@@ -173,6 +173,31 @@ const Dashboard = () => {
     setIsModalOpen(true);
   };
 
+  const handleAddNewLesson = () => {
+    if (!subject) return;
+    
+    const currentSubjectLessons = lessonsData[subject];
+    const newLessonId = currentSubjectLessons.length + 1;
+    
+    // Add new empty lesson slot
+    setLessonsData(prev => ({
+      ...prev,
+      [subject]: [
+        ...prev[subject],
+        {
+          id: newLessonId,
+          title: null,
+          duration: null,
+          status: 'not-uploaded' as const,
+        }
+      ],
+    }));
+    
+    // Open modal for the new lesson
+    setSelectedLessonId(newLessonId);
+    setIsModalOpen(true);
+  };
+
   const handleSaveLesson = (lessonData: { title: string; duration: string; description: string }) => {
     if (!subject || selectedLessonId === null) return;
     
@@ -334,7 +359,7 @@ const Dashboard = () => {
               </p>
             </div>
             {isProfessor && (
-              <Button variant="gold" className="gap-2">
+              <Button variant="gold" className="gap-2" onClick={handleAddNewLesson}>
                 <Plus className="w-4 h-4" />
                 Adaugă lecție nouă
               </Button>
