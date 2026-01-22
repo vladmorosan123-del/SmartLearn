@@ -324,7 +324,7 @@ const ModeleBac = () => {
         {/* BAC Viewer Modal */}
         {viewingModel && (
           <BACViewer 
-            subjectTitle={viewingModel} 
+            title={viewingModel} 
             onClose={() => setViewingModel(null)} 
           />
         )}
