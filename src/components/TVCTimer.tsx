@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, X, Clock, FileText, Upload } from 'lucide-react';
+import { Play, Pause, RotateCcw, X, Clock, FileText, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface TVCTimerProps {
@@ -75,14 +75,34 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl }: TVCTimerProps) => {
               <FileText className="w-5 h-5 text-gold" />
               <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {pdfUrl && (
+                <Button 
+                  variant="gold" 
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = pdfUrl;
+                    link.download = `${subjectTitle}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                  Descarcă PDF
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onClose}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
           
           {/* PDF Content Area */}
