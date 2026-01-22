@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, FileText, Eye, Plus, Upload, 
-  Search, Filter, Calendar, Trash2
+  Search, Filter, Calendar, Trash2, Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -216,32 +216,47 @@ const ModeleBac = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {isProfessor ? (
-                    model.status === 'not-uploaded' ? (
+                    <>
                       <Button 
                         variant="gold" 
                         size="sm" 
                         className="gap-2"
                         onClick={() => handleAddModel(model.id)}
                       >
-                        <Plus className="w-4 h-4" />
-                        Încarcă Model
+                        {model.status === 'not-uploaded' ? (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Încarcă Model
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="w-4 h-4" />
+                            Editează
+                          </>
+                        )}
                       </Button>
-                    ) : (
-                      <>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <Eye className="w-4 h-4" />
-                          Vezi
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive"
-                          onClick={() => handleDeleteModel(model.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )
+                      {model.status === 'uploaded' && (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1"
+                            onClick={() => model.title && setViewingModel({ title: model.title, pdfUrl: model.pdfUrl })}
+                          >
+                            <Eye className="w-4 h-4" />
+                            Vezi
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive"
+                            onClick={() => handleDeleteModel(model.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </>
                   ) : (
                     model.status === 'uploaded' && (
                       <Button 
