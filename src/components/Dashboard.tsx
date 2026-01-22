@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Shield, BookOpen, FileText, ClipboardList, Settings, LogOut, 
   ChevronRight, Plus, Edit, Trash2, Clock, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X
+  Code, BookText, Calculator, Atom, Menu, X, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -39,6 +39,7 @@ interface Lesson {
   title: string | null;
   duration: string | null;
   description?: string;
+  pdfUrl?: string;
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
 }
 
@@ -198,14 +199,14 @@ const Dashboard = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveLesson = (lessonData: { title: string; duration: string; description: string }) => {
+  const handleSaveLesson = (lessonData: { title: string; duration: string; description: string; pdfUrl?: string }) => {
     if (!subject || selectedLessonId === null) return;
     
     setLessonsData(prev => ({
       ...prev,
       [subject]: prev[subject].map(lesson => 
         lesson.id === selectedLessonId 
-          ? { ...lesson, title: lessonData.title, duration: lessonData.duration, description: lessonData.description, status: 'locked' as const }
+          ? { ...lesson, title: lessonData.title, duration: lessonData.duration, description: lessonData.description, pdfUrl: lessonData.pdfUrl, status: 'locked' as const }
           : lesson
       ),
     }));
@@ -219,7 +220,7 @@ const Dashboard = () => {
       ...prev,
       [subject]: prev[subject].map(lesson => 
         lesson.id === lessonId 
-          ? { ...lesson, title: null, duration: null, description: undefined, status: 'not-uploaded' as const }
+          ? { ...lesson, title: null, duration: null, description: undefined, pdfUrl: undefined, status: 'not-uploaded' as const }
           : lesson
       ),
     }));
@@ -432,10 +433,18 @@ const Dashboard = () => {
                       ) : (
                         <>
                           <h3 className="font-medium text-foreground">{lesson.title}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            {lesson.duration}
-                          </p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {lesson.duration}
+                            </p>
+                            {lesson.pdfUrl && (
+                              <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
+                                <FileText className="w-3 h-3" />
+                                PDF atașat
+                              </span>
+                            )}
+                          </div>
                         </>
                       )}
                     </div>
@@ -454,6 +463,17 @@ const Dashboard = () => {
                         </Button>
                       ) : (
                         <>
+                          {lesson.pdfUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="gap-1"
+                              onClick={() => setViewingPDF(lesson.title)}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Vezi PDF
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => handleAddLesson(lesson.id)}>
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -469,14 +489,27 @@ const Dashboard = () => {
                       )
                     ) : (
                       lesson.status !== 'not-uploaded' && (
-                        <Button 
-                          variant={lesson.status === 'locked' ? 'outline' : 'gold'} 
-                          size="sm"
-                          disabled={lesson.status === 'locked'}
-                        >
-                          {lesson.status === 'completed' ? 'Revizuiește' : 
-                           lesson.status === 'in-progress' ? 'Continuă' : 'Blocat'}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {lesson.pdfUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="gap-1"
+                              onClick={() => setViewingPDF(lesson.title)}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Vezi PDF
+                            </Button>
+                          )}
+                          <Button 
+                            variant={lesson.status === 'locked' ? 'outline' : 'gold'} 
+                            size="sm"
+                            disabled={lesson.status === 'locked'}
+                          >
+                            {lesson.status === 'completed' ? 'Revizuiește' : 
+                             lesson.status === 'in-progress' ? 'Continuă' : 'Blocat'}
+                          </Button>
+                        </div>
                       )
                     )}
                   </div>
