@@ -12,11 +12,16 @@ interface TVCTimerProps {
 
 const INITIAL_TIME = 3 * 60 * 60; // 3 hours in seconds
 
+// Helper function to get PDF viewer URL using Google Docs Viewer
+const getPdfViewerUrl = (url: string) => {
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+};
+
 const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) => {
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [showQuiz, setShowQuiz] = useState(false);
+  const [activeTab, setActiveTab] = useState<'timer' | 'quiz'>('timer');
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -58,7 +63,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
     setTimeLeft(INITIAL_TIME);
     setIsRunning(false);
     setHasStarted(false);
-    setShowQuiz(false);
+    setActiveTab('timer');
   };
 
   const hasAnswerKey = answerKey && Array.isArray(answerKey) && answerKey.length > 0;
@@ -112,12 +117,13 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
           </div>
           
           {/* PDF Content Area */}
-          <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
+          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
             {pdfUrl ? (
               <iframe 
-                src={pdfUrl} 
-                className="w-full h-full rounded-lg border border-border"
+                src={getPdfViewerUrl(pdfUrl)} 
+                className="w-full h-full rounded-lg border border-border bg-white"
                 title="TVC Subject PDF"
+                allow="autoplay"
               />
             ) : (
               <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
@@ -141,9 +147,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
           {/* Tabs Header */}
           <div className="flex border-b border-border">
             <button
-              onClick={() => setShowQuiz(false)}
+              onClick={() => setActiveTab('timer')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                !showQuiz 
+                activeTab === 'timer' 
                   ? 'bg-gold/10 text-gold border-b-2 border-gold' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
@@ -153,9 +159,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
             </button>
             {hasAnswerKey && (
               <button
-                onClick={() => setShowQuiz(true)}
+                onClick={() => setActiveTab('quiz')}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                  showQuiz 
+                  activeTab === 'quiz' 
                     ? 'bg-gold/10 text-gold border-b-2 border-gold' 
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
@@ -168,7 +174,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto">
-            {!showQuiz ? (
+            {activeTab === 'timer' ? (
               /* Timer Content */
               <div className="flex flex-col items-center justify-center p-6 h-full">
                 {/* Timer Display */}
@@ -249,14 +255,14 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
                 </p>
 
                 {/* Quiz CTA */}
-                {hasAnswerKey && hasStarted && (
+                {hasAnswerKey && (
                   <Button 
                     variant="gold" 
-                    onClick={() => setShowQuiz(true)} 
+                    onClick={() => setActiveTab('quiz')} 
                     className="mt-4 gap-2"
                   >
                     <ClipboardCheck className="w-4 h-4" />
-                    Verifică Răspunsurile
+                    Completează Grila
                   </Button>
                 )}
               </div>
