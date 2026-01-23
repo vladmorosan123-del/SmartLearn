@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Shield, BookOpen, ClipboardList, Settings, LogOut, 
@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import AddLessonModal from '@/components/AddLessonModal';
-import PDFViewer from '@/components/PDFViewer';
 import LessonCard, { Lesson } from '@/components/LessonCard';
 import StatsCard from '@/components/StatsCard';
 import SearchInput from '@/components/SearchInput';
 import EmptyState from '@/components/EmptyState';
+import FileViewer from '@/components/FileViewer';
+import { useMaterials, Material } from '@/hooks/useMaterials';
 
 const subjectIcons = {
   informatica: Code,
@@ -36,69 +37,55 @@ const subjectColors = {
   fizica: 'from-violet-500 to-violet-700',
 };
 
-
-// Initial empty lessons template - 10 slots each
-const createEmptyLessons = (): Lesson[] => 
-  Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    title: null,
-    duration: null,
-    status: 'not-uploaded' as const,
-  }));
-
-// Initial mock data per subject
-const initialLessonsData: Record<Subject, Lesson[]> = {
-  informatica: [
-    { id: 1, title: 'Introducere în algoritmi', duration: '45 min', status: 'completed' },
-    { id: 2, title: 'Structuri de date fundamentale', duration: '60 min', status: 'in-progress' },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 3,
-      title: null,
-      duration: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  romana: [
-    { id: 1, title: 'Introducere în literatura română', duration: '50 min', status: 'completed' },
-    ...Array.from({ length: 9 }, (_, i) => ({
-      id: i + 2,
-      title: null,
-      duration: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  matematica: createEmptyLessons(),
-  fizica: [
-    { id: 1, title: 'Mecanica - Introducere', duration: '55 min', status: 'completed' },
-    { id: 2, title: 'Cinematica', duration: '60 min', status: 'in-progress' },
-    { id: 3, title: 'Dinamica', duration: '65 min', status: 'locked' },
-    ...Array.from({ length: 7 }, (_, i) => ({
-      id: i + 4,
-      title: null,
-      duration: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-};
-
 const Dashboard = () => {
   const { role, subject, setSubject, clearSession } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
-  const [lessonsData, setLessonsData] = useState<Record<Subject, Lesson[]>>(initialLessonsData);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
+  const [selectedLessonNumber, setSelectedLessonNumber] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewingPDF, setViewingPDF] = useState<string | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   
   const isProfessor = role === 'profesor';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
   const subjectName = subject ? subjectNames[subject] : 'Materie';
   const subjectColor = subject ? subjectColors[subject] : 'from-gray-500 to-gray-700';
   
-  const currentLessons = subject ? lessonsData[subject] : [];
+  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+    subject: subject || 'informatica',
+    category: 'lesson',
+  });
+
+  // Convert materials to lessons for display
+  const currentLessons: Lesson[] = useMemo(() => {
+    const lessons: Lesson[] = materials.map((m, index) => ({
+      id: index + 1,
+      title: m.title,
+      duration: m.description?.match(/\d+ min/)?.[0] || '45 min',
+      description: m.description || undefined,
+      fileUrl: m.file_url,
+      fileName: m.file_name,
+      fileType: m.file_type,
+      fileSize: m.file_size || undefined,
+      status: 'locked' as const,
+      materialId: m.id,
+    }));
+    
+    // Add empty slots up to 10 if less than 10 materials
+    const emptySlots = Math.max(0, 10 - lessons.length);
+    for (let i = 0; i < emptySlots; i++) {
+      lessons.push({
+        id: lessons.length + 1,
+        title: null,
+        duration: null,
+        status: 'not-uploaded' as const,
+      });
+    }
+    
+    return lessons;
+  }, [materials]);
 
   // Filtered lessons based on search
   const filteredLessons = useMemo(() => {
@@ -111,7 +98,6 @@ const Dashboard = () => {
 
   // Stats calculations
   const uploadedLessons = currentLessons.filter(l => l.status !== 'not-uploaded').length;
-  const completedLessons = currentLessons.filter(l => l.status === 'completed').length;
   const totalDuration = currentLessons
     .filter(l => l.duration)
     .reduce((acc, l) => {
@@ -131,61 +117,74 @@ const Dashboard = () => {
     toast({ title: 'Deconectat', description: 'Te-ai deconectat cu succes.' });
   };
 
-  const handleAddLesson = (lessonId: number) => {
-    setSelectedLessonId(lessonId);
+  const handleAddLesson = (lessonNumber: number) => {
+    setSelectedLessonNumber(lessonNumber);
     setIsModalOpen(true);
   };
 
   const handleAddNewLesson = () => {
-    if (!subject) return;
-    
-    const currentSubjectLessons = lessonsData[subject];
-    const newLessonId = currentSubjectLessons.length + 1;
-    
-    setLessonsData(prev => ({
-      ...prev,
-      [subject]: [
-        ...prev[subject],
-        {
-          id: newLessonId,
-          title: null,
-          duration: null,
-          status: 'not-uploaded' as const,
-        }
-      ],
-    }));
-    
-    setSelectedLessonId(newLessonId);
+    setSelectedLessonNumber(currentLessons.length + 1);
     setIsModalOpen(true);
   };
 
-  const handleSaveLesson = (lessonData: { title: string; duration: string; description: string; pdfUrl?: string }) => {
-    if (!subject || selectedLessonId === null) return;
+  const handleSaveLesson = async (lessonData: { 
+    title: string; 
+    duration: string; 
+    description: string; 
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
+  }) => {
+    if (!subject || !lessonData.fileUrl) {
+      toast({ 
+        title: 'Eroare', 
+        description: 'Te rugăm să încarci un fișier.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
     
-    setLessonsData(prev => ({
-      ...prev,
-      [subject]: prev[subject].map(lesson => 
-        lesson.id === selectedLessonId 
-          ? { ...lesson, title: lessonData.title, duration: lessonData.duration, description: lessonData.description, pdfUrl: lessonData.pdfUrl, status: 'locked' as const }
-          : lesson
-      ),
-    }));
-    setSelectedLessonId(null);
-    toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
+    try {
+      await addMaterial({
+        title: lessonData.title,
+        description: `${lessonData.duration} - ${lessonData.description}`,
+        file_name: lessonData.fileName || 'unknown',
+        file_type: lessonData.fileType || 'unknown',
+        file_url: lessonData.fileUrl,
+        file_size: lessonData.fileSize || 0,
+        subject: subject,
+        category: 'lesson',
+        lesson_number: selectedLessonNumber,
+        author: null,
+        genre: null,
+        year: null,
+      });
+      
+      toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
+    } catch (error) {
+      console.error('Error saving lesson:', error);
+    }
   };
 
-  const handleDeleteLesson = (lessonId: number) => {
-    if (!subject) return;
+  const handleDeleteLesson = async (lessonId: number) => {
+    const lesson = currentLessons.find(l => l.id === lessonId);
+    if (!lesson || !(lesson as any).materialId) return;
     
-    setLessonsData(prev => ({
-      ...prev,
-      [subject]: prev[subject].map(lesson => 
-        lesson.id === lessonId 
-          ? { ...lesson, title: null, duration: null, description: undefined, pdfUrl: undefined, status: 'not-uploaded' as const }
-          : lesson
-      ),
-    }));
-    toast({ title: 'Lecție ștearsă', description: 'Lecția a fost ștearsă.' });
+    const material = materials.find(m => m.id === (lesson as any).materialId);
+    if (material) {
+      await deleteMaterial(material.id, material.file_url);
+    }
+  };
+
+  const handleViewFile = (lesson: Lesson) => {
+    if (lesson.fileUrl && lesson.fileName && lesson.fileType) {
+      setViewingFile({
+        url: lesson.fileUrl,
+        name: lesson.fileName,
+        type: lesson.fileType,
+      });
+    }
   };
 
   return (
@@ -382,8 +381,8 @@ const Dashboard = () => {
             icon={Users}
             iconColor="text-emerald-500"
             iconBg="bg-emerald-500/10"
-            value={completedLessons}
-            label="Lecții completate"
+            value={materials.length}
+            label="Fișiere încărcate"
             delay="delay-300"
           />
         </div>
@@ -401,7 +400,11 @@ const Dashboard = () => {
         <section id="lectii" className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
           
-          {filteredLessons.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Se încarcă...</p>
+            </div>
+          ) : filteredLessons.length === 0 ? (
             searchQuery ? (
               <EmptyState
                 icon={Search}
@@ -430,7 +433,7 @@ const Dashboard = () => {
                   onAdd={handleAddLesson}
                   onEdit={handleAddLesson}
                   onDelete={handleDeleteLesson}
-                  onViewPDF={(title) => setViewingPDF(title)}
+                  onViewFile={handleViewFile}
                 />
               ))}
             </div>
@@ -442,17 +445,20 @@ const Dashboard = () => {
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
-            setSelectedLessonId(null);
           }}
           onSave={handleSaveLesson}
-          lessonNumber={selectedLessonId || 1}
+          lessonNumber={selectedLessonNumber}
+          subject={subject || 'informatica'}
         />
 
-        {/* PDF Viewer */}
-        {viewingPDF && (
-          <PDFViewer
-            title={viewingPDF}
-            onClose={() => setViewingPDF(null)}
+        {/* File Viewer */}
+        {viewingFile && (
+          <FileViewer
+            isOpen={!!viewingFile}
+            onClose={() => setViewingFile(null)}
+            fileUrl={viewingFile.url}
+            fileName={viewingFile.name}
+            fileType={viewingFile.type}
           />
         )}
       </main>
