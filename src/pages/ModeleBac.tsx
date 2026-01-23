@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, FileText, Eye, Plus, Upload, 
-  Search, Filter, Calendar, Trash2, Edit
+  ArrowLeft, Shield, FileText, Eye, Plus, 
+  Search, Filter, Calendar, Trash2, Edit, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp, Subject } from '@/contexts/AppContext';
-import BACViewer from '@/components/BACViewer';
+import { useMaterials, Material } from '@/hooks/useMaterials';
+import { useToast } from '@/hooks/use-toast';
+import UploadMaterialModal from '@/components/UploadMaterialModal';
+import FileViewer from '@/components/FileViewer';
 
 const subjectNames: Record<Subject, string> = {
   informatica: 'Informatică',
@@ -16,142 +19,129 @@ const subjectNames: Record<Subject, string> = {
   fizica: 'Fizică',
 };
 
-interface BacModel {
-  id: number;
-  title: string | null;
-  year?: number;
-  description?: string;
-  pdfUrl?: string;
-  status: 'uploaded' | 'not-uploaded';
-}
+const getFileIcon = (fileType?: string) => {
+  if (!fileType) return <FileText className="w-3 h-3" />;
+  const type = fileType.toLowerCase();
+  if (type === 'jpg' || type === 'jpeg' || type === 'png') return <Image className="w-3 h-3" />;
+  if (type === 'pdf') return <FileText className="w-3 h-3" />;
+  if (type === 'xls' || type === 'xlsx' || type === 'csv') return <FileSpreadsheet className="w-3 h-3" />;
+  if (type === 'doc' || type === 'docx') return <FileTypeIcon className="w-3 h-3" />;
+  if (type === 'ppt' || type === 'pptx') return <Presentation className="w-3 h-3" />;
+  return <File className="w-3 h-3" />;
+};
 
-// 10 slots for each subject
-const createEmptySlots = (): BacModel[] => 
-  Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    title: null,
-    status: 'not-uploaded',
-  }));
-
-const initialBacData: Record<Subject, BacModel[]> = {
-  informatica: [
-    { id: 1, title: 'Model BAC Informatică 2024 - Sesiunea Iunie', year: 2024, status: 'uploaded' },
-    { id: 2, title: 'Model BAC Informatică 2023', year: 2023, status: 'uploaded' },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 3,
-      title: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  romana: [
-    { id: 1, title: 'Model BAC Română 2024 - Real', year: 2024, status: 'uploaded' },
-    { id: 2, title: 'Model BAC Română 2024 - Uman', year: 2024, status: 'uploaded' },
-    { id: 3, title: 'Simulare Națională Februarie 2024', year: 2024, status: 'uploaded' },
-    ...Array.from({ length: 7 }, (_, i) => ({
-      id: i + 4,
-      title: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  matematica: [
-    { id: 1, title: 'Model BAC Matematică M1 2024', year: 2024, status: 'uploaded' },
-    { id: 2, title: 'Model BAC Matematică M2 2024', year: 2024, status: 'uploaded' },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 3,
-      title: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  fizica: [
-    { id: 1, title: 'Model BAC Fizică 2024', year: 2024, status: 'uploaded' },
-    ...Array.from({ length: 9 }, (_, i) => ({
-      id: i + 2,
-      title: null,
-      status: 'not-uploaded' as const,
-    })),
-  ],
+const getFileTypeLabel = (type?: string) => {
+  if (!type) return 'Fișier';
+  const labels: Record<string, string> = {
+    pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
+    ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
+    jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+  };
+  return labels[type.toLowerCase()] || type.toUpperCase();
 };
 
 const ModeleBac = () => {
   const { role, subject } = useApp();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<Subject>(subject || 'informatica');
-  const [bacData, setBacData] = useState(initialBacData);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
-  const [newModel, setNewModel] = useState({ title: '', year: new Date().getFullYear(), description: '', pdfUrl: '' });
-  const [viewingModel, setViewingModel] = useState<{ title: string; pdfUrl?: string } | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
 
   const isProfessor = role === 'profesor';
-  const currentModels = bacData[selectedSubject];
+
+  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+    subject: selectedSubject,
+    category: 'bac_model',
+  });
 
   // Get unique years from uploaded models
-  const availableYears = [...new Set(
-    currentModels
-      .filter(m => m.status === 'uploaded' && m.year)
-      .map(m => m.year!)
-  )].sort((a, b) => b - a);
+  const availableYears = useMemo(() => 
+    [...new Set(materials.filter(m => m.year).map(m => m.year!))]
+      .sort((a, b) => b - a),
+    [materials]
+  );
 
   const years = Array.from({ length: 10 }, (_, i) => 2025 - i);
-  const getYearCount = (year: number) =>
-    currentModels.filter(m => m.year === year && m.status === 'uploaded').length;
+  const getYearCount = (year: number) => materials.filter(m => m.year === year).length;
 
   // Filter models based on search and year filter
-  const filteredModels = currentModels.filter(model => {
-    // Always show not-uploaded slots for professors
-    if (model.status === 'not-uploaded' && isProfessor) {
-      // Hide if searching or filtering by year
-      if (searchQuery.trim() || selectedYear) return false;
-      return true;
-    }
-    
-    // For uploaded models, apply filters
-    if (model.status === 'uploaded') {
+  const filteredModels = useMemo(() => {
+    return materials.filter(model => {
       const matchesSearch = !searchQuery.trim() || 
-        model.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        model.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         model.year?.toString().includes(searchQuery);
       
       const matchesYear = !selectedYear || model.year === selectedYear;
       
       return matchesSearch && matchesYear;
+    });
+  }, [materials, searchQuery, selectedYear]);
+
+  // Add empty slots to show
+  const displayModels = useMemo(() => {
+    const models = [...filteredModels];
+    if (!searchQuery && !selectedYear && isProfessor) {
+      const emptySlots = Math.max(0, 10 - materials.length);
+      for (let i = 0; i < emptySlots; i++) {
+        models.push({
+          id: `empty-${i}`,
+          title: '',
+          description: null,
+          file_name: '',
+          file_type: '',
+          file_url: '',
+          file_size: null,
+          subject: selectedSubject,
+          category: 'bac_model',
+          lesson_number: null,
+          author: null,
+          genre: null,
+          year: null,
+          created_at: '',
+          updated_at: '',
+          _isEmpty: true,
+        } as Material & { _isEmpty?: boolean });
+      }
     }
-    
-    return false;
-  });
+    return models;
+  }, [filteredModels, searchQuery, selectedYear, isProfessor, materials.length, selectedSubject]);
 
-  const handleAddModel = (slotId: number) => {
-    setSelectedSlotId(slotId);
-    setIsAddModalOpen(true);
+  const handleSaveMaterial = async (data: {
+    title: string;
+    description: string;
+    year?: number;
+    fileUrl: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+  }) => {
+    try {
+      await addMaterial({
+        title: data.title,
+        description: data.description,
+        file_name: data.fileName,
+        file_type: data.fileType,
+        file_url: data.fileUrl,
+        file_size: data.fileSize,
+        subject: selectedSubject,
+        category: 'bac_model',
+        lesson_number: null,
+        author: null,
+        genre: null,
+        year: data.year || null,
+      });
+      toast({ title: 'Model salvat', description: 'Modelul BAC a fost salvat cu succes.' });
+    } catch (error) {
+      console.error('Error saving model:', error);
+    }
   };
 
-  const handleSaveModel = () => {
-    if (!newModel.title.trim() || selectedSlotId === null) return;
-
-    setBacData(prev => ({
-      ...prev,
-      [selectedSubject]: prev[selectedSubject].map(item =>
-        item.id === selectedSlotId
-          ? { ...item, title: newModel.title, year: newModel.year, description: newModel.description, pdfUrl: newModel.pdfUrl || undefined, status: 'uploaded' as const }
-          : item
-      ),
-    }));
-    setIsAddModalOpen(false);
-    setNewModel({ title: '', year: new Date().getFullYear(), description: '', pdfUrl: '' });
-    setSelectedSlotId(null);
-  };
-
-  const handleDeleteModel = (slotId: number) => {
-    setBacData(prev => ({
-      ...prev,
-      [selectedSubject]: prev[selectedSubject].map(item =>
-        item.id === slotId
-          ? { ...item, title: null, year: undefined, description: undefined, status: 'not-uploaded' as const }
-          : item
-      ),
-    }));
+  const handleDeleteMaterial = async (material: Material) => {
+    await deleteMaterial(material.id, material.file_url);
   };
 
   return (
@@ -224,44 +214,28 @@ const ModeleBac = () => {
                 <span className="text-muted-foreground text-xs">▼</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              sideOffset={8}
-              className="z-[9999] w-[260px] p-0 overflow-hidden"
-            >
+            <PopoverContent align="end" sideOffset={8} className="z-[9999] w-[260px] p-0 overflow-hidden">
               <div className="px-3 py-2 border-b border-border">
                 <p className="text-xs font-medium text-muted-foreground uppercase">Selectează anul</p>
               </div>
               <div className="max-h-[220px] overflow-y-auto">
                 <button
-                  onClick={() => {
-                    setSelectedYear(null);
-                    setIsYearPickerOpen(false);
-                  }}
+                  onClick={() => { setSelectedYear(null); setIsYearPickerOpen(false); }}
                   className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${!selectedYear ? 'bg-muted text-foreground font-medium' : 'text-foreground'}`}
                 >
                   Toți anii
                 </button>
-
                 {years.map((year) => {
-                  const hasModels = availableYears.includes(year);
-                  const count = hasModels ? getYearCount(year) : 0;
+                  const count = getYearCount(year);
                   return (
                     <button
                       key={year}
-                      onClick={() => {
-                        setSelectedYear(year);
-                        setIsYearPickerOpen(false);
-                      }}
+                      onClick={() => { setSelectedYear(year); setIsYearPickerOpen(false); }}
                       className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center justify-between ${selectedYear === year ? 'bg-muted font-medium' : ''}`}
                     >
-                      <span className={hasModels ? 'text-foreground' : 'text-muted-foreground'}>
-                        {year}
-                      </span>
-                      {hasModels ? (
-                        <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">
-                          {count} modele
-                        </span>
+                      <span className={count > 0 ? 'text-foreground' : 'text-muted-foreground'}>{year}</span>
+                      {count > 0 ? (
+                        <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">{count} modele</span>
                       ) : (
                         <span className="text-xs text-muted-foreground italic">neîncărcat</span>
                       )}
@@ -271,212 +245,139 @@ const ModeleBac = () => {
               </div>
             </PopoverContent>
           </Popover>
+          {isProfessor && (
+            <Button variant="gold" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Adaugă Model
+            </Button>
+          )}
         </div>
 
-        {/* Models List - 10 Slots */}
+        {/* Models List */}
         <div className="space-y-4 animate-fade-up delay-300">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-2xl text-foreground">
               Modele BAC - {subjectNames[selectedSubject]}
             </h2>
-            {(searchQuery || selectedYear) && (
-              <p className="text-sm text-muted-foreground">
-                {filteredModels.filter(m => m.status === 'uploaded').length} rezultate găsite
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground">
+              {materials.length} modele încărcate
+            </p>
           </div>
           
-          {filteredModels.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
+              <p className="text-muted-foreground">Se încarcă...</p>
+            </div>
+          ) : displayModels.length === 0 ? (
             <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
               <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-medium text-foreground mb-2">Niciun rezultat găsit</h3>
               <p className="text-muted-foreground text-sm">
-                Încearcă să modifici criteriile de căutare sau filtrare
+                {searchQuery || selectedYear ? 'Încearcă să modifici criteriile de căutare' : 'Nu există modele încărcate încă'}
               </p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedYear(null);
-                }}
-              >
-                Resetează filtrele
-              </Button>
+              {(searchQuery || selectedYear) && (
+                <Button variant="outline" className="mt-4" onClick={() => { setSearchQuery(''); setSelectedYear(null); }}>
+                  Resetează filtrele
+                </Button>
+              )}
             </div>
           ) : (
-            filteredModels.map((model, index) => (
-            <div 
-              key={model.id}
-              className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${model.status === 'not-uploaded' ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    model.status === 'uploaded' ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <span className="font-bold">{index + 1}</span>
-                  </div>
-                  <div>
-                    {model.status === 'not-uploaded' ? (
-                      <h3 className="font-medium text-muted-foreground italic">Modelul nu a fost încărcat</h3>
-                    ) : (
-                      <>
-                        <h3 className="font-medium text-foreground">{model.title}</h3>
-                        {model.year && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                            <Calendar className="w-3 h-3" />
-                            {model.year}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isProfessor ? (
-                    <>
-                      <Button 
-                        variant="gold" 
-                        size="sm" 
-                        className="gap-2"
-                        onClick={() => handleAddModel(model.id)}
-                      >
-                        {model.status === 'not-uploaded' ? (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            Încarcă Model
-                          </>
+            displayModels.map((model, index) => {
+              const isEmpty = (model as any)._isEmpty;
+              return (
+                <div 
+                  key={model.id}
+                  className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${isEmpty ? 'opacity-60' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${!isEmpty ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'}`}>
+                        <span className="font-bold">{index + 1}</span>
+                      </div>
+                      <div>
+                        {isEmpty ? (
+                          <h3 className="font-medium text-muted-foreground italic">Modelul nu a fost încărcat</h3>
                         ) : (
                           <>
-                            <Edit className="w-4 h-4" />
-                            Editează
+                            <h3 className="font-medium text-foreground">{model.title}</h3>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {model.year && (
+                                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {model.year}
+                                </span>
+                              )}
+                              <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
+                                {getFileIcon(model.file_type)}
+                                {getFileTypeLabel(model.file_type)}
+                              </span>
+                            </div>
                           </>
                         )}
-                      </Button>
-                      {model.status === 'uploaded' && (
-                        <>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isProfessor ? (
+                        isEmpty ? (
+                          <Button variant="gold" size="sm" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+                            <Plus className="w-4 h-4" />
+                            Încarcă Model
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Vezi
+                            </Button>
+                            <Button 
+                              variant="ghost" size="icon" className="text-destructive"
+                              onClick={() => handleDeleteMaterial(model)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )
+                      ) : (
+                        !isEmpty && (
                           <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="gap-1"
-                            onClick={() => model.title && setViewingModel({ title: model.title, pdfUrl: model.pdfUrl })}
+                            variant="gold" size="sm" className="gap-1"
+                            onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
                           >
                             <Eye className="w-4 h-4" />
-                            Vezi
+                            Deschide
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive"
-                            onClick={() => handleDeleteModel(model.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
+                        )
                       )}
-                    </>
-                  ) : (
-                    model.status === 'uploaded' && (
-                      <Button 
-                        variant="gold" 
-                        size="sm" 
-                        className="gap-1"
-                        onClick={() => model.title && setViewingModel({ title: model.title, pdfUrl: model.pdfUrl })}
-                      >
-                        <Eye className="w-4 h-4" />
-                        Deschide
-                      </Button>
-                    )
-                  )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))
+              );
+            })
           )}
         </div>
 
-        {/* Add Modal */}
-        {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div 
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsAddModalOpen(false)}
-            />
-            <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-md mx-4 p-6 animate-scale-in">
-              <h2 className="font-display text-xl text-foreground mb-4">Încarcă Model BAC</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Titlu *</label>
-                  <input
-                    type="text"
-                    placeholder="ex: Model BAC 2024 - Sesiunea Iunie"
-                    value={newModel.title}
-                    onChange={(e) => setNewModel(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                </div>
+        {/* Upload Modal */}
+        <UploadMaterialModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSave={handleSaveMaterial}
+          title="Încarcă Model BAC"
+          category="bac_model"
+          subject={selectedSubject}
+          showYear={true}
+        />
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Anul</label>
-                  <input
-                    type="number"
-                    value={newModel.year}
-                    onChange={(e) => setNewModel(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Descriere (opțional)</label>
-                  <textarea
-                    placeholder="Descriere scurtă..."
-                    value={newModel.description}
-                    onChange={(e) => setNewModel(prev => ({ ...prev, description: e.target.value }))}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Link PDF (opțional)</label>
-                  <input
-                    type="url"
-                    placeholder="https://exemplu.com/subiect.pdf"
-                    value={newModel.pdfUrl}
-                    onChange={(e) => setNewModel(prev => ({ ...prev, pdfUrl: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Introdu linkul către fișierul PDF (Google Drive, Dropbox, etc.)
-                  </p>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setIsAddModalOpen(false)}>
-                    Anulează
-                  </Button>
-                  <Button 
-                    variant="gold" 
-                    className="flex-1"
-                    onClick={handleSaveModel}
-                    disabled={!newModel.title.trim()}
-                  >
-                    Salvează
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* BAC Viewer Modal */}
-        {viewingModel && (
-          <BACViewer 
-            title={viewingModel.title} 
-            pdfUrl={viewingModel.pdfUrl}
-            onClose={() => setViewingModel(null)} 
+        {/* File Viewer */}
+        {viewingFile && (
+          <FileViewer
+            isOpen={!!viewingFile}
+            onClose={() => setViewingFile(null)}
+            fileUrl={viewingFile.url}
+            fileName={viewingFile.name}
+            fileType={viewingFile.type}
           />
         )}
       </main>
