@@ -2,13 +2,14 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Filter, 
-  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck
+  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck, Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
+import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimer from '@/components/TVCTimer';
 
@@ -51,12 +52,13 @@ const TesteAcademii = () => {
     subject && tvcSubjects.includes(subject) ? subject : 'informatica'
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
   const isProfessor = role === 'profesor';
 
-  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject: selectedSubject,
     category: 'tvc',
   });
@@ -133,6 +135,28 @@ const TesteAcademii = () => {
 
   const handleDeleteMaterial = async (material: Material) => {
     await deleteMaterial(material.id, material.file_url);
+  };
+
+  const handleEditMaterial = async (data: {
+    title: string;
+    description: string;
+    year?: number;
+    answerKey?: string[];
+  }) => {
+    if (!editingMaterial) return;
+    
+    try {
+      await updateMaterial(editingMaterial.id, {
+        title: data.title,
+        description: data.description,
+        year: data.year || null,
+        answer_key: data.answerKey || null,
+      });
+      toast({ title: 'Material actualizat', description: 'Modificările au fost salvate cu succes.' });
+      setEditingMaterial(null);
+    } catch (error) {
+      console.error('Error updating material:', error);
+    }
   };
 
   // Check if current subject has TVC
@@ -305,6 +329,13 @@ const TesteAcademii = () => {
                               Vezi
                             </Button>
                             <Button 
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => setEditingMaterial(material)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                              Editează
+                            </Button>
+                            <Button 
                               variant="ghost" size="icon" className="text-destructive"
                               onClick={() => handleDeleteMaterial(material)}
                             >
@@ -351,6 +382,15 @@ const TesteAcademii = () => {
           showAnswerKey={true}
         />
 
+        {/* Edit Modal */}
+        <EditMaterialModal
+          isOpen={!!editingMaterial}
+          onClose={() => setEditingMaterial(null)}
+          onSave={handleEditMaterial}
+          material={editingMaterial}
+          showYear={true}
+          showAnswerKey={true}
+        />
         {/* File Viewer */}
         {viewingFile && (
           <FileViewer
