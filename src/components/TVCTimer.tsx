@@ -1,19 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, X, Clock, FileText, Upload, Download } from 'lucide-react';
+import { Play, Pause, RotateCcw, X, Clock, FileText, Upload, Download, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import TVCQuizInterface from '@/components/TVCQuizInterface';
 
 interface TVCTimerProps {
   subjectTitle: string;
   onClose: () => void;
   pdfUrl?: string;
+  answerKey?: string[] | null;
 }
 
 const INITIAL_TIME = 3 * 60 * 60; // 3 hours in seconds
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl }: TVCTimerProps) => {
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) => {
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -55,7 +58,10 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl }: TVCTimerProps) => {
     setTimeLeft(INITIAL_TIME);
     setIsRunning(false);
     setHasStarted(false);
+    setShowQuiz(false);
   };
+
+  const hasAnswerKey = answerKey && Array.isArray(answerKey) && answerKey.length > 0;
 
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
   const isTimeUp = timeLeft === 0;
@@ -130,92 +136,138 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl }: TVCTimerProps) => {
           </div>
         </div>
 
-        {/* Right Side - Timer */}
-        <div className="w-80 lg:w-96 flex flex-col bg-card border-l border-border">
-          {/* Timer Header */}
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
-            <Clock className="w-5 h-5 text-gold" />
-            <h2 className="font-display text-lg text-foreground">Timer TVC</h2>
+        {/* Right Side - Timer & Quiz */}
+        <div className="w-80 lg:w-[480px] flex flex-col bg-card border-l border-border overflow-hidden">
+          {/* Tabs Header */}
+          <div className="flex border-b border-border">
+            <button
+              onClick={() => setShowQuiz(false)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                !showQuiz 
+                  ? 'bg-gold/10 text-gold border-b-2 border-gold' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Timer
+            </button>
+            {hasAnswerKey && (
+              <button
+                onClick={() => setShowQuiz(true)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  showQuiz 
+                    ? 'bg-gold/10 text-gold border-b-2 border-gold' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <ClipboardCheck className="w-4 h-4" />
+                Grilă ({answerKey?.length})
+              </button>
+            )}
           </div>
 
-          {/* Timer Content */}
-          <div className="flex-1 flex flex-col items-center justify-center p-6">
-            {/* Timer Display */}
-            <div className="relative mb-8">
-              <div className="w-40 h-40 lg:w-48 lg:h-48 relative">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-muted"
-                  />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 45} ${2 * Math.PI * 45}`}
-                    strokeDashoffset={2 * Math.PI * 45 * (1 - progress / 100)}
-                    className={`transition-all duration-1000 ${isTimeUp ? 'text-destructive' : 'text-gold'}`}
-                    strokeLinecap="round"
-                    style={{ strokeDasharray: `${2 * Math.PI * 72} ${2 * Math.PI * 72}`, strokeDashoffset: 2 * Math.PI * 72 * (1 - progress / 100) }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`font-mono text-2xl lg:text-3xl font-bold ${isTimeUp ? 'text-destructive' : 'text-foreground'}`}>
-                    {formatTime(timeLeft)}
-                  </span>
-                  {isRunning && (
-                    <span className="text-xs text-gold mt-2 animate-pulse">În desfășurare</span>
-                  )}
-                  {!isRunning && hasStarted && !isTimeUp && (
-                    <span className="text-xs text-muted-foreground mt-2">Pauză</span>
-                  )}
-                  {isTimeUp && (
-                    <span className="text-xs text-destructive mt-2 font-medium">Timp expirat!</span>
-                  )}
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            {!showQuiz ? (
+              /* Timer Content */
+              <div className="flex flex-col items-center justify-center p-6 h-full">
+                {/* Timer Display */}
+                <div className="relative mb-8">
+                  <div className="w-40 h-40 lg:w-48 lg:h-48 relative">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="45%"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        className="text-muted"
+                      />
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="45%"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        strokeDasharray={`${2 * Math.PI * 45} ${2 * Math.PI * 45}`}
+                        strokeDashoffset={2 * Math.PI * 45 * (1 - progress / 100)}
+                        className={`transition-all duration-1000 ${isTimeUp ? 'text-destructive' : 'text-gold'}`}
+                        strokeLinecap="round"
+                        style={{ strokeDasharray: `${2 * Math.PI * 72} ${2 * Math.PI * 72}`, strokeDashoffset: 2 * Math.PI * 72 * (1 - progress / 100) }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`font-mono text-2xl lg:text-3xl font-bold ${isTimeUp ? 'text-destructive' : 'text-foreground'}`}>
+                        {formatTime(timeLeft)}
+                      </span>
+                      {isRunning && (
+                        <span className="text-xs text-gold mt-2 animate-pulse">În desfășurare</span>
+                      )}
+                      {!isRunning && hasStarted && !isTimeUp && (
+                        <span className="text-xs text-muted-foreground mt-2">Pauză</span>
+                      )}
+                      {isTimeUp && (
+                        <span className="text-xs text-destructive mt-2 font-medium">Timp expirat!</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Controls */}
-            <div className="flex flex-col items-center gap-3 w-full">
-              {!hasStarted ? (
-                <Button variant="gold" size="lg" onClick={handleStart} className="gap-2 w-full">
-                  <Play className="w-5 h-5" />
-                  Start Timer
-                </Button>
-              ) : (
-                <>
-                  {isRunning ? (
-                    <Button variant="outline" size="lg" onClick={handlePause} className="gap-2 w-full">
-                      <Pause className="w-5 h-5" />
-                      Pauză
+                {/* Controls */}
+                <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+                  {!hasStarted ? (
+                    <Button variant="gold" size="lg" onClick={handleStart} className="gap-2 w-full">
+                      <Play className="w-5 h-5" />
+                      Start Timer
                     </Button>
                   ) : (
-                    <Button variant="gold" size="lg" onClick={handleResume} className="gap-2 w-full" disabled={isTimeUp}>
-                      <Play className="w-5 h-5" />
-                      Continuă
-                    </Button>
+                    <>
+                      {isRunning ? (
+                        <Button variant="outline" size="lg" onClick={handlePause} className="gap-2 w-full">
+                          <Pause className="w-5 h-5" />
+                          Pauză
+                        </Button>
+                      ) : (
+                        <Button variant="gold" size="lg" onClick={handleResume} className="gap-2 w-full" disabled={isTimeUp}>
+                          <Play className="w-5 h-5" />
+                          Continuă
+                        </Button>
+                      )}
+                      <Button variant="outline" size="lg" onClick={handleReset} className="gap-2 w-full">
+                        <RotateCcw className="w-5 h-5" />
+                        Reset
+                      </Button>
+                    </>
                   )}
-                  <Button variant="outline" size="lg" onClick={handleReset} className="gap-2 w-full">
-                    <RotateCcw className="w-5 h-5" />
-                    Reset
-                  </Button>
-                </>
-              )}
-            </div>
+                </div>
 
-            {/* Info */}
-            <p className="text-center text-muted-foreground text-xs mt-6">
-              Ai la dispoziție 3 ore pentru a rezolva subiectul TVC.
-            </p>
+                {/* Info */}
+                <p className="text-center text-muted-foreground text-xs mt-6">
+                  Ai la dispoziție 3 ore pentru a rezolva subiectul TVC.
+                </p>
+
+                {/* Quiz CTA */}
+                {hasAnswerKey && hasStarted && (
+                  <Button 
+                    variant="gold" 
+                    onClick={() => setShowQuiz(true)} 
+                    className="mt-4 gap-2"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    Verifică Răspunsurile
+                  </Button>
+                )}
+              </div>
+            ) : (
+              /* Quiz Content */
+              <div className="p-6">
+                {hasAnswerKey && (
+                  <TVCQuizInterface answerKey={answerKey!} />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Exit Button */}
