@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      materials: {
+        Row: {
+          author: string | null
+          category: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          genre: string | null
+          id: string
+          lesson_number: number | null
+          subject: string
+          title: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          author?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          genre?: string | null
+          id?: string
+          lesson_number?: number | null
+          subject: string
+          title: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          author?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          genre?: string | null
+          id?: string
+          lesson_number?: number | null
+          subject?: string
+          title?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
