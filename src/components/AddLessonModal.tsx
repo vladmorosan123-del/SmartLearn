@@ -1,22 +1,37 @@
 import { useState } from 'react';
-import { X, FileText, Link } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import FileUpload from '@/components/FileUpload';
 
 interface AddLessonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (lesson: { title: string; duration: string; description: string; pdfUrl?: string }) => void;
+  onSave: (lesson: { 
+    title: string; 
+    duration: string; 
+    description: string; 
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
+  }) => void;
   lessonNumber: number;
+  subject: string;
 }
 
-const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber }: AddLessonModalProps) => {
+const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddLessonModalProps) => {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
-  const [pdfUrl, setPdfUrl] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<{
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -27,22 +42,48 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber }: AddLessonModa
         title: title.trim(), 
         duration: duration.trim(), 
         description: description.trim(),
-        pdfUrl: pdfUrl.trim() || undefined
+        fileUrl: uploadedFile?.url,
+        fileName: uploadedFile?.name,
+        fileType: uploadedFile?.type,
+        fileSize: uploadedFile?.size,
       });
-      setTitle('');
-      setDuration('');
-      setDescription('');
-      setPdfUrl('');
+      resetForm();
       onClose();
     }
   };
 
-  const handleClose = () => {
+  const resetForm = () => {
     setTitle('');
     setDuration('');
     setDescription('');
-    setPdfUrl('');
+    setUploadedFile(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
+  };
+
+  const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
+    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+  };
+
+  const getFileTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      pdf: 'PDF',
+      doc: 'Word',
+      docx: 'Word',
+      xls: 'Excel',
+      xlsx: 'Excel',
+      ppt: 'PowerPoint',
+      pptx: 'PowerPoint',
+      txt: 'Text',
+      csv: 'CSV',
+      jpg: 'Imagine',
+      jpeg: 'Imagine',
+      png: 'Imagine',
+    };
+    return labels[type.toLowerCase()] || type.toUpperCase();
   };
 
   return (
@@ -54,7 +95,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber }: AddLessonModa
       />
       
       {/* Modal */}
-      <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-md mx-4 animate-scale-in max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <div>
@@ -107,25 +148,42 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber }: AddLessonModa
             />
           </div>
 
-          {/* PDF URL Field */}
+          {/* File Upload Section */}
           <div className="space-y-2">
-            <Label htmlFor="pdfUrl" className="flex items-center gap-2">
+            <Label className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gold" />
-              Link PDF (opțional)
+              Încarcă fișier (opțional)
             </Label>
-            <div className="relative">
-              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="pdfUrl"
-                placeholder="https://example.com/lectie.pdf"
-                value={pdfUrl}
-                onChange={(e) => setPdfUrl(e.target.value)}
-                className="bg-background pl-10"
+            
+            {uploadedFile ? (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-gold" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                      {uploadedFile.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setUploadedFile(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <FileUpload
+                onUploadComplete={handleUploadComplete}
+                category="lesson"
+                subject={subject}
               />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Adaugă un link către un fișier PDF pentru această lecție
-            </p>
+            )}
           </div>
 
           {/* Actions */}
