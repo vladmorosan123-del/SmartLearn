@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit, Calculator, Atom, BookMarked, X, Eye, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon } from 'lucide-react';
+import { Plus, Trash2, Pencil, Calculator, Atom, BookMarked, X, Eye, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
 import FileUpload from '@/components/FileUpload';
@@ -58,8 +60,10 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [editTitle, setEditTitle] = useState('');
 
-  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject,
     category: 'formula',
   });
@@ -116,6 +120,24 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
 
   const handleDeleteFormula = async (material: Material) => {
     await deleteMaterial(material.id, material.file_url);
+  };
+
+  const handleEditFormula = (material: Material) => {
+    setEditingMaterial(material);
+    setEditTitle(material.title);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMaterial || !editTitle.trim()) return;
+
+    try {
+      await updateMaterial(editingMaterial.id, { title: editTitle.trim() });
+      toast({ title: 'Actualizat', description: 'Titlul a fost modificat cu succes.' });
+      setEditingMaterial(null);
+      setEditTitle('');
+    } catch (error) {
+      console.error('Error updating formula:', error);
+    }
   };
 
   const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
@@ -202,14 +224,24 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
                               <Eye className="w-3 h-3" />
                             </Button>
                             {isProfessor && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => handleDeleteFormula(material)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleEditFormula(material)}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  onClick={() => handleDeleteFormula(material)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -292,6 +324,49 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
                 Anulează
               </Button>
               <Button variant="gold" className="flex-1" onClick={handleSaveFormula} disabled={!uploadedFile}>
+                Salvează
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={!!editingMaterial} onOpenChange={(open) => !open && setEditingMaterial(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-gold" />
+              Editează fișier
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-formula-title">Titlu</Label>
+              <Input
+                id="edit-formula-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Titlul fișierului..."
+              />
+            </div>
+            
+            {editingMaterial && (
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                {getFileIcon(editingMaterial.file_type)}
+                <div>
+                  <p className="text-sm font-medium text-foreground truncate">{editingMaterial.file_name}</p>
+                  <p className="text-xs text-muted-foreground">{getFileTypeLabel(editingMaterial.file_type)}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setEditingMaterial(null)}>
+                Anulează
+              </Button>
+              <Button variant="gold" className="flex-1 gap-2" onClick={handleSaveEdit} disabled={!editTitle.trim()}>
+                <Save className="w-4 h-4" />
                 Salvează
               </Button>
             </div>
