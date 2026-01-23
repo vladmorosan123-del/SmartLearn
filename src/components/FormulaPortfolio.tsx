@@ -1,19 +1,11 @@
-import { useState } from 'react';
-import { Plus, Trash2, Edit, Calculator, Atom, BookMarked, Image, Upload, X } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Trash2, Edit, Calculator, Atom, BookMarked, X, Eye, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-
-interface FormulaCategory {
-  id: string;
-  name: string;
-  imageUrl: string | null;
-  status: 'uploaded' | 'not-uploaded';
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useMaterials, Material } from '@/hooks/useMaterials';
+import { useToast } from '@/hooks/use-toast';
+import FileUpload from '@/components/FileUpload';
+import FileViewer from '@/components/FileViewer';
 
 interface FormulaPortfolioProps {
   subject: 'matematica' | 'fizica';
@@ -39,60 +31,101 @@ const categoryDefinitions: Record<'matematica' | 'fizica', { id: string; name: s
   ],
 };
 
-const createInitialCategories = (subject: 'matematica' | 'fizica'): FormulaCategory[] =>
-  categoryDefinitions[subject].map(cat => ({
-    id: cat.id,
-    name: cat.name,
-    imageUrl: null,
-    status: 'not-uploaded' as const,
-  }));
+const getFileIcon = (fileType?: string) => {
+  if (!fileType) return <FileText className="w-4 h-4" />;
+  const type = fileType.toLowerCase();
+  if (type === 'jpg' || type === 'jpeg' || type === 'png') return <ImageIcon className="w-4 h-4" />;
+  if (type === 'pdf') return <FileText className="w-4 h-4" />;
+  if (type === 'xls' || type === 'xlsx' || type === 'csv') return <FileSpreadsheet className="w-4 h-4" />;
+  if (type === 'doc' || type === 'docx') return <FileTypeIcon className="w-4 h-4" />;
+  if (type === 'ppt' || type === 'pptx') return <Presentation className="w-4 h-4" />;
+  return <File className="w-4 h-4" />;
+};
+
+const getFileTypeLabel = (type?: string) => {
+  if (!type) return 'Fișier';
+  const labels: Record<string, string> = {
+    pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
+    ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
+    jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+  };
+  return labels[type.toLowerCase()] || type.toUpperCase();
+};
 
 const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
-  const [categories, setCategories] = useState<FormulaCategory[]>(createInitialCategories(subject));
+  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState('');
-  const [viewingImage, setViewingImage] = useState<{ name: string; url: string } | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+
+  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+    subject,
+    category: 'formula',
+  });
 
   const SubjectIcon = subject === 'matematica' ? Calculator : Atom;
   const subjectName = subject === 'matematica' ? 'Matematică' : 'Fizică';
+  const categories = categoryDefinitions[subject];
+
+  // Group materials by genre (category id)
+  const materialsByCategory = useMemo(() => {
+    const grouped: Record<string, Material[]> = {};
+    materials.forEach(m => {
+      const cat = m.genre || 'other';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(m);
+    });
+    return grouped;
+  }, [materials]);
 
   const handleUploadImage = (categoryId: string) => {
-    const existingCategory = categories.find(c => c.id === categoryId);
-    setImageUrl(existingCategory?.imageUrl || '');
     setSelectedCategoryId(categoryId);
+    setUploadedFile(null);
     setIsModalOpen(true);
   };
 
-  const handleSaveImage = () => {
-    if (!imageUrl.trim() || selectedCategoryId === null) return;
+  const handleSaveFormula = async () => {
+    if (!uploadedFile || !selectedCategoryId) return;
 
-    setCategories(prev =>
-      prev.map(category =>
-        category.id === selectedCategoryId
-          ? { ...category, imageUrl: imageUrl.trim(), status: 'uploaded' as const }
-          : category
-      )
-    );
-    setIsModalOpen(false);
-    setImageUrl('');
-    setSelectedCategoryId(null);
+    const categoryName = categories.find(c => c.id === selectedCategoryId)?.name || '';
+
+    try {
+      await addMaterial({
+        title: `Formule ${categoryName}`,
+        description: categoryName,
+        file_name: uploadedFile.name,
+        file_type: uploadedFile.type,
+        file_url: uploadedFile.url,
+        file_size: uploadedFile.size,
+        subject,
+        category: 'formula',
+        lesson_number: null,
+        author: null,
+        genre: selectedCategoryId,
+        year: null,
+      });
+      toast({ title: 'Formule salvate', description: 'Formulele au fost salvate cu succes.' });
+      setIsModalOpen(false);
+      setUploadedFile(null);
+      setSelectedCategoryId(null);
+    } catch (error) {
+      console.error('Error saving formula:', error);
+    }
   };
 
-  const handleDeleteImage = (categoryId: string) => {
-    setCategories(prev =>
-      prev.map(category =>
-        category.id === categoryId
-          ? { ...category, imageUrl: null, status: 'not-uploaded' as const }
-          : category
-      )
-    );
+  const handleDeleteFormula = async (material: Material) => {
+    await deleteMaterial(material.id, material.file_url);
   };
 
-  const uploadedCategories = categories.filter(c => c.status === 'uploaded');
+  const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
+    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+  };
+
+  const uploadedCategories = categories.filter(c => materialsByCategory[c.id]?.length > 0);
 
   return (
-    <section className="mt-12 animate-fade-up">
+    <section className="animate-fade-up">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-gold to-gold/70 rounded-lg flex items-center justify-center">
@@ -109,140 +142,156 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-card rounded-lg p-4 border border-border">
           <p className="text-2xl font-bold text-gold">{uploadedCategories.length}</p>
-          <p className="text-xs text-muted-foreground">Categorii încărcate</p>
+          <p className="text-xs text-muted-foreground">Categorii cu fișiere</p>
         </div>
         <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-2xl font-bold text-foreground">{categories.length}</p>
-          <p className="text-xs text-muted-foreground">Total categorii</p>
+          <p className="text-2xl font-bold text-foreground">{materials.length}</p>
+          <p className="text-xs text-muted-foreground">Total fișiere încărcate</p>
         </div>
       </div>
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories.map(category => (
-          <div
-            key={category.id}
-            className={`bg-card rounded-xl border border-border overflow-hidden transition-all duration-300 hover:border-gold/50 hover:shadow-gold ${
-              category.status === 'not-uploaded' ? 'opacity-70' : ''
-            }`}
-          >
-            {/* Category Header */}
-            <div className="p-4 border-b border-border bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <SubjectIcon className="w-5 h-5 text-gold" />
-                  <h3 className="font-display text-lg text-foreground">{category.name}</h3>
+      {isLoading ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Se încarcă...</p>
+        </div>
+      ) : (
+        /* Categories Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map(category => {
+            const categoryMaterials = materialsByCategory[category.id] || [];
+            const hasFiles = categoryMaterials.length > 0;
+
+            return (
+              <div
+                key={category.id}
+                className={`bg-card rounded-xl border border-border overflow-hidden transition-all duration-300 hover:border-gold/50 hover:shadow-gold ${!hasFiles ? 'opacity-70' : ''}`}
+              >
+                {/* Category Header */}
+                <div className="p-4 border-b border-border bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <SubjectIcon className="w-5 h-5 text-gold" />
+                      <h3 className="font-display text-lg text-foreground">{category.name}</h3>
+                    </div>
+                    {isProfessor && hasFiles && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUploadImage(category.id)}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                {isProfessor && category.status === 'uploaded' && (
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUploadImage(category.id)}>
-                      <Edit className="w-4 h-4" />
+
+                {/* Files List */}
+                <div className="p-4">
+                  {hasFiles ? (
+                    <div className="space-y-2">
+                      {categoryMaterials.map(material => (
+                        <div key={material.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {getFileIcon(material.file_type)}
+                            <span className="text-sm text-foreground truncate">{material.file_name}</span>
+                            <span className="text-xs text-muted-foreground">{getFileTypeLabel(material.file_type)}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                            {isProfessor && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => handleDeleteFormula(material)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Niciun fișier încărcat</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Button for Professors */}
+                {isProfessor && !hasFiles && (
+                  <div className="p-4 border-t border-border">
+                    <Button variant="gold" className="w-full gap-2" onClick={() => handleUploadImage(category.id)}>
+                      <Plus className="w-4 h-4" />
+                      Încarcă fișier
                     </Button>
+                  </div>
+                )}
+
+                {/* View Button for Students */}
+                {!isProfessor && hasFiles && (
+                  <div className="p-4 border-t border-border">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => handleDeleteImage(category.id)}
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        const first = categoryMaterials[0];
+                        setViewingFile({ url: first.file_url, name: first.file_name, type: first.file_type });
+                      }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Eye className="w-4 h-4" />
+                      Vezi formule
                     </Button>
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Image Area */}
-            <div className="aspect-[4/3] relative">
-              {category.status === 'uploaded' && category.imageUrl ? (
-                <img
-                  src={category.imageUrl}
-                  alt={`Formule ${category.name}`}
-                  className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setViewingImage({ name: category.name, url: category.imageUrl! })}
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground">
-                  <Image className="w-12 h-12 mb-2 opacity-50" />
-                  <p className="text-sm">Nicio imagine încărcată</p>
-                </div>
-              )}
-            </div>
-
-            {/* Upload Button for Professors */}
-            {isProfessor && category.status === 'not-uploaded' && (
-              <div className="p-4 border-t border-border">
-                <Button
-                  variant="gold"
-                  className="w-full gap-2"
-                  onClick={() => handleUploadImage(category.id)}
-                >
-                  <Upload className="w-4 h-4" />
-                  Încarcă imagine
-                </Button>
-              </div>
-            )}
-
-            {/* View Button for Students */}
-            {!isProfessor && category.status === 'uploaded' && (
-              <div className="p-4 border-t border-border">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => setViewingImage({ name: category.name, url: category.imageUrl! })}
-                >
-                  <Image className="w-4 h-4" />
-                  Vezi formule
-                </Button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Upload Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">
-              Încarcă imagine pentru {categories.find(c => c.id === selectedCategoryId)?.name}
+              Încarcă fișier pentru {categories.find(c => c.id === selectedCategoryId)?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">URL Imagine *</label>
-              <input
-                type="url"
-                placeholder="https://example.com/formule.jpg"
-                value={imageUrl}
-                onChange={e => setImageUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Introduceți URL-ul imaginii cu formulele pentru această categorie
-              </p>
-            </div>
-
-            {imageUrl && (
-              <div className="border border-border rounded-lg overflow-hidden">
-                <img
-                  src={imageUrl}
-                  alt="Preview"
-                  className="w-full h-40 object-cover"
-                  onError={e => (e.currentTarget.style.display = 'none')}
-                />
+            {uploadedFile ? (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-3">
+                  {getFileIcon(uploadedFile.type)}
+                  <div>
+                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{uploadedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
+            ) : (
+              <FileUpload
+                onUploadComplete={handleUploadComplete}
+                category="formula"
+                subject={subject}
+              />
             )}
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
                 Anulează
               </Button>
-              <Button
-                variant="gold"
-                className="flex-1"
-                onClick={handleSaveImage}
-                disabled={!imageUrl.trim()}
-              >
+              <Button variant="gold" className="flex-1" onClick={handleSaveFormula} disabled={!uploadedFile}>
                 Salvează
               </Button>
             </div>
@@ -250,36 +299,15 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Image Viewer Modal */}
-      {viewingImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setViewingImage(null)} />
-          <div className="relative max-w-4xl max-h-[90vh] w-full">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute -top-12 right-0 text-white hover:bg-white/20"
-              onClick={() => setViewingImage(null)}
-            >
-              <X className="w-6 h-6" />
-            </Button>
-            <div className="bg-card rounded-xl overflow-hidden shadow-elegant">
-              <div className="p-4 border-b border-border bg-muted/30">
-                <h3 className="font-display text-xl text-foreground flex items-center gap-2">
-                  <SubjectIcon className="w-5 h-5 text-gold" />
-                  Formule - {viewingImage.name}
-                </h3>
-              </div>
-              <div className="max-h-[70vh] overflow-auto">
-                <img
-                  src={viewingImage.url}
-                  alt={`Formule ${viewingImage.name}`}
-                  className="w-full h-auto"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* File Viewer Modal */}
+      {viewingFile && (
+        <FileViewer
+          isOpen={!!viewingFile}
+          onClose={() => setViewingFile(null)}
+          fileUrl={viewingFile.url}
+          fileName={viewingFile.name}
+          fileType={viewingFile.type}
+        />
       )}
     </section>
   );
