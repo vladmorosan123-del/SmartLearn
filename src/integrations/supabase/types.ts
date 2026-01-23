@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       materials: {
         Row: {
+          answer_key: Json | null
           author: string | null
           category: string
           created_at: string
@@ -33,6 +34,7 @@ export type Database = {
           year: number | null
         }
         Insert: {
+          answer_key?: Json | null
           author?: string | null
           category: string
           created_at?: string
@@ -50,6 +52,7 @@ export type Database = {
           year?: number | null
         }
         Update: {
+          answer_key?: Json | null
           author?: string | null
           category?: string
           created_at?: string

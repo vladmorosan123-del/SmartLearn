@@ -16,6 +16,7 @@ export interface Material {
   author: string | null;
   genre: string | null;
   year: number | null;
+  answer_key?: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +30,11 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  // Helper to convert Supabase data to Material type
+  const mapToMaterial = (data: any): Material => ({
+    ...data,
+    answer_key: Array.isArray(data.answer_key) ? data.answer_key : null,
+  });
 
   const fetchMaterials = useCallback(async () => {
     try {
@@ -41,7 +47,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMaterials(data || []);
+      setMaterials((data || []).map(mapToMaterial));
     } catch (error: any) {
       console.error('Error fetching materials:', error);
       toast({
@@ -68,8 +74,8 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
       if (error) throw error;
       
-      setMaterials(prev => [data, ...prev]);
-      return data;
+      setMaterials(prev => [mapToMaterial(data), ...prev]);
+      return mapToMaterial(data);
     } catch (error: any) {
       console.error('Error adding material:', error);
       toast({
@@ -92,8 +98,8 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
       if (error) throw error;
       
-      setMaterials(prev => prev.map(m => m.id === id ? data : m));
-      return data;
+      setMaterials(prev => prev.map(m => m.id === id ? mapToMaterial(data) : m));
+      return mapToMaterial(data);
     } catch (error: any) {
       console.error('Error updating material:', error);
       toast({
