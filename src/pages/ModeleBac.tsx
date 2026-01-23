@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, FileText, Eye, Plus, 
-  Search, Filter, Calendar, Trash2, Edit, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon
+  Search, Filter, Calendar, Trash2, Pencil, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -10,6 +10,7 @@ import { useApp, Subject } from '@/contexts/AppContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
+import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
 
 const subjectNames: Record<Subject, string> = {
@@ -47,13 +48,14 @@ const ModeleBac = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<Subject>(subject || 'informatica');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
 
   const isProfessor = role === 'profesor';
 
-  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject: selectedSubject,
     category: 'bac_model',
   });
@@ -142,6 +144,26 @@ const ModeleBac = () => {
 
   const handleDeleteMaterial = async (material: Material) => {
     await deleteMaterial(material.id, material.file_url);
+  };
+
+  const handleEditMaterial = async (data: {
+    title: string;
+    description: string;
+    year?: number;
+  }) => {
+    if (!editingMaterial) return;
+    
+    try {
+      await updateMaterial(editingMaterial.id, {
+        title: data.title,
+        description: data.description,
+        year: data.year || null,
+      });
+      toast({ title: 'Model actualizat', description: 'Modificările au fost salvate cu succes.' });
+      setEditingMaterial(null);
+    } catch (error) {
+      console.error('Error updating material:', error);
+    }
   };
 
   return (
@@ -333,6 +355,13 @@ const ModeleBac = () => {
                               Vezi
                             </Button>
                             <Button 
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => setEditingMaterial(model)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                              Editează
+                            </Button>
+                            <Button 
                               variant="ghost" size="icon" className="text-destructive"
                               onClick={() => handleDeleteMaterial(model)}
                             >
@@ -367,6 +396,15 @@ const ModeleBac = () => {
           title="Încarcă Model BAC"
           category="bac_model"
           subject={selectedSubject}
+          showYear={true}
+        />
+
+        {/* Edit Modal */}
+        <EditMaterialModal
+          isOpen={!!editingMaterial}
+          onClose={() => setEditingMaterial(null)}
+          onSave={handleEditMaterial}
+          material={editingMaterial}
           showYear={true}
         />
 
