@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Filter, 
-  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText
+  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -107,6 +107,7 @@ const TesteAcademii = () => {
     fileName: string;
     fileType: string;
     fileSize: number;
+    answerKey?: string[];
   }) => {
     try {
       await addMaterial({
@@ -122,6 +123,7 @@ const TesteAcademii = () => {
         author: null,
         genre: null,
         year: data.year || null,
+        answer_key: data.answerKey || null,
       });
       toast({ title: 'Material salvat', description: 'Materialul TVC a fost salvat cu succes.' });
     } catch (error) {
@@ -275,6 +277,12 @@ const TesteAcademii = () => {
                                 {getFileIcon(material.file_type)}
                                 {getFileTypeLabel(material.file_type)}
                               </span>
+                              {material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0 && (
+                                <span className="text-xs bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <ClipboardCheck className="w-3 h-3" />
+                                  Grilă ({material.answer_key.length} întrebări)
+                                </span>
+                              )}
                             </div>
                           </>
                         )}
@@ -340,6 +348,7 @@ const TesteAcademii = () => {
           category="tvc"
           subject={selectedSubject}
           showYear={true}
+          showAnswerKey={true}
         />
 
         {/* File Viewer */}
@@ -358,6 +367,7 @@ const TesteAcademii = () => {
           <TVCTimer 
             subjectTitle={timerMaterial.title}
             pdfUrl={timerMaterial.file_url}
+            answerKey={timerMaterial.answer_key}
             onClose={() => setTimerMaterial(null)} 
           />
         )}
