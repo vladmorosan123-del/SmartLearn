@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, Award, Upload, Search, Filter, 
-  Calendar, Clock, FileText, Plus, Trash2, BookOpen
+  ArrowLeft, Shield, Award, Search, Filter, 
+  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useMaterials, Material } from '@/hooks/useMaterials';
+import { useToast } from '@/hooks/use-toast';
+import UploadMaterialModal from '@/components/UploadMaterialModal';
+import FileViewer from '@/components/FileViewer';
 import TVCTimer from '@/components/TVCTimer';
 
-// Subjects that have TVC tests (excluding romana)
 const tvcSubjects: Subject[] = ['informatica', 'matematica', 'fizica'];
 
 const subjectNames: Record<Subject, string> = {
@@ -18,94 +21,116 @@ const subjectNames: Record<Subject, string> = {
   fizica: 'Fizică',
 };
 
-interface TVCMaterial {
-  id: number;
-  title: string | null;
-  type: 'subiect' | 'material' | 'pdf';
-  year?: number;
-  description?: string;
-  status: 'uploaded' | 'not-uploaded';
-}
+const getFileIcon = (fileType?: string) => {
+  if (!fileType) return <FileText className="w-3 h-3" />;
+  const type = fileType.toLowerCase();
+  if (type === 'jpg' || type === 'jpeg' || type === 'png') return <Image className="w-3 h-3" />;
+  if (type === 'pdf') return <FileText className="w-3 h-3" />;
+  if (type === 'xls' || type === 'xlsx' || type === 'csv') return <FileSpreadsheet className="w-3 h-3" />;
+  if (type === 'doc' || type === 'docx') return <FileTypeIcon className="w-3 h-3" />;
+  if (type === 'ppt' || type === 'pptx') return <Presentation className="w-3 h-3" />;
+  return <File className="w-3 h-3" />;
+};
 
-// 10 slots for each subject
-const createEmptySlots = (): TVCMaterial[] => 
-  Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    title: null,
-    type: 'subiect',
-    status: 'not-uploaded',
-  }));
-
-const initialTVCData: Record<Subject, TVCMaterial[]> = {
-  informatica: [
-    { id: 1, title: 'Subiect TVC 2024 - Sesiunea I', type: 'subiect', year: 2024, status: 'uploaded' },
-    { id: 2, title: 'Culegere probleme TVC', type: 'pdf', status: 'uploaded' },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 3,
-      title: null,
-      type: 'subiect' as const,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  romana: createEmptySlots(), // Not used, but kept for type consistency
-  matematica: [
-    { id: 1, title: 'Subiect TVC Matematică 2024', type: 'subiect', year: 2024, status: 'uploaded' },
-    ...Array.from({ length: 9 }, (_, i) => ({
-      id: i + 2,
-      title: null,
-      type: 'subiect' as const,
-      status: 'not-uploaded' as const,
-    })),
-  ],
-  fizica: createEmptySlots(),
+const getFileTypeLabel = (type?: string) => {
+  if (!type) return 'Fișier';
+  const labels: Record<string, string> = {
+    pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
+    ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
+    jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+  };
+  return labels[type.toLowerCase()] || type.toUpperCase();
 };
 
 const TesteAcademii = () => {
   const { role, subject } = useApp();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<Subject>(
     subject && tvcSubjects.includes(subject) ? subject : 'informatica'
   );
-  const [tvcData, setTvcData] = useState(initialTVCData);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
-  const [newMaterial, setNewMaterial] = useState<{ title: string; type: 'subiect' | 'material' | 'pdf'; description: string }>({ title: '', type: 'subiect', description: '' });
-  const [timerSubject, setTimerSubject] = useState<string | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
   const isProfessor = role === 'profesor';
-  const currentMaterials = tvcData[selectedSubject];
 
-  const handleAddMaterial = (slotId: number) => {
-    setSelectedSlotId(slotId);
-    setIsAddModalOpen(true);
+  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+    subject: selectedSubject,
+    category: 'tvc',
+  });
+
+  // Filter models based on search
+  const filteredMaterials = useMemo(() => {
+    if (!searchQuery.trim()) return materials;
+    return materials.filter(m => 
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [materials, searchQuery]);
+
+  // Add empty slots
+  const displayMaterials = useMemo(() => {
+    const mats = [...filteredMaterials];
+    if (!searchQuery && isProfessor) {
+      const emptySlots = Math.max(0, 10 - materials.length);
+      for (let i = 0; i < emptySlots; i++) {
+        mats.push({
+          id: `empty-${i}`,
+          title: '',
+          description: null,
+          file_name: '',
+          file_type: '',
+          file_url: '',
+          file_size: null,
+          subject: selectedSubject,
+          category: 'tvc',
+          lesson_number: null,
+          author: null,
+          genre: null,
+          year: null,
+          created_at: '',
+          updated_at: '',
+          _isEmpty: true,
+        } as Material & { _isEmpty?: boolean });
+      }
+    }
+    return mats;
+  }, [filteredMaterials, searchQuery, isProfessor, materials.length, selectedSubject]);
+
+  const handleSaveMaterial = async (data: {
+    title: string;
+    description: string;
+    year?: number;
+    fileUrl: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+  }) => {
+    try {
+      await addMaterial({
+        title: data.title,
+        description: data.description,
+        file_name: data.fileName,
+        file_type: data.fileType,
+        file_url: data.fileUrl,
+        file_size: data.fileSize,
+        subject: selectedSubject,
+        category: 'tvc',
+        lesson_number: null,
+        author: null,
+        genre: null,
+        year: data.year || null,
+      });
+      toast({ title: 'Material salvat', description: 'Materialul TVC a fost salvat cu succes.' });
+    } catch (error) {
+      console.error('Error saving material:', error);
+    }
   };
 
-  const handleSaveMaterial = () => {
-    if (!newMaterial.title.trim() || selectedSlotId === null) return;
-
-    setTvcData(prev => ({
-      ...prev,
-      [selectedSubject]: prev[selectedSubject].map(item =>
-        item.id === selectedSlotId
-          ? { ...item, title: newMaterial.title, type: newMaterial.type, description: newMaterial.description, status: 'uploaded' as const }
-          : item
-      ),
-    }));
-    setIsAddModalOpen(false);
-    setNewMaterial({ title: '', type: 'subiect', description: '' });
-    setSelectedSlotId(null);
-  };
-
-  const handleDeleteMaterial = (slotId: number) => {
-    setTvcData(prev => ({
-      ...prev,
-      [selectedSubject]: prev[selectedSubject].map(item =>
-        item.id === slotId
-          ? { ...item, title: null, type: 'subiect', description: undefined, status: 'not-uploaded' as const }
-          : item
-      ),
-    }));
+  const handleDeleteMaterial = async (material: Material) => {
+    await deleteMaterial(material.id, material.file_url);
   };
 
   // Check if current subject has TVC
@@ -182,10 +207,12 @@ const TesteAcademii = () => {
               className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
             />
           </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            Filtrează
-          </Button>
+          {isProfessor && (
+            <Button variant="gold" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Adaugă Material
+            </Button>
+          )}
         </div>
 
         {/* Info Box */}
@@ -193,161 +220,145 @@ const TesteAcademii = () => {
           <h3 className="font-display text-lg text-foreground mb-2">Ce este TVC?</h3>
           <p className="text-muted-foreground">
             Testul de Verificare a Cunoștințelor (TVC) este examenul unitar de admitere pentru toate academiile militare din România. 
-            Aici găsești subiecte, materiale de pregătire și PDF-uri din cărți pentru {subjectNames[selectedSubject]}.
+            Aici găsești subiecte, materiale de pregătire și fișiere pentru {subjectNames[selectedSubject]}.
           </p>
         </div>
 
-        {/* Materials List - 10 Slots */}
+        {/* Materials List */}
         <div className="space-y-4 animate-fade-up delay-400">
-          <h2 className="font-display text-2xl text-foreground mb-4">
-            Materiale TVC - {subjectNames[selectedSubject]} (10 sloturi)
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-2xl text-foreground">
+              Materiale TVC - {subjectNames[selectedSubject]}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {materials.length} materiale încărcate
+            </p>
+          </div>
           
-          {currentMaterials.map((material, index) => (
-            <div 
-              key={material.id}
-              className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${material.status === 'not-uploaded' ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    material.status === 'uploaded' ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <span className="font-bold">{index + 1}</span>
-                  </div>
-                  <div>
-                    {material.status === 'not-uploaded' ? (
-                      <h3 className="font-medium text-muted-foreground italic">Materialul nu a fost încărcat</h3>
-                    ) : (
-                      <>
-                        <h3 className="font-medium text-foreground">{material.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            material.type === 'subiect' ? 'bg-primary/10 text-primary' :
-                            material.type === 'pdf' ? 'bg-rose-500/10 text-rose-600' :
-                            'bg-gold/10 text-gold'
-                          }`}>
-                            {material.type === 'subiect' ? 'Subiect' : material.type === 'pdf' ? 'PDF Carte' : 'Material'}
-                          </span>
-                          {material.year && (
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {material.year}
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isProfessor ? (
-                    material.status === 'not-uploaded' ? (
-                      <Button 
-                        variant="gold" 
-                        size="sm" 
-                        className="gap-2"
-                        onClick={() => handleAddMaterial(material.id)}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Încarcă
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-destructive"
-                        onClick={() => handleDeleteMaterial(material.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )
-                  ) : (
-                    material.status === 'uploaded' && (
-                      <Button 
-                        variant="gold" 
-                        size="sm"
-                        onClick={() => material.type === 'subiect' && material.title ? setTimerSubject(material.title) : null}
-                      >
-                        {material.type === 'subiect' ? 'Începe cu Timer' : 'Deschide'}
-                      </Button>
-                    )
-                  )}
-                </div>
-              </div>
+          {isLoading ? (
+            <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
+              <p className="text-muted-foreground">Se încarcă...</p>
             </div>
-          ))}
+          ) : displayMaterials.length === 0 ? (
+            <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-medium text-foreground mb-2">Niciun material găsit</h3>
+              <p className="text-muted-foreground text-sm">Nu există materiale TVC încărcate încă</p>
+            </div>
+          ) : (
+            displayMaterials.map((material, index) => {
+              const isEmpty = (material as any)._isEmpty;
+              return (
+                <div 
+                  key={material.id}
+                  className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300 ${isEmpty ? 'opacity-60' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${!isEmpty ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'}`}>
+                        <span className="font-bold">{index + 1}</span>
+                      </div>
+                      <div>
+                        {isEmpty ? (
+                          <h3 className="font-medium text-muted-foreground italic">Materialul nu a fost încărcat</h3>
+                        ) : (
+                          <>
+                            <h3 className="font-medium text-foreground">{material.title}</h3>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {material.year && (
+                                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {material.year}
+                                </span>
+                              )}
+                              <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
+                                {getFileIcon(material.file_type)}
+                                {getFileTypeLabel(material.file_type)}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isProfessor ? (
+                        isEmpty ? (
+                          <Button variant="gold" size="sm" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+                            <Plus className="w-4 h-4" />
+                            Încarcă
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Vezi
+                            </Button>
+                            <Button 
+                              variant="ghost" size="icon" className="text-destructive"
+                              onClick={() => handleDeleteMaterial(material)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )
+                      ) : (
+                        !isEmpty && (
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Vezi
+                            </Button>
+                            <Button 
+                              variant="gold" size="sm"
+                              onClick={() => setTimerMaterial(material)}
+                            >
+                              Începe cu Timer
+                            </Button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
-        {/* Add Modal */}
-        {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div 
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsAddModalOpen(false)}
-            />
-            <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-md mx-4 p-6 animate-scale-in">
-              <h2 className="font-display text-xl text-foreground mb-4">Încarcă Material TVC</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Titlu *</label>
-                  <input
-                    type="text"
-                    placeholder="ex: Subiect TVC 2024"
-                    value={newMaterial.title}
-                    onChange={(e) => setNewMaterial(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                </div>
+        {/* Upload Modal */}
+        <UploadMaterialModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSave={handleSaveMaterial}
+          title="Încarcă Material TVC"
+          category="tvc"
+          subject={selectedSubject}
+          showYear={true}
+        />
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Tip material</label>
-                  <select
-                    value={newMaterial.type}
-                    onChange={(e) => setNewMaterial(prev => ({ ...prev, type: e.target.value as 'subiect' | 'material' | 'pdf' }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  >
-                    <option value="subiect">Subiect TVC</option>
-                    <option value="material">Material de pregătire</option>
-                    <option value="pdf">PDF din carte</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Descriere (opțional)</label>
-                  <textarea
-                    placeholder="Descriere scurtă..."
-                    value={newMaterial.description}
-                    onChange={(e) => setNewMaterial(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setIsAddModalOpen(false)}>
-                    Anulează
-                  </Button>
-                  <Button 
-                    variant="gold" 
-                    className="flex-1"
-                    onClick={handleSaveMaterial}
-                    disabled={!newMaterial.title.trim()}
-                  >
-                    Salvează
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* File Viewer */}
+        {viewingFile && (
+          <FileViewer
+            isOpen={!!viewingFile}
+            onClose={() => setViewingFile(null)}
+            fileUrl={viewingFile.url}
+            fileName={viewingFile.name}
+            fileType={viewingFile.type}
+          />
         )}
 
         {/* Timer Modal */}
-        {timerSubject && (
+        {timerMaterial && (
           <TVCTimer 
-            subjectTitle={timerSubject} 
-            onClose={() => setTimerSubject(null)} 
+            subjectTitle={timerMaterial.title}
+            pdfUrl={timerMaterial.file_url}
+            onClose={() => setTimerMaterial(null)} 
           />
         )}
       </main>
