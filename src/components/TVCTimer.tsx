@@ -157,19 +157,17 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
               <Clock className="w-4 h-4" />
               Timer
             </button>
-            {hasAnswerKey && (
-              <button
-                onClick={() => setActiveTab('quiz')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'quiz' 
-                    ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                <ClipboardCheck className="w-4 h-4" />
-                Grilă ({answerKey?.length})
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab('quiz')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'quiz' 
+                  ? 'bg-gold/10 text-gold border-b-2 border-gold' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              Grilă {hasAnswerKey ? `(${answerKey?.length})` : ''}
+            </button>
           </div>
 
           {/* Content Area */}
@@ -269,8 +267,18 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
             ) : (
               /* Quiz Content */
               <div className="p-6">
-                {hasAnswerKey && (
+                {hasAnswerKey ? (
                   <TVCQuizInterface answerKey={answerKey!} />
+                ) : (
+                  <div className="text-center py-12">
+                    <ClipboardCheck className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-display text-lg text-foreground mb-2">
+                      Grilă indisponibilă
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Profesorul nu a adăugat încă baremul pentru acest subiect.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
