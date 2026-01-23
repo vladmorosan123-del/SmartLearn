@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import FileUpload from '@/components/FileUpload';
+import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
 
 interface UploadMaterialModalProps {
   isOpen: boolean;
@@ -16,11 +17,13 @@ interface UploadMaterialModalProps {
     fileName: string;
     fileType: string;
     fileSize: number;
+    answerKey?: string[];
   }) => void;
   title: string;
   category: string;
   subject: string;
   showYear?: boolean;
+  showAnswerKey?: boolean;
 }
 
 const UploadMaterialModal = ({ 
@@ -30,11 +33,13 @@ const UploadMaterialModal = ({
   title: modalTitle,
   category,
   subject,
-  showYear = false 
+  showYear = false,
+  showAnswerKey = false
 }: UploadMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
+  const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [uploadedFile, setUploadedFile] = useState<{
     url: string;
     name: string;
@@ -48,6 +53,7 @@ const UploadMaterialModal = ({
     setTitle('');
     setDescription('');
     setYear(new Date().getFullYear());
+    setAnswerKey(Array(9).fill(''));
     setUploadedFile(null);
   };
 
@@ -60,6 +66,10 @@ const UploadMaterialModal = ({
     e.preventDefault();
     if (!title.trim() || !uploadedFile) return;
 
+    // Validate answer key if required
+    const hasValidAnswerKey = !showAnswerKey || answerKey.every(a => a !== '');
+    if (showAnswerKey && !hasValidAnswerKey) return;
+
     onSave({
       title: title.trim(),
       description: description.trim(),
@@ -68,6 +78,7 @@ const UploadMaterialModal = ({
       fileName: uploadedFile.name,
       fileType: uploadedFile.type,
       fileSize: uploadedFile.size,
+      answerKey: showAnswerKey ? answerKey : undefined,
     });
     resetForm();
     onClose();
@@ -171,6 +182,14 @@ const UploadMaterialModal = ({
             )}
           </div>
 
+          {/* Answer Key Input for TVC */}
+          {showAnswerKey && (
+            <TVCAnswerKeyInput
+              value={answerKey}
+              onChange={setAnswerKey}
+            />
+          )}
+
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
               Anulează
@@ -179,7 +198,7 @@ const UploadMaterialModal = ({
               type="submit" 
               variant="gold"
               className="flex-1"
-              disabled={!title.trim() || !uploadedFile}
+              disabled={!title.trim() || !uploadedFile || (showAnswerKey && !answerKey.every(a => a !== ''))}
             >
               Salvează
             </Button>
