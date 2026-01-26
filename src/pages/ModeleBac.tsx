@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
@@ -43,6 +44,7 @@ const getFileTypeLabel = (type?: string) => {
 
 const ModeleBac = () => {
   const { role, subject } = useApp();
+  const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +55,7 @@ const ModeleBac = () => {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
 
-  const isProfessor = role === 'profesor';
+  const isProfessor = role === 'profesor' || authRole === 'admin';
 
   const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject: selectedSubject,
