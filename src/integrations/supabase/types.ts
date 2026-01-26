@@ -98,6 +98,47 @@ export type Database = {
         }
         Relationships: []
       }
+      tvc_submissions: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          material_id: string
+          score: number
+          submitted_at: string
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          answers: Json
+          created_at?: string
+          id?: string
+          material_id: string
+          score: number
+          submitted_at?: string
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          material_id?: string
+          score?: number
+          submitted_at?: string
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tvc_submissions_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

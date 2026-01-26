@@ -408,6 +408,7 @@ const TesteAcademii = () => {
             subjectTitle={timerMaterial.title}
             pdfUrl={timerMaterial.file_url}
             answerKey={timerMaterial.answer_key}
+            materialId={timerMaterial.id}
             onClose={() => setTimerMaterial(null)} 
           />
         )}
