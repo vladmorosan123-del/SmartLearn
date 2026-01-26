@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, BookMarked } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import FormulaPortfolio from '@/components/FormulaPortfolio';
 
 const PortofoliuFormule = () => {
   const { role, subject } = useApp();
+  const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
-  const isProfessor = role === 'profesor';
+  const isProfessor = role === 'profesor' || authRole === 'admin';
 
   // Only allow math and physics
   if (subject !== 'matematica' && subject !== 'fizica') {
