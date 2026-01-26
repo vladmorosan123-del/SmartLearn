@@ -5,12 +5,14 @@ import {
   Award, TrendingUp, Calendar, Clock, BarChart3, PieChart,
   CheckCircle2, AlertCircle, Upload, Eye, Trash2, Plus,
   GraduationCap, Target, Activity, Layers, Loader2, ClipboardCheck,
-  Search, X
+  Search, X, UserPlus, Timer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import TVCSubmissionsViewer from '@/components/TVCSubmissionsViewer';
+import CreateStudentForm from '@/components/CreateStudentForm';
+import { useStudentProgress } from '@/hooks/useStudentProgress';
 import {
   Table,
   TableBody,
@@ -59,6 +61,7 @@ const AdminPanel = () => {
   const [materialStats, setMaterialStats] = useState<MaterialStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const { students: progressStudents, stats: progressStats, isLoading: isProgressLoading, refetch: refetchProgress, formatTime } = useStudentProgress();
 
   // Fetch real data from database
   useEffect(() => {
@@ -116,8 +119,10 @@ const AdminPanel = () => {
     totalLessons: materialStats ? Object.values(materialStats).reduce((sum, s) => sum + s.lessons, 0) : 0,
     totalBacModels: materialStats ? Object.values(materialStats).reduce((sum, s) => sum + s.bacModels, 0) : 0,
     totalTvcMaterials: materialStats ? Object.values(materialStats).reduce((sum, s) => sum + s.tvcMaterials, 0) : 0,
-    averageProgress: 0,
-    activeToday: students.length,
+    averageProgress: Math.round(progressStats.averageScore),
+    averageTimePerTest: progressStats.averageTimePerTest,
+    averageTimePerLesson: progressStats.averageTimePerLesson,
+    activeToday: progressStats.totalActiveStudents,
     weeklyGrowth: 0,
   };
 
@@ -270,7 +275,7 @@ const AdminPanel = () => {
             </div>
 
             {/* Secondary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-card rounded-xl p-6 border border-border shadow-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium text-foreground">Progres Mediu</h3>
@@ -278,7 +283,6 @@ const AdminPanel = () => {
                 </div>
                 <div className="flex items-end gap-2">
                   <span className="text-4xl font-bold text-foreground">{platformStats.averageProgress}%</span>
-                  <span className="text-emerald-500 text-sm mb-1">+{platformStats.weeklyGrowth}% săptămâna asta</span>
                 </div>
                 <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
                   <div 
@@ -286,34 +290,45 @@ const AdminPanel = () => {
                     style={{ width: `${platformStats.averageProgress}%` }}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">Scor mediu la teste TVC</p>
               </div>
 
               <div className="bg-card rounded-xl p-6 border border-border shadow-card">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-foreground">Activi Astăzi</h3>
-                  <Activity className="w-5 h-5 text-emerald-500" />
+                  <h3 className="font-medium text-foreground">Timp Mediu/Test</h3>
+                  <Timer className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold text-foreground">
+                    {formatTime(platformStats.averageTimePerTest)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Timpul petrecut pe un test TVC</p>
+              </div>
+
+              <div className="bg-card rounded-xl p-6 border border-border shadow-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-foreground">Timp Mediu/Lecție</h3>
+                  <Clock className="w-5 h-5 text-gold" />
+                </div>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold text-foreground">
+                    {formatTime(platformStats.averageTimePerLesson)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Timpul petrecut pe o lecție</p>
+              </div>
+
+              <div className="bg-card rounded-xl p-6 border border-border shadow-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-foreground">Elevi Activi</h3>
+                  <Activity className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex items-end gap-2">
                   <span className="text-4xl font-bold text-foreground">{platformStats.activeToday}</span>
-                  <span className="text-muted-foreground text-sm mb-1">din {platformStats.totalStudents} elevi</span>
+                  <span className="text-muted-foreground text-sm mb-1">/ {platformStats.totalStudents}</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {Math.round((platformStats.activeToday / platformStats.totalStudents) * 100)}% rată de activitate
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border border-border shadow-card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-foreground">Profesori</h3>
-                  <GraduationCap className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-bold text-foreground">{platformStats.totalProfessors}</span>
-                  <span className="text-muted-foreground text-sm mb-1">profesori activi</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  ~{Math.round(platformStats.totalStudents / platformStats.totalProfessors)} elevi/profesor
-                </p>
+                <p className="text-xs text-muted-foreground mt-2">Elevi cu activitate pe platformă</p>
               </div>
             </div>
 
@@ -460,6 +475,16 @@ const AdminPanel = () => {
         {/* Students Tab */}
         {activeTab === 'students' && (
           <div className="space-y-6 animate-fade-up">
+            {/* Create Student Form */}
+            <CreateStudentForm onStudentCreated={() => {
+              // Refetch students after creation
+              supabase.from('profiles').select('*').order('created_at', { ascending: false })
+                .then(({ data }) => {
+                  if (data) setStudents(data as StudentProfile[]);
+                });
+              refetchProgress();
+            }} />
+
             <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
@@ -489,7 +514,13 @@ const AdminPanel = () => {
               </div>
               <div className="overflow-x-auto">
                 {(() => {
-                  const filteredStudents = students.filter((student) => {
+                  // Merge students with progress data
+                  const studentsWithProgress = students.map(student => {
+                    const progress = progressStudents.find(p => p.userId === student.user_id);
+                    return { ...student, progress };
+                  });
+
+                  const filteredStudents = studentsWithProgress.filter((student) => {
                     const searchLower = studentSearchQuery.toLowerCase();
                     return (
                       student.username.toLowerCase().includes(searchLower) ||
@@ -505,6 +536,9 @@ const AdminPanel = () => {
                             <TableHead className="w-12">#</TableHead>
                             <TableHead>Utilizator</TableHead>
                             <TableHead>Nume Complet</TableHead>
+                            <TableHead className="text-center">Teste</TableHead>
+                            <TableHead className="text-center">Scor Mediu</TableHead>
+                            <TableHead className="text-center">Timp Total</TableHead>
                             <TableHead className="text-center">Data Înregistrării</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -521,6 +555,23 @@ const AdminPanel = () => {
                               </TableCell>
                               <TableCell className="font-medium">{student.username}</TableCell>
                               <TableCell>{student.full_name || '-'}</TableCell>
+                              <TableCell className="text-center">
+                                {student.progress?.totalTests || 0}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {student.progress?.averageScore ? (
+                                  <span className={`font-medium ${
+                                    student.progress.averageScore >= 70 ? 'text-primary' :
+                                    student.progress.averageScore >= 50 ? 'text-gold' :
+                                    'text-destructive'
+                                  }`}>
+                                    {Math.round(student.progress.averageScore)}%
+                                  </span>
+                                ) : '-'}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {student.progress?.totalTimeSpent ? formatTime(student.progress.totalTimeSpent) : '-'}
+                              </TableCell>
                               <TableCell className="text-center">
                                 {new Date(student.created_at).toLocaleDateString('ro-RO')}
                               </TableCell>
