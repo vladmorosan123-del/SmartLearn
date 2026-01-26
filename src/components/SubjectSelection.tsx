@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Code, BookText, Calculator, Atom, ArrowLeft, Shield } from 'lucide-react';
+import { Code, BookText, Calculator, Atom, ArrowLeft, Shield, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const subjects = [
   {
@@ -35,7 +37,9 @@ const subjects = [
 ];
 
 const SubjectSelection = () => {
-  const { role, setSubject, setRole } = useApp();
+  const { role, setSubject, setRole, clearSession } = useApp();
+  const { signOut, isAuthenticated, profile } = useAuthContext();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubjectSelect = (subject: Subject) => {
@@ -43,11 +47,25 @@ const SubjectSelection = () => {
     navigate('/dashboard');
   };
 
-  const handleBack = () => {
-    setRole(null);
-    // Clear localStorage when going back
-    localStorage.removeItem('lm_user_role');
+  const handleLogout = async () => {
+    await signOut();
+    clearSession();
+    toast({
+      title: "Deconectat",
+      description: "Ai fost deconectat cu succes.",
+    });
     navigate('/');
+  };
+
+  const handleBack = () => {
+    // If authenticated as student, do full logout
+    if (isAuthenticated && role === 'student') {
+      handleLogout();
+    } else {
+      // For professor (local auth), just clear session
+      clearSession();
+      navigate('/');
+    }
   };
 
   return (
@@ -70,8 +88,21 @@ const SubjectSelection = () => {
             <Shield className="w-8 h-8 text-gold" />
             <span className="font-display text-lg text-foreground">LM Ștefan cel Mare</span>
           </div>
-          <div className="px-4 py-2 bg-primary/10 rounded-full">
-            <span className="text-sm font-medium text-primary capitalize">{role}</span>
+          <div className="flex items-center gap-3">
+            {isAuthenticated && profile && (
+              <span className="text-sm text-muted-foreground">
+                {profile.full_name || profile.username}
+              </span>
+            )}
+            <div className="px-4 py-2 bg-primary/10 rounded-full">
+              <span className="text-sm font-medium text-primary capitalize">{role}</span>
+            </div>
+            {isAuthenticated && (
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2 text-muted-foreground hover:text-destructive">
+                <LogOut className="w-4 h-4" />
+                Ieși
+              </Button>
+            )}
           </div>
         </nav>
 
