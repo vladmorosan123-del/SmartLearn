@@ -1,18 +1,24 @@
 import { useState } from 'react';
-import { CheckCircle, XCircle, Send, RotateCcw } from 'lucide-react';
+import { CheckCircle, XCircle, Send, RotateCcw, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface TVCQuizInterfaceProps {
   answerKey: string[];
+  materialId?: string;
   onComplete?: (score: number, total: number) => void;
 }
 
-const TVCQuizInterface = ({ answerKey, onComplete }: TVCQuizInterfaceProps) => {
+const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfaceProps) => {
   const [userAnswers, setUserAnswers] = useState<string[]>(Array(answerKey.length).fill(''));
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
+  const { toast } = useToast();
 
   const options = ['A', 'B', 'C', 'D'];
 
@@ -23,19 +29,70 @@ const TVCQuizInterface = ({ answerKey, onComplete }: TVCQuizInterfaceProps) => {
     setUserAnswers(newAnswers);
   };
 
-  const handleSubmit = () => {
+  const saveSubmission = async (score: number, total: number) => {
+    if (!materialId) return;
+    
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Neautentificat",
+          description: "Trebuie să fii autentificat pentru a salva răspunsurile.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase.from('tvc_submissions').insert({
+        user_id: user.id,
+        material_id: materialId,
+        answers: userAnswers,
+        score,
+        total_questions: total,
+      });
+
+      if (error) {
+        console.error('Error saving submission:', error);
+        toast({
+          title: "Eroare",
+          description: "Nu s-au putut salva răspunsurile.",
+          variant: "destructive",
+        });
+      } else {
+        setIsSaved(true);
+        toast({
+          title: "Salvat!",
+          description: "Răspunsurile tale au fost salvate cu succes.",
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     const newResults = userAnswers.map((answer, index) => answer === answerKey[index]);
     setResults(newResults);
     setIsSubmitted(true);
     
     const score = newResults.filter(Boolean).length;
     onComplete?.(score, answerKey.length);
+    
+    // Auto-save submission if materialId is available
+    if (materialId) {
+      await saveSubmission(score, answerKey.length);
+    }
   };
 
   const handleReset = () => {
     setUserAnswers(Array(answerKey.length).fill(''));
     setIsSubmitted(false);
     setResults([]);
+    setIsSaved(false);
   };
 
   const score = results.filter(Boolean).length;

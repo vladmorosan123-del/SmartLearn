@@ -4,11 +4,12 @@ import {
   ArrowLeft, Shield, Settings, Users, BookOpen, FileText, 
   Award, TrendingUp, Calendar, Clock, BarChart3, PieChart,
   CheckCircle2, AlertCircle, Upload, Eye, Trash2, Plus,
-  GraduationCap, Target, Activity, Layers, Loader2
+  GraduationCap, Target, Activity, Layers, Loader2, ClipboardCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
+import TVCSubmissionsViewer from '@/components/TVCSubmissionsViewer';
 import {
   Table,
   TableBody,
@@ -52,7 +53,7 @@ const recentActivity = [
 const AdminPanel = () => {
   const { role } = useApp();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'students' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'students' | 'activity' | 'submissions'>('overview');
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [materialStats, setMaterialStats] = useState<MaterialStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -213,6 +214,7 @@ const AdminPanel = () => {
             { id: 'overview', label: 'Privire de ansamblu', icon: BarChart3 },
             { id: 'content', label: 'Gestionare Conținut', icon: Layers },
             { id: 'students', label: 'Elevi', icon: GraduationCap },
+            { id: 'submissions', label: 'Răspunsuri TVC', icon: ClipboardCheck },
             { id: 'activity', label: 'Activitate Recentă', icon: Activity },
           ].map((tab) => (
             <Button
@@ -521,6 +523,13 @@ const AdminPanel = () => {
                 <p className="text-sm text-muted-foreground">Materiale TVC</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Submissions Tab */}
+        {activeTab === 'submissions' && (
+          <div className="animate-fade-up">
+            <TVCSubmissionsViewer />
           </div>
         )}
 

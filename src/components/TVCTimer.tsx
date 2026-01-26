@@ -8,6 +8,7 @@ interface TVCTimerProps {
   onClose: () => void;
   pdfUrl?: string;
   answerKey?: string[] | null;
+  materialId?: string;
 }
 
 const INITIAL_TIME = 3 * 60 * 60; // 3 hours in seconds
@@ -17,7 +18,7 @@ const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 };
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) => {
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey, materialId }: TVCTimerProps) => {
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -268,7 +269,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey }: TVCTimerProps) =
               /* Quiz Content */
               <div className="p-6">
                 {hasAnswerKey ? (
-                  <TVCQuizInterface answerKey={answerKey!} />
+                  <TVCQuizInterface answerKey={answerKey!} materialId={materialId} />
                 ) : (
                   <div className="text-center py-12">
                     <ClipboardCheck className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
