@@ -105,19 +105,8 @@ export const useAuth = () => {
   };
 
   const signInWithUsername = async (username: string, password: string) => {
-    // First, find the user by username
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('username', username)
-      .single();
-
-    if (profileError || !profile) {
-      return { error: { message: 'Utilizator inexistent' } };
-    }
-
-    // Get user email from auth (we need to use a workaround since we can't directly query auth.users)
-    // Instead, we'll use a convention: email = username@lm.local
+    // Use the convention: email = username@lm.local
+    // This allows login without querying the profiles table first (which requires auth)
     const email = `${username}@lm.local`;
     
     const { error } = await supabase.auth.signInWithPassword({
@@ -125,7 +114,15 @@ export const useAuth = () => {
       password,
     });
 
-    return { error };
+    if (error) {
+      // Translate the error message
+      if (error.message === 'Invalid login credentials') {
+        return { error: { message: 'Nume de utilizator sau parolă incorectă' } };
+      }
+      return { error };
+    }
+
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, username: string, fullName?: string, role: AppRole = 'student') => {
