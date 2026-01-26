@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
@@ -15,7 +16,8 @@ type AuthView = 'login' | 'signup' | 'verify-code';
 const AuthProfesor = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading, signInWithUsername, role } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, signInWithUsername, role: authRole } = useAuth();
+  const { setRole } = useApp();
   
   const [view, setView] = useState<AuthView>('login');
   const [username, setUsername] = useState('');
@@ -27,14 +29,14 @@ const AuthProfesor = () => {
   const [codeVerified, setCodeVerified] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Redirect if already authenticated as profesor
+  // Redirect if already authenticated as profesor or admin
   useEffect(() => {
-    if (isAuthenticated && !authLoading && role === 'profesor') {
-      navigate('/materii');
-    } else if (isAuthenticated && !authLoading && role === 'admin') {
+    if (isAuthenticated && !authLoading && (authRole === 'profesor' || authRole === 'admin')) {
+      // Set the role in AppContext so Dashboard can use it
+      setRole(authRole);
       navigate('/materii');
     }
-  }, [isAuthenticated, authLoading, role, navigate]);
+  }, [isAuthenticated, authLoading, authRole, navigate, setRole]);
 
   const validateLoginForm = () => {
     const newErrors: Record<string, string> = {};
@@ -95,7 +97,7 @@ const AuthProfesor = () => {
           title: "Autentificare reușită",
           description: "Bine ai venit!",
         });
-        navigate('/materii');
+        // Role will be set by the useEffect when authRole changes
       }
     } catch (err) {
       toast({
