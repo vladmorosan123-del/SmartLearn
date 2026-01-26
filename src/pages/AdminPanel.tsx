@@ -5,13 +5,15 @@ import {
   Award, TrendingUp, Calendar, Clock, BarChart3, PieChart,
   CheckCircle2, AlertCircle, Upload, Eye, Trash2, Plus,
   GraduationCap, Target, Activity, Layers, Loader2, ClipboardCheck,
-  Search, X, UserPlus, Timer
+  Search, X, UserPlus, Timer, UserCog
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import TVCSubmissionsViewer from '@/components/TVCSubmissionsViewer';
 import CreateStudentForm from '@/components/CreateStudentForm';
+import AdminUserManagement from '@/components/AdminUserManagement';
 import { useStudentProgress } from '@/hooks/useStudentProgress';
 import {
   Table,
@@ -55,9 +57,11 @@ const recentActivity = [
 
 const AdminPanel = () => {
   const { role } = useApp();
+  const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'students' | 'activity' | 'submissions'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'students' | 'activity' | 'submissions' | 'admin'>('overview');
   const [students, setStudents] = useState<StudentProfile[]>([]);
+  const isAdmin = authRole === 'admin';
   const [materialStats, setMaterialStats] = useState<MaterialStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -223,6 +227,7 @@ const AdminPanel = () => {
             { id: 'students', label: 'Elevi', icon: GraduationCap },
             { id: 'submissions', label: 'Răspunsuri TVC', icon: ClipboardCheck },
             { id: 'activity', label: 'Activitate Recentă', icon: Activity },
+            ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: UserCog }] : []),
           ].map((tab) => (
             <Button
               key={tab.id}
@@ -669,6 +674,13 @@ const AdminPanel = () => {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Admin Tab - Only visible for admins */}
+        {activeTab === 'admin' && isAdmin && (
+          <div className="animate-fade-up">
+            <AdminUserManagement />
           </div>
         )}
       </main>

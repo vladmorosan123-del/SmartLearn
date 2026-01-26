@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'student' | 'profesor' | null;
+export type AppRole = 'student' | 'profesor' | 'admin' | null;
 
 interface Profile {
   id: string;
@@ -80,6 +80,21 @@ export const useAuth = () => {
         .select('*')
         .eq('user_id', userId)
         .single();
+
+      // Check if user is blocked
+      if (profile && (profile as any).is_blocked) {
+        // Sign out blocked users
+        await supabase.auth.signOut();
+        setAuthState(prev => ({
+          ...prev,
+          user: null,
+          session: null,
+          profile: null,
+          role: null,
+          isLoading: false,
+        }));
+        return;
+      }
 
       // Fetch role using security definer function
       const { data: role } = await supabase.rpc('get_user_role', { _user_id: userId });
