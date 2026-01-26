@@ -1,92 +1,22 @@
-import { useState } from 'react';
-import { GraduationCap, BookOpen, ArrowRight, Lock } from 'lucide-react';
+import { GraduationCap, BookOpen, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useApp, UserRole } from '@/contexts/AppContext';
+import { UserRole } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
 
 const RoleSelection = () => {
-  const { setRole } = useApp();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [password, setPassword] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
 
   const handleRoleSelect = (role: UserRole) => {
     if (role === 'profesor') {
-      setShowPasswordDialog(true);
-      setPassword('');
-      setPasswordError(false);
+      // Redirect to professor auth page
+      navigate('/auth-profesor');
     } else {
       // For students, redirect to login page
       navigate('/auth');
     }
   };
 
-  const handlePasswordSubmit = () => {
-    if (password === '12345') {
-      setShowPasswordDialog(false);
-      setRole('profesor');
-      navigate('/materii');
-    } else {
-      setPasswordError(true);
-      toast({
-        title: "Parolă incorectă",
-        description: "Parola introdusă nu este validă.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
-    <>
-      {/* Password Dialog for Professor */}
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-gold" />
-              Acces Profesor
-            </DialogTitle>
-            <DialogDescription>
-              Introduceți parola pentru a accesa contul de profesor.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              type="password"
-              placeholder="Introduceți parola..."
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordError(false);
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-              className={passwordError ? 'border-destructive' : ''}
-            />
-            {passwordError && (
-              <p className="text-sm text-destructive">Parolă incorectă</p>
-            )}
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
-                Anulează
-              </Button>
-              <Button variant="gold" onClick={handlePasswordSubmit}>
-                Confirmă
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -193,7 +123,6 @@ const RoleSelection = () => {
         </footer>
       </div>
     </div>
-    </>
   );
 };
 
