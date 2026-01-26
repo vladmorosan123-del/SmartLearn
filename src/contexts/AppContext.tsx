@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'student' | 'profesor' | null;
+export type UserRole = 'student' | 'profesor' | 'admin' | null;
 export type Subject = 'informatica' | 'romana' | 'matematica' | 'fizica';
 
 interface AppContextType {
