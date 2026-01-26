@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      lesson_views: {
+        Row: {
+          created_at: string
+          id: string
+          material_id: string
+          time_spent_seconds: number | null
+          user_id: string
+          view_ended_at: string | null
+          view_started_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          material_id: string
+          time_spent_seconds?: number | null
+          user_id: string
+          view_ended_at?: string | null
+          view_started_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          material_id?: string
+          time_spent_seconds?: number | null
+          user_id?: string
+          view_ended_at?: string | null
+          view_started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_views_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       materials: {
         Row: {
           answer_key: Json | null
@@ -106,6 +144,7 @@ export type Database = {
           material_id: string
           score: number
           submitted_at: string
+          time_spent_seconds: number | null
           total_questions: number
           user_id: string
         }
@@ -116,6 +155,7 @@ export type Database = {
           material_id: string
           score: number
           submitted_at?: string
+          time_spent_seconds?: number | null
           total_questions: number
           user_id: string
         }
@@ -126,6 +166,7 @@ export type Database = {
           material_id?: string
           score?: number
           submitted_at?: string
+          time_spent_seconds?: number | null
           total_questions?: number
           user_id?: string
         }
