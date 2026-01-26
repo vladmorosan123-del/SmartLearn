@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, PenTool, Plus, Trash2, Edit, Eye, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -47,9 +48,10 @@ const initialEssays: Essay[] = [
 
 const EseuriBAC = () => {
   const { role, subject } = useApp();
+  const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isProfessor = role === 'profesor';
+  const isProfessor = role === 'profesor' || authRole === 'admin';
   
   const [essays, setEssays] = useState<Essay[]>(initialEssays);
   const [isModalOpen, setIsModalOpen] = useState(false);

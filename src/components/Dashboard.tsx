@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import AddLessonModal from '@/components/AddLessonModal';
 import LessonCard, { Lesson } from '@/components/LessonCard';
@@ -39,6 +40,7 @@ const subjectColors = {
 
 const Dashboard = () => {
   const { role, subject, setSubject, clearSession } = useApp();
+  const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,7 +50,7 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   
-  const isProfessor = role === 'profesor';
+  const isProfessor = role === 'profesor' || authRole === 'admin';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
   const subjectName = subject ? subjectNames[subject] : 'Materie';
   const subjectColor = subject ? subjectColors[subject] : 'from-gray-500 to-gray-700';

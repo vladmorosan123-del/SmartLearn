@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
@@ -45,6 +46,7 @@ const getFileTypeLabel = (type?: string) => {
 
 const TesteAcademii = () => {
   const { role, subject } = useApp();
+  const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,7 +58,7 @@ const TesteAcademii = () => {
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
-  const isProfessor = role === 'profesor';
+  const isProfessor = role === 'profesor' || authRole === 'admin';
 
   const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject: selectedSubject,

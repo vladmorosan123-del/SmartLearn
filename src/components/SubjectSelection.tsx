@@ -38,7 +38,7 @@ const subjects = [
 
 const SubjectSelection = () => {
   const { role, setSubject, setRole, clearSession } = useApp();
-  const { signOut, isAuthenticated, profile } = useAuthContext();
+  const { signOut, isAuthenticated, profile, role: authRole } = useAuthContext();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -62,9 +62,8 @@ const SubjectSelection = () => {
     if (isAuthenticated && role === 'student') {
       handleLogout();
     } else {
-      // For professor (local auth), just clear session
-      clearSession();
-      navigate('/');
+      // For professor or admin (authenticated), do full logout too
+      handleLogout();
     }
   };
 
