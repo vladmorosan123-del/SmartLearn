@@ -43,12 +43,28 @@ export const useStudentProgress = () => {
   const fetchProgress = async () => {
     setIsLoading(true);
     try {
-      // Fetch all profiles
+      // Fetch only student profiles (exclude professors and admins)
+      const { data: studentRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'student');
+
+      const studentUserIds = studentRoles?.map(r => r.user_id) || [];
+
+      // Fetch profiles only for students
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .in('user_id', studentUserIds.length > 0 ? studentUserIds : ['no-match']);
 
-      if (!profiles) {
+      if (!profiles || profiles.length === 0) {
+        setStudents([]);
+        setStats({
+          averageTimePerTest: 0,
+          averageTimePerLesson: 0,
+          averageScore: 0,
+          totalActiveStudents: 0,
+        });
         setIsLoading(false);
         return;
       }

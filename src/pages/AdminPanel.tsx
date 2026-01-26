@@ -72,14 +72,27 @@ const AdminPanel = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch students (profiles with student role)
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // First, get all user IDs with the 'student' role
+        const { data: studentRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'student');
 
-        if (profiles) {
-          setStudents(profiles as StudentProfile[]);
+        const studentUserIds = studentRoles?.map(r => r.user_id) || [];
+
+        // Fetch only student profiles (exclude professors and admins)
+        if (studentUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('user_id', studentUserIds)
+            .order('created_at', { ascending: false });
+
+          if (profiles) {
+            setStudents(profiles as StudentProfile[]);
+          }
+        } else {
+          setStudents([]);
         }
 
         // Fetch materials count by category and subject
