@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle, XCircle, Send, RotateCcw, Loader2, Save } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { CheckCircle, XCircle, Send, RotateCcw, Loader2, Save, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -18,9 +18,30 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startTimeRef = useRef<Date>(new Date());
   const { toast } = useToast();
 
   const options = ['A', 'B', 'C', 'D'];
+
+  // Timer effect
+  useEffect(() => {
+    if (isSubmitted) return;
+    
+    const interval = setInterval(() => {
+      const now = new Date();
+      const elapsed = Math.floor((now.getTime() - startTimeRef.current.getTime()) / 1000);
+      setElapsedSeconds(elapsed);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSubmitted]);
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
     if (isSubmitted) return;
@@ -29,7 +50,7 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
     setUserAnswers(newAnswers);
   };
 
-  const saveSubmission = async (score: number, total: number) => {
+  const saveSubmission = async (score: number, total: number, timeSpent: number) => {
     if (!materialId) return;
     
     setIsSaving(true);
@@ -51,6 +72,7 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
         answers: userAnswers,
         score,
         total_questions: total,
+        time_spent_seconds: timeSpent,
       });
 
       if (error) {
@@ -64,7 +86,7 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
         setIsSaved(true);
         toast({
           title: "Salvat!",
-          description: "Răspunsurile tale au fost salvate cu succes.",
+          description: `Răspunsurile tale au fost salvate. Timp: ${formatTime(timeSpent)}`,
         });
       }
     } catch (error) {
@@ -80,11 +102,12 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
     setIsSubmitted(true);
     
     const score = newResults.filter(Boolean).length;
+    const timeSpent = elapsedSeconds;
     onComplete?.(score, answerKey.length);
     
     // Auto-save submission if materialId is available
     if (materialId) {
-      await saveSubmission(score, answerKey.length);
+      await saveSubmission(score, answerKey.length, timeSpent);
     }
   };
 
@@ -93,6 +116,8 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
     setIsSubmitted(false);
     setResults([]);
     setIsSaved(false);
+    setElapsedSeconds(0);
+    startTimeRef.current = new Date();
   };
 
   const score = results.filter(Boolean).length;
@@ -100,6 +125,17 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
 
   return (
     <div className="space-y-6">
+      {/* Timer Display */}
+      <div className="flex items-center justify-center gap-2 p-3 bg-muted/50 rounded-lg">
+        <Clock className="w-5 h-5 text-gold" />
+        <span className="font-mono text-lg font-bold text-foreground">
+          {formatTime(elapsedSeconds)}
+        </span>
+        {!isSubmitted && (
+          <span className="text-sm text-muted-foreground">- Timp scurs</span>
+        )}
+      </div>
+
       {/* Score Display */}
       {isSubmitted && (
         <div className={`p-4 rounded-lg text-center ${
