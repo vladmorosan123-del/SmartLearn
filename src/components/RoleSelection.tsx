@@ -27,8 +27,8 @@ const RoleSelection = () => {
       setPassword('');
       setPasswordError(false);
     } else {
-      setRole(role);
-      navigate('/materii');
+      // For students, redirect to login page
+      navigate('/auth');
     }
   };
 

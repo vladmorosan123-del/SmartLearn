@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Settings, Users, BookOpen, FileText, 
   Award, TrendingUp, Calendar, Clock, BarChart3, PieChart,
   CheckCircle2, AlertCircle, Upload, Eye, Trash2, Plus,
-  GraduationCap, Target, Activity, Layers
+  GraduationCap, Target, Activity, Layers, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
   TableBody,
@@ -24,25 +25,22 @@ const subjectNames: Record<Subject, string> = {
   fizica: 'Fizică',
 };
 
-// Mock data for admin statistics
-const platformStats = {
-  totalStudents: 156,
-  totalProfessors: 8,
-  totalLessons: 47,
-  totalBacModels: 32,
-  totalTvcMaterials: 18,
-  averageProgress: 68,
-  activeToday: 42,
-  weeklyGrowth: 12,
-};
+interface StudentProfile {
+  id: string;
+  user_id: string;
+  username: string;
+  full_name: string | null;
+  created_at: string;
+}
 
-const subjectStats: Record<Subject, { lessons: number; uploaded: number; bacModels: number; tvcMaterials: number; students: number }> = {
-  informatica: { lessons: 10, uploaded: 5, bacModels: 8, tvcMaterials: 6, students: 45 },
-  romana: { lessons: 10, uploaded: 3, bacModels: 10, tvcMaterials: 0, students: 38 },
-  matematica: { lessons: 10, uploaded: 2, bacModels: 7, tvcMaterials: 5, students: 42 },
-  fizica: { lessons: 10, uploaded: 4, bacModels: 7, tvcMaterials: 7, students: 31 },
-};
+interface MaterialStats {
+  informatica: { lessons: number; bacModels: number; tvcMaterials: number };
+  romana: { lessons: number; bacModels: number; tvcMaterials: number };
+  matematica: { lessons: number; bacModels: number; tvcMaterials: number };
+  fizica: { lessons: number; bacModels: number; tvcMaterials: number };
+}
 
+// Mock data for recent activity (will be replaced with real data later)
 const recentActivity = [
   { id: 1, action: 'Lecție adăugată', subject: 'informatica', title: 'Algoritmi de sortare', time: 'Acum 2 ore', type: 'add' },
   { id: 2, action: 'Model BAC încărcat', subject: 'romana', title: 'Subiect BAC 2024', time: 'Acum 5 ore', type: 'add' },
@@ -51,18 +49,106 @@ const recentActivity = [
   { id: 5, action: 'Model BAC adăugat', subject: 'informatica', title: 'Varianta 2023 - II', time: 'Acum 2 zile', type: 'add' },
 ];
 
-const topStudents = [
-  { id: 1, name: 'Alexandru M.', progress: 95, lessonsCompleted: 12, subject: 'informatica' },
-  { id: 2, name: 'Maria I.', progress: 88, lessonsCompleted: 10, subject: 'romana' },
-  { id: 3, name: 'Andrei P.', progress: 82, lessonsCompleted: 9, subject: 'matematica' },
-  { id: 4, name: 'Elena D.', progress: 78, lessonsCompleted: 8, subject: 'fizica' },
-  { id: 5, name: 'Mihai C.', progress: 75, lessonsCompleted: 8, subject: 'informatica' },
-];
-
 const AdminPanel = () => {
   const { role } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'students' | 'activity'>('overview');
+  const [students, setStudents] = useState<StudentProfile[]>([]);
+  const [materialStats, setMaterialStats] = useState<MaterialStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch real data from database
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch students (profiles with student role)
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (profiles) {
+          setStudents(profiles as StudentProfile[]);
+        }
+
+        // Fetch materials count by category and subject
+        const { data: materials } = await supabase
+          .from('materials')
+          .select('category, subject');
+
+        if (materials) {
+          const stats: MaterialStats = {
+            informatica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+            romana: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+            matematica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+            fizica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+          };
+
+          materials.forEach((m) => {
+            const subject = m.subject as Subject;
+            if (stats[subject]) {
+              if (m.category === 'lectie') stats[subject].lessons++;
+              else if (m.category === 'bac') stats[subject].bacModels++;
+              else if (m.category === 'tvc') stats[subject].tvcMaterials++;
+            }
+          });
+
+          setMaterialStats(stats);
+        }
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Calculate platform stats from real data
+  const platformStats = {
+    totalStudents: students.length,
+    totalProfessors: 1, // Hardcoded for now
+    totalLessons: materialStats ? Object.values(materialStats).reduce((sum, s) => sum + s.lessons, 0) : 0,
+    totalBacModels: materialStats ? Object.values(materialStats).reduce((sum, s) => sum + s.bacModels, 0) : 0,
+    totalTvcMaterials: materialStats ? Object.values(materialStats).reduce((sum, s) => sum + s.tvcMaterials, 0) : 0,
+    averageProgress: 0,
+    activeToday: students.length,
+    weeklyGrowth: 0,
+  };
+
+  // Calculate subject stats with uploaded counts
+  const subjectStats: Record<Subject, { lessons: number; uploaded: number; bacModels: number; tvcMaterials: number; students: number }> = {
+    informatica: { 
+      lessons: 10, 
+      uploaded: materialStats?.informatica.lessons || 0, 
+      bacModels: materialStats?.informatica.bacModels || 0, 
+      tvcMaterials: materialStats?.informatica.tvcMaterials || 0, 
+      students: Math.ceil(students.length / 4) 
+    },
+    romana: { 
+      lessons: 10, 
+      uploaded: materialStats?.romana.lessons || 0, 
+      bacModels: materialStats?.romana.bacModels || 0, 
+      tvcMaterials: materialStats?.romana.tvcMaterials || 0, 
+      students: Math.ceil(students.length / 4) 
+    },
+    matematica: { 
+      lessons: 10, 
+      uploaded: materialStats?.matematica.lessons || 0, 
+      bacModels: materialStats?.matematica.bacModels || 0, 
+      tvcMaterials: materialStats?.matematica.tvcMaterials || 0, 
+      students: Math.ceil(students.length / 4) 
+    },
+    fizica: { 
+      lessons: 10, 
+      uploaded: materialStats?.fizica.lessons || 0, 
+      bacModels: materialStats?.fizica.bacModels || 0, 
+      tvcMaterials: materialStats?.fizica.tvcMaterials || 0, 
+      students: Math.ceil(students.length / 4) 
+    },
+  };
 
   // Redirect if not professor
   if (role !== 'profesor') {
@@ -77,6 +163,14 @@ const AdminPanel = () => {
             Înapoi la Dashboard
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gold" />
       </div>
     );
   }
@@ -364,61 +458,68 @@ const AdminPanel = () => {
           <div className="space-y-6 animate-fade-up">
             <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
               <div className="p-6 border-b border-border">
-                <h3 className="font-display text-lg text-foreground">Top Elevi după Progres</h3>
+                <h3 className="font-display text-lg text-foreground">Elevi Înregistrați</h3>
               </div>
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Nume</TableHead>
-                      <TableHead>Materie Principală</TableHead>
-                      <TableHead className="text-center">Lecții Finalizate</TableHead>
-                      <TableHead className="text-center">Progres</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topStudents.map((student, index) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                            index === 0 ? 'bg-gold/20 text-gold' :
-                            index === 1 ? 'bg-gray-300/20 text-gray-500' :
-                            index === 2 ? 'bg-amber-600/20 text-amber-600' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {index + 1}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{student.name}</TableCell>
-                        <TableCell>{subjectNames[student.subject as Subject]}</TableCell>
-                        <TableCell className="text-center">{student.lessonsCompleted}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-gold to-emerald-500 rounded-full"
-                                style={{ width: `${student.progress}%` }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium w-12 text-right">{student.progress}%</span>
-                          </div>
-                        </TableCell>
+                {students.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Utilizator</TableHead>
+                        <TableHead>Nume Complet</TableHead>
+                        <TableHead className="text-center">Data Înregistrării</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student, index) => (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                              index === 0 ? 'bg-gold/20 text-gold' :
+                              index === 1 ? 'bg-muted text-muted-foreground' :
+                              index === 2 ? 'bg-muted text-muted-foreground' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {index + 1}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{student.username}</TableCell>
+                          <TableCell>{student.full_name || '-'}</TableCell>
+                          <TableCell className="text-center">
+                            {new Date(student.created_at).toLocaleDateString('ro-RO')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Nu există elevi înregistrați încă.</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Student Distribution */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(subjectStats).map(([key, stats]) => (
-                <div key={key} className="bg-card rounded-xl p-4 border border-border shadow-card text-center">
-                  <p className="text-3xl font-bold text-foreground">{stats.students}</p>
-                  <p className="text-sm text-muted-foreground">{subjectNames[key as Subject]}</p>
-                </div>
-              ))}
+              <div className="bg-card rounded-xl p-4 border border-border shadow-card text-center">
+                <p className="text-3xl font-bold text-foreground">{students.length}</p>
+                <p className="text-sm text-muted-foreground">Total Elevi</p>
+              </div>
+              <div className="bg-card rounded-xl p-4 border border-border shadow-card text-center">
+                <p className="text-3xl font-bold text-foreground">{platformStats.totalLessons}</p>
+                <p className="text-sm text-muted-foreground">Lecții Disponibile</p>
+              </div>
+              <div className="bg-card rounded-xl p-4 border border-border shadow-card text-center">
+                <p className="text-3xl font-bold text-foreground">{platformStats.totalBacModels}</p>
+                <p className="text-sm text-muted-foreground">Modele BAC</p>
+              </div>
+              <div className="bg-card rounded-xl p-4 border border-border shadow-card text-center">
+                <p className="text-3xl font-bold text-foreground">{platformStats.totalTvcMaterials}</p>
+                <p className="text-sm text-muted-foreground">Materiale TVC</p>
+              </div>
             </div>
           </div>
         )}
