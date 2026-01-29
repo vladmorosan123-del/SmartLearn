@@ -94,24 +94,23 @@ serve(async (req: Request) => {
     if (request.action === 'verify-code') {
       const { code } = request;
       
-      const { data: codeData, error } = await supabaseAdmin
-        .from('invitation_codes')
-        .select('*')
-        .eq('code', code.toUpperCase())
-        .eq('is_used', false)
-        .single();
+      // Use the secure database function to verify code without exposing sensitive data
+      const { data, error } = await supabaseAdmin.rpc('verify_invitation_code', {
+        _code: code
+      });
 
-      if (error || !codeData) {
+      if (error) {
+        console.error('Error verifying code:', error);
         return new Response(
-          JSON.stringify({ valid: false, error: 'Cod invalid sau deja folosit' }),
+          JSON.stringify({ valid: false, error: 'Eroare la verificarea codului' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Check if expired
-      if (new Date(codeData.expires_at) < new Date()) {
+      const result = data?.[0];
+      if (!result || !result.is_valid) {
         return new Response(
-          JSON.stringify({ valid: false, error: 'Codul a expirat' }),
+          JSON.stringify({ valid: false, error: result?.error_message || 'Cod invalid sau deja folosit' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

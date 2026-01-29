@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export interface Material {
   id: string;
@@ -17,6 +18,7 @@ export interface Material {
   genre: string | null;
   year: number | null;
   answer_key?: string[] | null;
+  has_answer_key?: boolean; // New field to indicate if answer key exists without exposing it
   created_at: string;
   updated_at: string;
 }
@@ -30,11 +32,23 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { role } = useAuthContext();
+  
+  const isPrivilegedUser = role === 'profesor' || role === 'admin';
+
   // Helper to convert Supabase data to Material type
-  const mapToMaterial = (data: any): Material => ({
-    ...data,
-    answer_key: Array.isArray(data.answer_key) ? data.answer_key : null,
-  });
+  // For non-privileged users, we hide the actual answer_key but indicate if it exists
+  const mapToMaterial = (data: any, hideAnswerKey: boolean): Material => {
+    const hasAnswerKey = Array.isArray(data.answer_key) && data.answer_key.length > 0;
+    
+    return {
+      ...data,
+      // Only include actual answer_key for privileged users
+      answer_key: hideAnswerKey ? null : (Array.isArray(data.answer_key) ? data.answer_key : null),
+      // Always indicate if answer key exists (for UI display)
+      has_answer_key: hasAnswerKey,
+    };
+  };
 
   const fetchMaterials = useCallback(async () => {
     try {
@@ -47,7 +61,9 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMaterials((data || []).map(mapToMaterial));
+      
+      // Hide answer_key for non-privileged users
+      setMaterials((data || []).map(d => mapToMaterial(d, !isPrivilegedUser)));
     } catch (error: any) {
       console.error('Error fetching materials:', error);
       toast({
@@ -58,7 +74,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [subject, category, toast]);
+  }, [subject, category, toast, isPrivilegedUser]);
 
   useEffect(() => {
     fetchMaterials();
@@ -74,8 +90,9 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
       if (error) throw error;
       
-      setMaterials(prev => [mapToMaterial(data), ...prev]);
-      return mapToMaterial(data);
+      // When adding, we're a privileged user, so don't hide answer_key
+      setMaterials(prev => [mapToMaterial(data, false), ...prev]);
+      return mapToMaterial(data, false);
     } catch (error: any) {
       console.error('Error adding material:', error);
       toast({
@@ -98,8 +115,9 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
       if (error) throw error;
       
-      setMaterials(prev => prev.map(m => m.id === id ? mapToMaterial(data) : m));
-      return mapToMaterial(data);
+      // When updating, we're a privileged user, so don't hide answer_key
+      setMaterials(prev => prev.map(m => m.id === id ? mapToMaterial(data, false) : m));
+      return mapToMaterial(data, false);
     } catch (error: any) {
       console.error('Error updating material:', error);
       toast({
