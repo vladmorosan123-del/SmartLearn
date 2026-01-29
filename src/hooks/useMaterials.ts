@@ -53,17 +53,45 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   const fetchMaterials = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .eq('subject', subject)
-        .eq('category', category)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
       
-      // Hide answer_key for non-privileged users
-      setMaterials((data || []).map(d => mapToMaterial(d, !isPrivilegedUser)));
+      // Use materials_public view for non-privileged users to hide answer_key at database level
+      // Privileged users (professors/admins) can access the full materials table
+      if (isPrivilegedUser) {
+        const { data, error } = await supabase
+          .from('materials')
+          .select('*')
+          .eq('subject', subject)
+          .eq('category', category)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setMaterials((data || []).map(d => mapToMaterial(d, false)));
+      } else {
+        // Students use the secure view that excludes answer_key
+        const { data, error } = await supabase
+          .from('materials_public')
+          .select('*')
+          .eq('subject', subject)
+          .eq('category', category)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        // For students, also fetch question count securely via RPC
+        const materialsWithQuestionCount = await Promise.all(
+          (data || []).map(async (material) => {
+            const { data: questionCount } = await supabase
+              .rpc('get_material_question_count', { _material_id: material.id });
+            return {
+              ...material,
+              answer_key: null,
+              has_answer_key: (questionCount || 0) > 0,
+            };
+          })
+        );
+        
+        setMaterials(materialsWithQuestionCount as Material[]);
+      }
     } catch (error: any) {
       console.error('Error fetching materials:', error);
       toast({
