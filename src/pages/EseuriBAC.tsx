@@ -1,50 +1,57 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, PenTool, Plus, Trash2, Edit, Eye, BookOpen } from 'lucide-react';
+import { ArrowLeft, Shield, PenTool, Plus, Trash2, Edit, Eye, BookOpen, FolderPlus, X, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import FileUpload from '@/components/FileUpload';
+import FileViewer from '@/components/FileViewer';
 
-interface Essay {
-  id: number;
-  title: string | null;
-  author?: string;
-  genre?: string;
-  description?: string;
-  pdfUrl?: string;
-  status: 'uploaded' | 'not-uploaded';
+interface GenreDefinition {
+  id: string;
+  name: string;
+  isCustom?: boolean;
 }
 
-const genres = [
-  'Poezie modernistă',
-  'Poezie romantică',
-  'Poezie simbolistă',
-  'Proză realistă',
-  'Proză psihologică',
-  'Dramă',
-  'Basm cult',
-  'Nuvelă',
-  'Roman',
+const defaultGenres: GenreDefinition[] = [
+  { id: 'poezie_modernista', name: 'Poezie modernistă' },
+  { id: 'poezie_romantica', name: 'Poezie romantică' },
+  { id: 'poezie_simbolista', name: 'Poezie simbolistă' },
+  { id: 'proza_realista', name: 'Proză realistă' },
+  { id: 'proza_psihologica', name: 'Proză psihologică' },
+  { id: 'drama', name: 'Dramă' },
+  { id: 'basm_cult', name: 'Basm cult' },
+  { id: 'nuvela', name: 'Nuvelă' },
+  { id: 'roman', name: 'Roman' },
 ];
 
-const initialEssays: Essay[] = [
-  { id: 1, title: 'Eseu - Luceafărul', author: 'Mihai Eminescu', genre: 'Poezie romantică', description: 'Analiza poemului romantic', status: 'uploaded' },
-  { id: 2, title: 'Eseu - Plumb', author: 'George Bacovia', genre: 'Poezie simbolistă', description: 'Tema condiției poetului', status: 'uploaded' },
-  { id: 3, title: 'Eseu - Enigma Otiliei', author: 'George Călinescu', genre: 'Roman', description: 'Caracterizarea Otiliei', status: 'uploaded' },
-  { id: 4, title: 'Eseu - Ion', author: 'Liviu Rebreanu', genre: 'Roman', description: 'Tema pământului și a iubirii', status: 'uploaded' },
-  ...Array.from({ length: 6 }, (_, i) => ({
-    id: i + 5,
-    title: null,
-    status: 'not-uploaded' as const,
-  })),
-];
+const getFileIcon = (fileType?: string) => {
+  if (!fileType) return <FileText className="w-4 h-4" />;
+  const type = fileType.toLowerCase();
+  if (type === 'jpg' || type === 'jpeg' || type === 'png') return <ImageIcon className="w-4 h-4" />;
+  if (type === 'pdf') return <FileText className="w-4 h-4" />;
+  if (type === 'xls' || type === 'xlsx' || type === 'csv') return <FileSpreadsheet className="w-4 h-4" />;
+  if (type === 'doc' || type === 'docx') return <FileTypeIcon className="w-4 h-4" />;
+  if (type === 'ppt' || type === 'pptx') return <Presentation className="w-4 h-4" />;
+  return <File className="w-4 h-4" />;
+};
+
+const getFileTypeLabel = (type?: string) => {
+  if (!type) return 'Fișier';
+  const labels: Record<string, string> = {
+    pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
+    ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
+    jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+  };
+  return labels[type.toLowerCase()] || type.toUpperCase();
+};
 
 const EseuriBAC = () => {
   const { role, subject } = useApp();
@@ -53,13 +60,77 @@ const EseuriBAC = () => {
   const { toast } = useToast();
   const isProfessor = role === 'profesor' || authRole === 'admin';
   
-  const [essays, setEssays] = useState<Essay[]>(initialEssays);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEssayId, setSelectedEssayId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ title: '', author: '', genre: genres[0], description: '', pdfUrl: '' });
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedGenreId, setSelectedGenreId] = useState<string | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [essayTitle, setEssayTitle] = useState('');
+  const [essayAuthor, setEssayAuthor] = useState('');
+  const [essayDescription, setEssayDescription] = useState('');
   const [filterGenre, setFilterGenre] = useState<string>('');
+  const [isAddGenreModalOpen, setIsAddGenreModalOpen] = useState(false);
+  const [newGenreName, setNewGenreName] = useState('');
+  const [customGenres, setCustomGenres] = useState<GenreDefinition[]>([]);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
-  // Only for Romanian
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
+    subject: 'romana',
+    category: 'eseu',
+  });
+
+  // Fetch custom genres
+  useEffect(() => {
+    const fetchCustomGenres = async () => {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('id, title, genre')
+        .eq('subject', 'romana')
+        .eq('category', 'eseu_genre')
+        .order('created_at', { ascending: true });
+
+      if (!error && data) {
+        setCustomGenres(
+          data.map(g => ({
+            id: g.genre || g.id,
+            name: g.title,
+            isCustom: true,
+          }))
+        );
+      }
+    };
+    fetchCustomGenres();
+  }, []);
+
+  // Merge default and custom genres
+  const genres = useMemo(() => {
+    return [...defaultGenres, ...customGenres];
+  }, [customGenres]);
+
+  // Group materials by genre
+  const materialsByGenre = useMemo(() => {
+    const grouped: Record<string, Material[]> = {};
+    materials.forEach(m => {
+      const genreId = m.genre || 'other';
+      if (!grouped[genreId]) grouped[genreId] = [];
+      grouped[genreId].push(m);
+    });
+    return grouped;
+  }, [materials]);
+
+  // Stats calculations
+  const genresWithEssays = genres.filter(g => materialsByGenre[g.id]?.length > 0);
+  const genreCounts = genres.reduce((acc, g) => {
+    const count = materialsByGenre[g.id]?.length || 0;
+    if (count > 0) acc[g.id] = count;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Filter
+  const filteredGenres = filterGenre 
+    ? genres.filter(g => g.id === filterGenre)
+    : genres;
+
+  // Only for Romanian - check after all hooks
   if (subject !== 'romana') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -76,55 +147,144 @@ const EseuriBAC = () => {
     );
   }
 
-  const handleAddEssay = (id: number) => {
-    const existing = essays.find(e => e.id === id);
-    setFormData({
-      title: existing?.title || '',
-      author: existing?.author || '',
-      genre: existing?.genre || genres[0],
-      description: existing?.description || '',
-      pdfUrl: existing?.pdfUrl || '',
-    });
-    setSelectedEssayId(id);
-    setIsModalOpen(true);
+  const handleUploadEssay = (genreId: string) => {
+    setSelectedGenreId(genreId);
+    setUploadedFile(null);
+    setEssayTitle('');
+    setEssayAuthor('');
+    setEssayDescription('');
+    setIsUploadModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formData.title.trim() || selectedEssayId === null) return;
-    
-    setEssays(prev => prev.map(e => 
-      e.id === selectedEssayId 
-        ? { ...e, ...formData, status: 'uploaded' as const }
-        : e
-    ));
-    setIsModalOpen(false);
-    setFormData({ title: '', author: '', genre: genres[0], description: '', pdfUrl: '' });
-    toast({ title: 'Eseu salvat', description: 'Eseul a fost salvat cu succes.' });
+  const handleSaveEssay = async () => {
+    if (!uploadedFile || !selectedGenreId || !essayTitle.trim()) return;
+
+    try {
+      await addMaterial({
+        title: essayTitle.trim(),
+        description: essayDescription.trim() || null,
+        file_name: uploadedFile.name,
+        file_type: uploadedFile.type,
+        file_url: uploadedFile.url,
+        file_size: uploadedFile.size,
+        subject: 'romana',
+        category: 'eseu',
+        lesson_number: null,
+        author: essayAuthor.trim() || null,
+        genre: selectedGenreId,
+        year: null,
+      });
+      toast({ title: 'Eseu salvat', description: 'Eseul a fost salvat cu succes.' });
+      setIsUploadModalOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving essay:', error);
+      toast({ title: 'Eroare', description: 'Nu s-a putut salva eseul.', variant: 'destructive' });
+    }
   };
 
-  const handleDelete = (id: number) => {
-    setEssays(prev => prev.map(e => 
-      e.id === id 
-        ? { ...e, title: null, author: undefined, genre: undefined, description: undefined, pdfUrl: undefined, status: 'not-uploaded' as const }
-        : e
-    ));
+  const resetForm = () => {
+    setUploadedFile(null);
+    setEssayTitle('');
+    setEssayAuthor('');
+    setEssayDescription('');
+    setSelectedGenreId(null);
+  };
+
+  const handleDeleteEssay = async (material: Material) => {
+    await deleteMaterial(material.id, material.file_url);
     toast({ title: 'Eseu șters', description: 'Eseul a fost șters.' });
   };
 
-  const handleAddNewSlot = () => {
-    const newId = essays.length + 1;
-    setEssays(prev => [...prev, { id: newId, title: null, status: 'not-uploaded' as const }]);
+  const handleEditEssay = (material: Material) => {
+    setEditingMaterial(material);
+    setEssayTitle(material.title);
+    setEssayAuthor(material.author || '');
+    setEssayDescription(material.description || '');
   };
 
-  const uploadedEssays = essays.filter(e => e.status === 'uploaded');
-  const filteredEssays = filterGenre 
-    ? essays.filter(e => e.genre === filterGenre || e.status === 'not-uploaded')
-    : essays;
-  
-  const genreCounts = uploadedEssays.reduce((acc, e) => {
-    if (e.genre) acc[e.genre] = (acc[e.genre] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const handleSaveEdit = async () => {
+    if (!editingMaterial || !essayTitle.trim()) return;
+
+    try {
+      await updateMaterial(editingMaterial.id, {
+        title: essayTitle.trim(),
+        author: essayAuthor.trim() || null,
+        description: essayDescription.trim() || null,
+      });
+      toast({ title: 'Actualizat', description: 'Eseul a fost modificat cu succes.' });
+      setEditingMaterial(null);
+      resetForm();
+    } catch (error) {
+      console.error('Error updating essay:', error);
+    }
+  };
+
+  const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
+    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+  };
+
+  const handleAddGenre = async () => {
+    if (!newGenreName.trim()) return;
+
+    const genreId = `custom_${Date.now()}`;
+    
+    try {
+      const { error } = await supabase
+        .from('materials')
+        .insert([{
+          title: newGenreName.trim(),
+          description: 'Custom genre',
+          file_name: 'genre_placeholder',
+          file_type: 'genre',
+          file_url: '',
+          subject: 'romana',
+          category: 'eseu_genre',
+          genre: genreId,
+        }]);
+
+      if (error) throw error;
+
+      setCustomGenres(prev => [...prev, {
+        id: genreId,
+        name: newGenreName.trim(),
+        isCustom: true,
+      }]);
+
+      toast({ title: 'Gen literar adăugat', description: `Genul "${newGenreName}" a fost creat.` });
+      setNewGenreName('');
+      setIsAddGenreModalOpen(false);
+    } catch (error) {
+      console.error('Error adding genre:', error);
+      toast({ title: 'Eroare', description: 'Nu s-a putut adăuga genul literar.', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteGenre = async (genreId: string) => {
+    try {
+      // Delete the genre marker
+      const { error: genreError } = await supabase
+        .from('materials')
+        .delete()
+        .eq('subject', 'romana')
+        .eq('category', 'eseu_genre')
+        .eq('genre', genreId);
+
+      if (genreError) throw genreError;
+
+      // Also delete all essays in this genre
+      const genreMaterials = materialsByGenre[genreId] || [];
+      for (const material of genreMaterials) {
+        await deleteMaterial(material.id, material.file_url);
+      }
+
+      setCustomGenres(prev => prev.filter(g => g.id !== genreId));
+      toast({ title: 'Gen șters', description: 'Genul și toate eseurile au fost șterse.' });
+    } catch (error) {
+      console.error('Error deleting genre:', error);
+      toast({ title: 'Eroare', description: 'Nu s-a putut șterge genul.', variant: 'destructive' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -161,20 +321,22 @@ const EseuriBAC = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-fade-up">
           <div className="bg-card rounded-lg p-4 border border-border">
-            <p className="text-2xl font-bold text-gold">{uploadedEssays.length}</p>
+            <p className="text-2xl font-bold text-gold">{materials.length}</p>
             <p className="text-xs text-muted-foreground">Eseuri încărcate</p>
           </div>
           <div className="bg-card rounded-lg p-4 border border-border">
-            <p className="text-2xl font-bold text-foreground">{Object.keys(genreCounts).length}</p>
-            <p className="text-xs text-muted-foreground">Genuri literare</p>
+            <p className="text-2xl font-bold text-foreground">{genresWithEssays.length}</p>
+            <p className="text-xs text-muted-foreground">Genuri cu eseuri</p>
           </div>
           <div className="bg-card rounded-lg p-4 border border-border">
-            <p className="text-2xl font-bold text-foreground">{essays.length}</p>
-            <p className="text-xs text-muted-foreground">Total sloturi</p>
+            <p className="text-2xl font-bold text-foreground">{genres.length}</p>
+            <p className="text-xs text-muted-foreground">Total genuri</p>
           </div>
           <div className="bg-card rounded-lg p-4 border border-border">
-            <p className="text-2xl font-bold text-emerald-500">{Math.round((uploadedEssays.length / essays.length) * 100)}%</p>
-            <p className="text-xs text-muted-foreground">Completat</p>
+            <p className="text-2xl font-bold text-accent">
+              {genres.length > 0 ? Math.round((genresWithEssays.length / genres.length) * 100) : 0}%
+            </p>
+            <p className="text-xs text-muted-foreground">Genuri completate</p>
           </div>
         </div>
 
@@ -187,169 +349,329 @@ const EseuriBAC = () => {
           >
             Toate
           </Button>
-          {Object.entries(genreCounts).map(([genre, count]) => (
-            <Button 
-              key={genre}
-              variant={filterGenre === genre ? 'gold' : 'outline'} 
-              size="sm"
-              onClick={() => setFilterGenre(genre)}
-            >
-              {genre} ({count})
-            </Button>
-          ))}
+          {Object.entries(genreCounts).map(([genreId, count]) => {
+            const genre = genres.find(g => g.id === genreId);
+            return (
+              <Button 
+                key={genreId}
+                variant={filterGenre === genreId ? 'gold' : 'outline'} 
+                size="sm"
+                onClick={() => setFilterGenre(genreId)}
+              >
+                {genre?.name} ({count})
+              </Button>
+            );
+          })}
         </div>
 
-        {/* Add New Button for Professors */}
+        {/* Add Genre Button for Professors */}
         {isProfessor && (
           <div className="mb-6 animate-fade-up delay-200">
-            <Button variant="gold" className="gap-2" onClick={handleAddNewSlot}>
-              <Plus className="w-4 h-4" />
-              Adaugă slot nou
+            <Button variant="gold" className="gap-2" onClick={() => setIsAddGenreModalOpen(true)}>
+              <FolderPlus className="w-4 h-4" />
+              Adaugă gen literar
             </Button>
           </div>
         )}
 
-        {/* Essays Grid */}
-        <div className="grid gap-4 animate-fade-up delay-300">
-          {filteredEssays.map((essay, index) => (
-            <div 
-              key={essay.id}
-              className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 transition-all ${
-                essay.status === 'not-uploaded' ? 'opacity-60' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    essay.status === 'uploaded' ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    {essay.status === 'not-uploaded' ? (
-                      <h3 className="font-medium text-muted-foreground italic">Eseu neîncărcat</h3>
-                    ) : (
-                      <>
-                        <h3 className="font-medium text-foreground">{essay.title}</h3>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          {essay.author && (
-                            <span className="text-sm text-muted-foreground">{essay.author}</span>
-                          )}
-                          {essay.genre && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              {essay.genre}
-                            </span>
-                          )}
-                        </div>
-                        {essay.description && (
-                          <p className="text-sm text-muted-foreground mt-2">{essay.description}</p>
+        {/* Genres Grid */}
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Se încarcă...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up delay-300">
+            {filteredGenres.map(genre => {
+              const genreMaterials = materialsByGenre[genre.id] || [];
+              const hasEssays = genreMaterials.length > 0;
+
+              return (
+                <div
+                  key={genre.id}
+                  className={`bg-card rounded-xl border border-border overflow-hidden transition-all duration-300 hover:border-gold/50 hover:shadow-gold ${!hasEssays ? 'opacity-70' : ''}`}
+                >
+                  {/* Genre Header */}
+                  <div className="p-4 border-b border-border bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-gold" />
+                        <h3 className="font-display text-lg text-foreground">{genre.name}</h3>
+                        {genre.isCustom && (
+                          <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded">Custom</span>
                         )}
-                      </>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {isProfessor && hasEssays && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUploadEssay(genre.id)}>
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {isProfessor && genre.isCustom && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteGenre(genre.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Essays List */}
+                  <div className="p-4">
+                    {hasEssays ? (
+                      <div className="space-y-3">
+                        {genreMaterials.map(material => (
+                          <div key={material.id} className="p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {getFileIcon(material.file_type)}
+                                  <span className="text-sm font-medium text-foreground truncate">{material.title}</span>
+                                </div>
+                                {material.author && (
+                                  <p className="text-xs text-muted-foreground">{material.author}</p>
+                                )}
+                                {material.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{material.description}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                                >
+                                  <Eye className="w-3 h-3" />
+                                </Button>
+                                {isProfessor && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => handleEditEssay(material)}
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive"
+                                      onClick={() => handleDeleteEssay(material)}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Niciun eseu încărcat</p>
+                      </div>
                     )}
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isProfessor ? (
-                    essay.status === 'not-uploaded' ? (
-                      <Button variant="gold" size="sm" className="gap-2" onClick={() => handleAddEssay(essay.id)}>
+
+                  {/* Upload Button for Professors */}
+                  {isProfessor && !hasEssays && (
+                    <div className="p-4 border-t border-border">
+                      <Button variant="gold" className="w-full gap-2" onClick={() => handleUploadEssay(genre.id)}>
                         <Plus className="w-4 h-4" />
-                        Adaugă
+                        Încarcă eseu
                       </Button>
-                    ) : (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={() => handleAddEssay(essay.id)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(essay.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )
-                  ) : (
-                    essay.status === 'uploaded' && (
-                      <Button variant="gold" size="sm" className="gap-2">
-                        <Eye className="w-4 h-4" />
-                        Citește
-                      </Button>
-                    )
+                    </div>
                   )}
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </main>
 
-      {/* Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+      {/* Upload Modal */}
+      <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display">Adaugă Eseu</DialogTitle>
+            <DialogTitle className="font-display">
+              Încarcă eseu - {genres.find(g => g.id === selectedGenreId)?.name}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Titlu *</label>
-              <input
-                type="text"
+            <div className="space-y-2">
+              <Label htmlFor="title">Titlu *</Label>
+              <Input
+                id="title"
                 placeholder="ex: Eseu - Luceafărul"
-                value={formData.title}
-                onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+                value={essayTitle}
+                onChange={e => setEssayTitle(e.target.value)}
+                className="bg-background"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Autor</label>
-              <input
-                type="text"
+            <div className="space-y-2">
+              <Label htmlFor="author">Autor</Label>
+              <Input
+                id="author"
                 placeholder="ex: Mihai Eminescu"
-                value={formData.author}
-                onChange={e => setFormData(prev => ({ ...prev, author: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+                value={essayAuthor}
+                onChange={e => setEssayAuthor(e.target.value)}
+                className="bg-background"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Gen literar</label>
-              <select
-                value={formData.genre}
-                onChange={e => setFormData(prev => ({ ...prev, genre: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-              >
-                {genres.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Descriere</label>
-              <textarea
+            <div className="space-y-2">
+              <Label htmlFor="description">Descriere</Label>
+              <Textarea
+                id="description"
                 placeholder="Descriere scurtă..."
-                value={formData.description}
-                onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                value={essayDescription}
+                onChange={e => setEssayDescription(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
+                className="bg-background resize-none"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">URL PDF (opțional)</label>
-              <input
-                type="url"
-                placeholder="https://example.com/eseu.pdf"
-                value={formData.pdfUrl}
-                onChange={e => setFormData(prev => ({ ...prev, pdfUrl: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+
+            {uploadedFile ? (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-3">
+                  {getFileIcon(uploadedFile.type)}
+                  <div>
+                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{uploadedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <FileUpload
+                onUploadComplete={handleUploadComplete}
+                category="eseu"
+                subject="romana"
               />
-            </div>
+            )}
+
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
+              <Button variant="outline" className="flex-1" onClick={() => { setIsUploadModalOpen(false); resetForm(); }}>
                 Anulează
               </Button>
-              <Button variant="gold" className="flex-1" onClick={handleSave} disabled={!formData.title.trim()}>
+              <Button 
+                variant="gold" 
+                className="flex-1" 
+                onClick={handleSaveEssay} 
+                disabled={!uploadedFile || !essayTitle.trim()}
+              >
                 Salvează
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={!!editingMaterial} onOpenChange={(open) => { if (!open) { setEditingMaterial(null); resetForm(); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">Editează eseu</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Titlu *</Label>
+              <Input
+                id="edit-title"
+                value={essayTitle}
+                onChange={e => setEssayTitle(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-author">Autor</Label>
+              <Input
+                id="edit-author"
+                value={essayAuthor}
+                onChange={e => setEssayAuthor(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Descriere</Label>
+              <Textarea
+                id="edit-description"
+                value={essayDescription}
+                onChange={e => setEssayDescription(e.target.value)}
+                rows={2}
+                className="bg-background resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setEditingMaterial(null); resetForm(); }}>
+                Anulează
+              </Button>
+              <Button 
+                variant="gold" 
+                className="flex-1" 
+                onClick={handleSaveEdit} 
+                disabled={!essayTitle.trim()}
+              >
+                Salvează
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Genre Modal */}
+      <Dialog open={isAddGenreModalOpen} onOpenChange={setIsAddGenreModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">Adaugă gen literar</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="genre-name">Numele genului</Label>
+              <Input
+                id="genre-name"
+                placeholder="ex: Poezie avangardistă"
+                value={newGenreName}
+                onChange={e => setNewGenreName(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setIsAddGenreModalOpen(false); setNewGenreName(''); }}>
+                Anulează
+              </Button>
+              <Button 
+                variant="gold" 
+                className="flex-1" 
+                onClick={handleAddGenre}
+                disabled={!newGenreName.trim()}
+              >
+                Adaugă
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Viewer */}
+      <FileViewer
+        isOpen={!!viewingFile}
+        fileUrl={viewingFile?.url || ''}
+        fileName={viewingFile?.name || ''}
+        fileType={viewingFile?.type || ''}
+        onClose={() => setViewingFile(null)}
+      />
     </div>
   );
 };
