@@ -112,6 +112,7 @@ const TesteAcademii = () => {
     fileType: string;
     fileSize: number;
     answerKey?: string[];
+    oficiu?: number;
   }) => {
     try {
       await addMaterial({
@@ -128,6 +129,7 @@ const TesteAcademii = () => {
         genre: null,
         year: data.year || null,
         answer_key: data.answerKey || null,
+        oficiu: data.oficiu ?? 0,
       });
       toast({ title: 'Material salvat', description: 'Materialul TVC a fost salvat cu succes.' });
     } catch (error) {
