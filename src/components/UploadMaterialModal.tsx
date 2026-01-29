@@ -19,6 +19,7 @@ interface UploadMaterialModalProps {
     fileType: string;
     fileSize: number;
     answerKey?: string[];
+    oficiu?: number;
   }) => void;
   title: string;
   category: string;
@@ -42,6 +43,7 @@ const UploadMaterialModal = ({
   const [year, setYear] = useState(new Date().getFullYear());
   const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
+  const [oficiu, setOficiu] = useState<number>(0);
   const [uploadedFile, setUploadedFile] = useState<{
     url: string;
     name: string;
@@ -69,6 +71,7 @@ const UploadMaterialModal = ({
     setYear(new Date().getFullYear());
     setQuestionCount(9);
     setAnswerKey(Array(9).fill(''));
+    setOficiu(0);
     setUploadedFile(null);
   };
 
@@ -94,6 +97,7 @@ const UploadMaterialModal = ({
       fileType: uploadedFile.type,
       fileSize: uploadedFile.size,
       answerKey: showAnswerKey ? answerKey : undefined,
+      oficiu: showAnswerKey ? oficiu : undefined,
     });
     resetForm();
     onClose();
@@ -201,20 +205,36 @@ const UploadMaterialModal = ({
           {/* Answer Key Input for TVC */}
           {showAnswerKey && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="questionCount">Număr de întrebări în grilă</Label>
-                <Select value={questionCount.toString()} onValueChange={handleQuestionCountChange}>
-                  <SelectTrigger className="w-full bg-background">
-                    <SelectValue placeholder="Selectează numărul de întrebări" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {Array.from({ length: 60 }, (_, i) => i + 1).map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} {num === 1 ? 'întrebare' : 'întrebări'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="questionCount">Număr de întrebări</Label>
+                  <Select value={questionCount.toString()} onValueChange={handleQuestionCountChange}>
+                    <SelectTrigger className="w-full bg-background">
+                      <SelectValue placeholder="Selectează" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 60 }, (_, i) => i + 1).map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num} {num === 1 ? 'întrebare' : 'întrebări'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="oficiu">Oficiu (puncte bonus)</Label>
+                  <Input
+                    id="oficiu"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={oficiu}
+                    onChange={(e) => setOficiu(Math.max(0, parseInt(e.target.value) || 0))}
+                    placeholder="0"
+                    className="bg-background"
+                  />
+                </div>
               </div>
               
               <TVCAnswerKeyInput
