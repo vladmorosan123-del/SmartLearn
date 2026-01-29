@@ -1,4 +1,4 @@
-import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation } from 'lucide-react';
+import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface FileViewerProps {
@@ -17,21 +17,26 @@ const getFileIcon = (fileType: string) => {
   if (type === 'doc' || type === 'docx') return <FileType className="w-16 h-16 text-blue-500" />;
   if (type === 'ppt' || type === 'pptx') return <Presentation className="w-16 h-16 text-orange-500" />;
   if (type === 'txt') return <FileText className="w-16 h-16 text-muted-foreground" />;
+  if (type === 'mp4' || type === 'webm' || type === 'mov' || type === 'avi' || type === 'mkv') return <Video className="w-16 h-16 text-purple-500" />;
   return <File className="w-16 h-16 text-muted-foreground" />;
 };
 
 const canPreviewInBrowser = (fileType: string) => {
   const type = fileType.toLowerCase();
-  return ['pdf', 'jpg', 'jpeg', 'png', 'txt'].includes(type);
+  // PDF, images, text, videos (mp4/webm), and office docs via Google Viewer
+  return ['pdf', 'jpg', 'jpeg', 'png', 'txt', 'mp4', 'webm', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 };
 
 const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewerProps) => {
   if (!isOpen) return null;
 
+  const type = fileType.toLowerCase();
   const canPreview = canPreviewInBrowser(fileType);
-  const isImage = ['jpg', 'jpeg', 'png'].includes(fileType.toLowerCase());
-  const isPdf = fileType.toLowerCase() === 'pdf';
-  const isTxt = fileType.toLowerCase() === 'txt';
+  const isImage = ['jpg', 'jpeg', 'png'].includes(type);
+  const isPdf = type === 'pdf';
+  const isTxt = type === 'txt';
+  const isVideo = ['mp4', 'webm'].includes(type);
+  const isOfficeDoc = ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 
   const handleDownload = () => {
     const link = document.createElement('a');
@@ -42,10 +47,18 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
     document.body.removeChild(link);
   };
 
-  // Add #toolbar=1 to PDF URLs to ensure browser shows the PDF viewer toolbar
-  const getPdfViewerUrl = (url: string) => {
-    // Use Google Docs Viewer as fallback for better compatibility
+  // Use Google Docs Viewer for PDFs and Office documents
+  const getGoogleViewerUrl = (url: string) => {
     return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+  };
+
+  // Get video MIME type for proper playback
+  const getVideoMimeType = (ext: string) => {
+    const mimeTypes: Record<string, string> = {
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+    };
+    return mimeTypes[ext] || 'video/mp4';
   };
 
   return (
@@ -108,7 +121,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
               
               {isPdf && (
                 <iframe
-                  src={getPdfViewerUrl(fileUrl)}
+                  src={getGoogleViewerUrl(fileUrl)}
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title={fileName}
                   allow="autoplay"
@@ -120,6 +133,27 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                   src={fileUrl}
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title={fileName}
+                />
+              )}
+
+              {isVideo && (
+                <video
+                  src={fileUrl}
+                  controls
+                  className="max-w-full max-h-full rounded-lg shadow-lg"
+                  controlsList="nodownload"
+                >
+                  <source src={fileUrl} type={getVideoMimeType(type)} />
+                  Browser-ul tău nu suportă redarea video.
+                </video>
+              )}
+
+              {isOfficeDoc && (
+                <iframe
+                  src={getGoogleViewerUrl(fileUrl)}
+                  className="w-full h-full rounded-lg border border-border bg-white"
+                  title={fileName}
+                  allow="autoplay"
                 />
               )}
             </div>
