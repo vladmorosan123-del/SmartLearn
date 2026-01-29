@@ -101,7 +101,13 @@ const LessonCard = ({ lesson, index, isProfessor, onAdd, onEdit, onDelete, onVie
                     {lesson.duration}
                   </p>
                   {lesson.fileUrl && (
-                    <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${
+                      ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(lesson.fileType?.toLowerCase() || '')
+                        ? 'bg-red-500/10 text-red-500'
+                        : ['ppt', 'pptx'].includes(lesson.fileType?.toLowerCase() || '')
+                        ? 'bg-orange-500/10 text-orange-500'
+                        : 'bg-gold/10 text-gold'
+                    }`}>
                       {getFileIcon(lesson.fileType)}
                       {getFileTypeLabel(lesson.fileType)} atașat
                     </span>
