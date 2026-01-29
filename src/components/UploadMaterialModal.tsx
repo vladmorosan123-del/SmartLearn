@@ -93,6 +93,7 @@ const UploadMaterialModal = ({
       pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
       ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
       jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+      mp4: 'Video', webm: 'Video', mov: 'Video', avi: 'Video', mkv: 'Video',
     };
     return labels[type.toLowerCase()] || type.toUpperCase();
   };

@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react';
-import { Upload, X, FileText, Image, FileSpreadsheet, FileType, File } from 'lucide-react';
+import { Upload, X, FileText, Image, FileSpreadsheet, FileType, File, Video, Presentation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const ALLOWED_EXTENSIONS = [
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', 
-  '.txt', '.csv', '.jpg', '.jpeg', '.png'
+  '.txt', '.csv', '.jpg', '.jpeg', '.png',
+  // Video formats
+  '.mp4', '.webm', '.mov', '.avi', '.mkv'
 ];
 
 const MIME_TYPES: Record<string, string> = {
@@ -22,6 +24,12 @@ const MIME_TYPES: Record<string, string> = {
   'jpg': 'image/jpeg',
   'jpeg': 'image/jpeg',
   'png': 'image/png',
+  // Video formats
+  'mp4': 'video/mp4',
+  'webm': 'video/webm',
+  'mov': 'video/quicktime',
+  'avi': 'video/x-msvideo',
+  'mkv': 'video/x-matroska',
 };
 
 interface FileUploadProps {
@@ -37,6 +45,8 @@ const getFileIcon = (fileType: string) => {
     return <FileSpreadsheet className="w-5 h-5" />;
   }
   if (fileType.includes('word') || fileType.includes('document')) return <FileType className="w-5 h-5" />;
+  if (fileType.includes('video')) return <Video className="w-5 h-5" />;
+  if (fileType.includes('presentation') || fileType.includes('powerpoint')) return <Presentation className="w-5 h-5" />;
   return <File className="w-5 h-5" />;
 };
 
@@ -52,17 +62,21 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
     if (!ALLOWED_EXTENSIONS.includes(extension)) {
       toast({
         title: 'Format nepermis',
-        description: `Fișierele ${extension} nu sunt permise. Formate acceptate: PDF, Word, Excel, PowerPoint, Text, CSV, JPG, PNG`,
+        description: `Fișierele ${extension} nu sunt permise. Formate acceptate: PDF, Word, Excel, PowerPoint, Text, CSV, JPG, PNG, MP4, WebM, MOV`,
         variant: 'destructive',
       });
       return false;
     }
     
-    // Max 10MB
-    if (file.size > 10 * 1024 * 1024) {
+    // Check file size - 100MB for videos, 10MB for other files
+    const isVideo = ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(extension);
+    const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxSizeLabel = isVideo ? '100MB' : '10MB';
+    
+    if (file.size > maxSize) {
       toast({
         title: 'Fișier prea mare',
-        description: 'Dimensiunea maximă permisă este 10MB.',
+        description: `Dimensiunea maximă permisă este ${maxSizeLabel}.`,
         variant: 'destructive',
       });
       return false;
@@ -192,8 +206,9 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
 
       <div className="text-xs text-muted-foreground">
         <p className="font-medium mb-1">Formate acceptate:</p>
-        <p>PDF, Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx), Text (.txt), CSV, JPG, PNG</p>
-        <p className="mt-1">Dimensiune maximă: 10MB</p>
+        <p>PDF, Word, Excel, PowerPoint, Text, CSV, JPG, PNG</p>
+        <p>Video: MP4, WebM, MOV, AVI, MKV</p>
+        <p className="mt-1">Dimensiune maximă: 10MB (documente) / 100MB (video)</p>
       </div>
 
       {selectedFile && (
