@@ -83,6 +83,13 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lesson_views_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       materials: {
@@ -214,6 +221,13 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tvc_submissions_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -239,9 +253,67 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      materials_public: {
+        Row: {
+          author: string | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
+          genre: string | null
+          id: string | null
+          lesson_number: number | null
+          subject: string | null
+          title: string | null
+          updated_at: string | null
+          year: number | null
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          genre?: string | null
+          id?: string | null
+          lesson_number?: number | null
+          subject?: string | null
+          title?: string | null
+          updated_at?: string | null
+          year?: number | null
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          genre?: string | null
+          id?: string | null
+          lesson_number?: number | null
+          subject?: string | null
+          title?: string | null
+          updated_at?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_material_answer_key: { Args: { _material_id: string }; Returns: Json }
+      get_material_question_count: {
+        Args: { _material_id: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -255,6 +327,13 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      verify_invitation_code: {
+        Args: { _code: string }
+        Returns: {
+          error_message: string
+          is_valid: boolean
+        }[]
+      }
     }
     Enums: {
       app_role: "student" | "profesor" | "admin"

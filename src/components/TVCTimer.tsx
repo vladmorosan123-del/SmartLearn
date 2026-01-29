@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, X, Clock, FileText, Upload, Download, ClipboardCheck } from 'lucide-react';
+import { Play, Pause, RotateCcw, X, Clock, FileText, Upload, Download, ClipboardCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TVCQuizInterface from '@/components/TVCQuizInterface';
+import TVCQuizInterfaceSecure from '@/components/TVCQuizInterfaceSecure';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TVCTimerProps {
   subjectTitle: string;
   onClose: () => void;
   pdfUrl?: string;
-  answerKey?: string[] | null;
+  hasAnswerKey?: boolean;
+  questionCount?: number;
   materialId?: string;
 }
 
@@ -18,11 +20,39 @@ const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 };
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey, materialId }: TVCTimerProps) => {
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId }: TVCTimerProps) => {
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [activeTab, setActiveTab] = useState<'timer' | 'quiz'>('timer');
+  const [questionCount, setQuestionCount] = useState(initialQuestionCount || 0);
+  const [isLoadingQuestionCount, setIsLoadingQuestionCount] = useState(false);
+
+  // Fetch question count if not provided (for students who don't have access to answer_key)
+  useEffect(() => {
+    const fetchQuestionCount = async () => {
+      if (hasAnswerKey && materialId && !initialQuestionCount) {
+        setIsLoadingQuestionCount(true);
+        try {
+          const { data, error } = await supabase.rpc('get_material_question_count', {
+            _material_id: materialId
+          });
+          
+          if (!error && typeof data === 'number') {
+            setQuestionCount(data);
+          }
+        } catch (err) {
+          console.error('Error fetching question count:', err);
+        } finally {
+          setIsLoadingQuestionCount(false);
+        }
+      } else if (initialQuestionCount) {
+        setQuestionCount(initialQuestionCount);
+      }
+    };
+    
+    fetchQuestionCount();
+  }, [hasAnswerKey, materialId, initialQuestionCount]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -67,7 +97,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey, materialId }: TVCT
     setActiveTab('timer');
   };
 
-  const hasAnswerKey = answerKey && Array.isArray(answerKey) && answerKey.length > 0;
+  const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
 
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
   const isTimeUp = timeLeft === 0;
@@ -167,7 +197,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey, materialId }: TVCT
               }`}
             >
               <ClipboardCheck className="w-4 h-4" />
-              Grilă {hasAnswerKey ? `(${answerKey?.length})` : ''}
+              Grilă {quizAvailable ? `(${questionCount})` : ''}
             </button>
           </div>
 
@@ -254,7 +284,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey, materialId }: TVCT
                 </p>
 
                 {/* Quiz CTA */}
-                {hasAnswerKey && (
+                {quizAvailable && (
                   <Button 
                     variant="gold" 
                     onClick={() => setActiveTab('quiz')} 
@@ -268,8 +298,11 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, answerKey, materialId }: TVCT
             ) : (
               /* Quiz Content */
               <div className="p-6">
-                {hasAnswerKey ? (
-                  <TVCQuizInterface answerKey={answerKey!} materialId={materialId} />
+                {quizAvailable ? (
+                  <TVCQuizInterfaceSecure 
+                    materialId={materialId} 
+                    questionCount={questionCount} 
+                  />
                 ) : (
                   <div className="text-center py-12">
                     <ClipboardCheck className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
