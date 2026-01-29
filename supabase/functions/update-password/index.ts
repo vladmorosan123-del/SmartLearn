@@ -20,14 +20,52 @@ serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // ========== SECURITY: Verify authentication ==========
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Authorization required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client with user's token to verify authentication
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
+
+    // Get the authenticated user
+    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !authUser) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Use service role key for admin operations
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
+
+    // ========== SECURITY: Verify user is admin ==========
+    const { data: isAdmin } = await supabaseAdmin.rpc('is_admin', { _user_id: authUser.id });
+    if (!isAdmin) {
+      console.error(`User ${authUser.id} attempted password reset without admin role`);
+      return new Response(
+        JSON.stringify({ error: 'Acces interzis. Doar administratorii pot reseta parolele.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { username, newPassword }: UpdatePasswordRequest = await req.json();
 
@@ -39,8 +77,16 @@ serve(async (req: Request) => {
       );
     }
 
+    // Validate password length
+    if (newPassword.length < 6) {
+      return new Response(
+        JSON.stringify({ error: 'Parola trebuie să aibă cel puțin 6 caractere' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Find user by username
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('user_id')
       .eq('username', username)
@@ -54,7 +100,7 @@ serve(async (req: Request) => {
     }
 
     // Update user password
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       profile.user_id,
       { password: newPassword }
     );
@@ -67,7 +113,7 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Password updated for user ${username}`);
+    console.log(`Password updated for user ${username} by admin ${authUser.id}`);
 
     return new Response(
       JSON.stringify({ 
