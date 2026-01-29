@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { X, FileText } from 'lucide-react';
+import { X, FileText, Video, Presentation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileUpload from '@/components/FileUpload';
 
 interface AddLessonModalProps {
@@ -32,6 +33,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
     type: string;
     size: number;
   } | null>(null);
+  const [activeTab, setActiveTab] = useState('document');
 
   if (!isOpen) return null;
 
@@ -57,6 +59,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
     setDuration('');
     setDescription('');
     setUploadedFile(null);
+    setActiveTab('document');
   };
 
   const handleClose = () => {
@@ -89,6 +92,17 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
       mkv: 'Video',
     };
     return labels[type.toLowerCase()] || type.toUpperCase();
+  };
+
+  const getFileTypeIcon = (type: string) => {
+    const t = type.toLowerCase();
+    if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(t)) {
+      return <Video className="w-5 h-5 text-red-500" />;
+    }
+    if (['ppt', 'pptx'].includes(t)) {
+      return <Presentation className="w-5 h-5 text-orange-500" />;
+    }
+    return <FileText className="w-5 h-5 text-gold" />;
   };
 
   return (
@@ -153,23 +167,31 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
             />
           </div>
 
-          {/* File Upload Section */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-gold" />
-              Încarcă fișier (opțional)
+          {/* File Upload Section with Tabs */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2 text-base font-semibold">
+              Materiale pentru lecție (opțional)
             </Label>
             
             {uploadedFile ? (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+                ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(uploadedFile.type.toLowerCase())
+                  ? 'bg-red-500/5 border-red-500/30'
+                  : ['ppt', 'pptx'].includes(uploadedFile.type.toLowerCase())
+                  ? 'bg-orange-500/5 border-orange-500/30'
+                  : 'bg-gold/5 border-gold/30'
+              }`}>
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-gold" />
+                  {getFileTypeIcon(uploadedFile.type)}
                   <div>
                     <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
                       {uploadedFile.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
+                      {getFileTypeLabel(uploadedFile.type)} • {uploadedFile.size >= 1024 * 1024 
+                        ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`
+                        : `${(uploadedFile.size / 1024).toFixed(1)} KB`
+                      }
                     </p>
                   </div>
                 </div>
@@ -183,11 +205,63 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
                 </Button>
               </div>
             ) : (
-              <FileUpload
-                onUploadComplete={handleUploadComplete}
-                category="lesson"
-                subject={subject}
-              />
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-3">
+                  <TabsTrigger value="document" className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Document
+                  </TabsTrigger>
+                  <TabsTrigger value="video" className="flex items-center gap-2">
+                    <Video className="w-4 h-4" />
+                    Video
+                  </TabsTrigger>
+                  <TabsTrigger value="powerpoint" className="flex items-center gap-2">
+                    <Presentation className="w-4 h-4" />
+                    PowerPoint
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="document" className="mt-0">
+                  <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Încarcă PDF, Word, Excel, Text sau imagini (max 10MB)
+                    </p>
+                    <FileUpload
+                      onUploadComplete={handleUploadComplete}
+                      category="lesson"
+                      subject={subject}
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="video" className="mt-0">
+                  <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/20">
+                    <p className="text-xs text-red-400 mb-3 flex items-center gap-2">
+                      <Video className="w-4 h-4" />
+                      Încarcă video MP4, WebM, MOV, AVI sau MKV (max 100MB)
+                    </p>
+                    <FileUpload
+                      onUploadComplete={handleUploadComplete}
+                      category="lesson"
+                      subject={subject}
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="powerpoint" className="mt-0">
+                  <div className="p-3 bg-orange-500/5 rounded-lg border border-orange-500/20">
+                    <p className="text-xs text-orange-400 mb-3 flex items-center gap-2">
+                      <Presentation className="w-4 h-4" />
+                      Încarcă prezentări PowerPoint .ppt sau .pptx (max 10MB)
+                    </p>
+                    <FileUpload
+                      onUploadComplete={handleUploadComplete}
+                      category="lesson"
+                      subject={subject}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
             )}
           </div>
 
