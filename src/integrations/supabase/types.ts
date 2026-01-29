@@ -99,6 +99,7 @@ export type Database = {
           genre: string | null
           id: string
           lesson_number: number | null
+          oficiu: number | null
           subject: string
           title: string
           updated_at: string
@@ -117,6 +118,7 @@ export type Database = {
           genre?: string | null
           id?: string
           lesson_number?: number | null
+          oficiu?: number | null
           subject: string
           title: string
           updated_at?: string
@@ -135,6 +137,7 @@ export type Database = {
           genre?: string | null
           id?: string
           lesson_number?: number | null
+          oficiu?: number | null
           subject?: string
           title?: string
           updated_at?: string
