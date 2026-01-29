@@ -3,6 +3,7 @@ import { X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FileUpload from '@/components/FileUpload';
 import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
 
@@ -39,6 +40,7 @@ const UploadMaterialModal = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
+  const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [uploadedFile, setUploadedFile] = useState<{
     url: string;
@@ -49,10 +51,23 @@ const UploadMaterialModal = ({
 
   if (!isOpen) return null;
 
+  const handleQuestionCountChange = (value: string) => {
+    const count = parseInt(value, 10);
+    setQuestionCount(count);
+    // Resize answer key array
+    const newAnswerKey = Array(count).fill('');
+    // Preserve existing answers
+    for (let i = 0; i < Math.min(answerKey.length, count); i++) {
+      newAnswerKey[i] = answerKey[i];
+    }
+    setAnswerKey(newAnswerKey);
+  };
+
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setYear(new Date().getFullYear());
+    setQuestionCount(9);
     setAnswerKey(Array(9).fill(''));
     setUploadedFile(null);
   };
@@ -185,10 +200,29 @@ const UploadMaterialModal = ({
 
           {/* Answer Key Input for TVC */}
           {showAnswerKey && (
-            <TVCAnswerKeyInput
-              value={answerKey}
-              onChange={setAnswerKey}
-            />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="questionCount">Număr de întrebări în grilă</Label>
+                <Select value={questionCount.toString()} onValueChange={handleQuestionCountChange}>
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue placeholder="Selectează numărul de întrebări" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {Array.from({ length: 60 }, (_, i) => i + 1).map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? 'întrebare' : 'întrebări'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <TVCAnswerKeyInput
+                value={answerKey}
+                onChange={setAnswerKey}
+                questionCount={questionCount}
+              />
+            </div>
           )}
 
           <div className="flex gap-3 pt-4">
