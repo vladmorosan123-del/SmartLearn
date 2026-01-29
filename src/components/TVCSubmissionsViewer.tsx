@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ClipboardCheck, User, Calendar, CheckCircle, XCircle, Loader2, Search, X, Filter } from 'lucide-react';
+import { ClipboardCheck, User, Calendar, CheckCircle, XCircle, Loader2, Search, X, Filter, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -16,6 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -59,6 +70,8 @@ const TVCSubmissionsViewer = () => {
   const [selectedSubmission, setSelectedSubmission] = useState<TVCSubmission | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
+  const [submissionToDelete, setSubmissionToDelete] = useState<TVCSubmission | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchSubmissions();
@@ -128,6 +141,29 @@ const TVCSubmissionsViewer = () => {
     if (percentage >= 70) return 'text-green-500';
     if (percentage >= 50) return 'text-yellow-500';
     return 'text-destructive';
+  };
+
+  const handleDeleteSubmission = async () => {
+    if (!submissionToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('tvc_submissions')
+        .delete()
+        .eq('id', submissionToDelete.id);
+
+      if (error) throw error;
+
+      setSubmissions(prev => prev.filter(s => s.id !== submissionToDelete.id));
+      toast.success('Răspunsul a fost șters cu succes');
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      toast.error('Eroare la ștergerea răspunsului');
+    } finally {
+      setIsDeleting(false);
+      setSubmissionToDelete(null);
+    }
   };
 
   // Filter submissions based on search and subject
@@ -234,13 +270,23 @@ const TVCSubmissionsViewer = () => {
                       {formatDate(submission.submitted_at)}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setSelectedSubmission(submission)}
-                      >
-                        Vezi Detalii
-                      </Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedSubmission(submission)}
+                        >
+                          Vezi Detalii
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setSubmissionToDelete(submission)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -344,6 +390,38 @@ const TVCSubmissionsViewer = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!submissionToDelete} onOpenChange={() => setSubmissionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmare Ștergere</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ești sigur că vrei să ștergi răspunsul TVC al elevului{' '}
+              <strong>{submissionToDelete?.profile?.full_name || submissionToDelete?.profile?.username}</strong>?
+              <br />
+              Această acțiune nu poate fi anulată.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSubmission}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Se șterge...
+                </>
+              ) : (
+                'Șterge'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
