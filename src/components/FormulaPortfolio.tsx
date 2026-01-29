@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
-import { Plus, Trash2, Pencil, Calculator, Atom, BookMarked, X, Eye, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon, Save } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Trash2, Pencil, Calculator, Atom, BookMarked, X, Eye, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon, Save, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import FileUpload from '@/components/FileUpload';
 import FileViewer from '@/components/FileViewer';
 
@@ -14,7 +15,13 @@ interface FormulaPortfolioProps {
   isProfessor: boolean;
 }
 
-const categoryDefinitions: Record<'matematica' | 'fizica', { id: string; name: string }[]> = {
+interface CategoryDefinition {
+  id: string;
+  name: string;
+  isCustom?: boolean;
+}
+
+const defaultCategories: Record<'matematica' | 'fizica', CategoryDefinition[]> = {
   matematica: [
     { id: 'algebra', name: 'Algebră' },
     { id: 'geometrie', name: 'Geometrie' },
@@ -62,15 +69,45 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
   const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [customCategories, setCustomCategories] = useState<CategoryDefinition[]>([]);
 
   const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject,
     category: 'formula',
   });
 
+  // Fetch custom categories (stored as materials with category='formula_category')
+  useEffect(() => {
+    const fetchCustomCategories = async () => {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('id, title, genre')
+        .eq('subject', subject)
+        .eq('category', 'formula_category')
+        .order('created_at', { ascending: true });
+
+      if (!error && data) {
+        setCustomCategories(
+          data.map(c => ({
+            id: c.genre || c.id,
+            name: c.title,
+            isCustom: true,
+          }))
+        );
+      }
+    };
+    fetchCustomCategories();
+  }, [subject]);
+
   const SubjectIcon = subject === 'matematica' ? Calculator : Atom;
   const subjectName = subject === 'matematica' ? 'Matematică' : 'Fizică';
-  const categories = categoryDefinitions[subject];
+  
+  // Merge default and custom categories
+  const categories = useMemo(() => {
+    return [...defaultCategories[subject], ...customCategories];
+  }, [subject, customCategories]);
 
   // Group materials by genre (category id)
   const materialsByCategory = useMemo(() => {
@@ -144,6 +181,70 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
     setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    const categoryId = `custom_${Date.now()}`;
+    
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .insert([{
+          title: newCategoryName.trim(),
+          description: 'Custom category',
+          file_name: 'category_placeholder',
+          file_type: 'category',
+          file_url: '',
+          subject,
+          category: 'formula_category',
+          genre: categoryId,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCustomCategories(prev => [...prev, {
+        id: categoryId,
+        name: newCategoryName.trim(),
+        isCustom: true,
+      }]);
+
+      toast({ title: 'Secțiune adăugată', description: `Secțiunea "${newCategoryName}" a fost creată.` });
+      setNewCategoryName('');
+      setIsAddCategoryModalOpen(false);
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast({ title: 'Eroare', description: 'Nu s-a putut adăuga secțiunea.', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      // Delete the category marker
+      const { error: catError } = await supabase
+        .from('materials')
+        .delete()
+        .eq('subject', subject)
+        .eq('category', 'formula_category')
+        .eq('genre', categoryId);
+
+      if (catError) throw catError;
+
+      // Also delete all materials in this category
+      const categoryMaterials = materialsByCategory[categoryId] || [];
+      for (const material of categoryMaterials) {
+        await deleteMaterial(material.id, material.file_url);
+      }
+
+      setCustomCategories(prev => prev.filter(c => c.id !== categoryId));
+      toast({ title: 'Secțiune ștearsă', description: 'Secțiunea și toate fișierele au fost șterse.' });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast({ title: 'Eroare', description: 'Nu s-a putut șterge secțiunea.', variant: 'destructive' });
+    }
+  };
+
   const uploadedCategories = categories.filter(c => materialsByCategory[c.id]?.length > 0);
 
   return (
@@ -158,6 +259,12 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
             <p className="text-sm text-muted-foreground">Formule esențiale pentru {subjectName} - organizate pe categorii</p>
           </div>
         </div>
+        {isProfessor && (
+          <Button variant="gold" className="gap-2" onClick={() => setIsAddCategoryModalOpen(true)}>
+            <FolderPlus className="w-4 h-4" />
+            Adaugă secțiune
+          </Button>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -194,12 +301,27 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
                     <div className="flex items-center gap-2">
                       <SubjectIcon className="w-5 h-5 text-gold" />
                       <h3 className="font-display text-lg text-foreground">{category.name}</h3>
+                      {category.isCustom && (
+                        <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded">Custom</span>
+                      )}
                     </div>
-                    {isProfessor && hasFiles && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUploadImage(category.id)}>
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {isProfessor && hasFiles && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleUploadImage(category.id)}>
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {isProfessor && category.isCustom && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteCategory(category.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -368,6 +490,39 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
               <Button variant="gold" className="flex-1 gap-2" onClick={handleSaveEdit} disabled={!editTitle.trim()}>
                 <Save className="w-4 h-4" />
                 Salvează
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Category Modal */}
+      <Dialog open={isAddCategoryModalOpen} onOpenChange={setIsAddCategoryModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <FolderPlus className="w-5 h-5 text-gold" />
+              Adaugă secțiune nouă
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-category-name">Numele secțiunii</Label>
+              <Input
+                id="new-category-name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Ex: Formule derivate, Constante fizice..."
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setIsAddCategoryModalOpen(false)}>
+                Anulează
+              </Button>
+              <Button variant="gold" className="flex-1 gap-2" onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
+                <Plus className="w-4 h-4" />
+                Adaugă
               </Button>
             </div>
           </div>
