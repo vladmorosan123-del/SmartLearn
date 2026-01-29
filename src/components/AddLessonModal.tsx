@@ -82,6 +82,11 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
       jpg: 'Imagine',
       jpeg: 'Imagine',
       png: 'Imagine',
+      mp4: 'Video',
+      webm: 'Video',
+      mov: 'Video',
+      avi: 'Video',
+      mkv: 'Video',
     };
     return labels[type.toLowerCase()] || type.toUpperCase();
   };
