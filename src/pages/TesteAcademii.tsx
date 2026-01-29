@@ -303,10 +303,10 @@ const TesteAcademii = () => {
                                 {getFileIcon(material.file_type)}
                                 {getFileTypeLabel(material.file_type)}
                               </span>
-                              {material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0 && (
+                              {(material.has_answer_key || (material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0)) && (
                                 <span className="text-xs bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-0.5 rounded flex items-center gap-1">
                                   <ClipboardCheck className="w-3 h-3" />
-                                  Grilă ({material.answer_key.length} întrebări)
+                                  Grilă disponibilă
                                 </span>
                               )}
                             </div>
@@ -409,7 +409,8 @@ const TesteAcademii = () => {
           <TVCTimer 
             subjectTitle={timerMaterial.title}
             pdfUrl={timerMaterial.file_url}
-            answerKey={timerMaterial.answer_key}
+            hasAnswerKey={timerMaterial.has_answer_key || (timerMaterial.answer_key && timerMaterial.answer_key.length > 0)}
+            questionCount={timerMaterial.answer_key?.length || 0}
             materialId={timerMaterial.id}
             onClose={() => setTimerMaterial(null)} 
           />
