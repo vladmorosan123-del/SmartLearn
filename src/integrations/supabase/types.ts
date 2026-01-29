@@ -83,13 +83,6 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "lesson_views_material_id_fkey"
-            columns: ["material_id"]
-            isOneToOne: false
-            referencedRelation: "materials_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       materials: {
@@ -221,13 +214,6 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tvc_submissions_material_id_fkey"
-            columns: ["material_id"]
-            isOneToOne: false
-            referencedRelation: "materials_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -271,40 +257,6 @@ export type Database = {
           updated_at: string | null
           year: number | null
         }
-        Insert: {
-          author?: string | null
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          file_name?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string | null
-          genre?: string | null
-          id?: string | null
-          lesson_number?: number | null
-          subject?: string | null
-          title?: string | null
-          updated_at?: string | null
-          year?: number | null
-        }
-        Update: {
-          author?: string | null
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          file_name?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string | null
-          genre?: string | null
-          id?: string | null
-          lesson_number?: number | null
-          subject?: string | null
-          title?: string | null
-          updated_at?: string | null
-          year?: number | null
-        }
         Relationships: []
       }
     }
@@ -313,6 +265,26 @@ export type Database = {
       get_material_question_count: {
         Args: { _material_id: string }
         Returns: number
+      }
+      get_materials_for_students: {
+        Args: never
+        Returns: {
+          author: string
+          category: string
+          created_at: string
+          description: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          genre: string
+          id: string
+          lesson_number: number
+          subject: string
+          title: string
+          updated_at: string
+          year: number
+        }[]
       }
       get_user_role: {
         Args: { _user_id: string }
