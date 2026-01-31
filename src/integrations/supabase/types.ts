@@ -101,6 +101,7 @@ export type Database = {
           lesson_number: number | null
           oficiu: number | null
           subject: string
+          timer_minutes: number | null
           title: string
           updated_at: string
           year: number | null
@@ -120,6 +121,7 @@ export type Database = {
           lesson_number?: number | null
           oficiu?: number | null
           subject: string
+          timer_minutes?: number | null
           title: string
           updated_at?: string
           year?: number | null
@@ -139,6 +141,7 @@ export type Database = {
           lesson_number?: number | null
           oficiu?: number | null
           subject?: string
+          timer_minutes?: number | null
           title?: string
           updated_at?: string
           year?: number | null

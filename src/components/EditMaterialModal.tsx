@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Save, Pencil } from 'lucide-react';
+import { X, FileText, Save, Pencil, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,12 @@ interface EditMaterialModalProps {
     description: string;
     year?: number;
     answerKey?: string[];
+    timerMinutes?: number;
   }) => void;
   material: Material | null;
   showYear?: boolean;
   showAnswerKey?: boolean;
+  showTimer?: boolean;
 }
 
 const EditMaterialModal = ({ 
@@ -26,12 +28,14 @@ const EditMaterialModal = ({
   onSave, 
   material,
   showYear = false,
-  showAnswerKey = false
+  showAnswerKey = false,
+  showTimer = false
 }: EditMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
+  const [timerMinutes, setTimerMinutes] = useState<number>(180);
 
   // Populate form when material changes
   useEffect(() => {
@@ -44,6 +48,7 @@ const EditMaterialModal = ({
           ? material.answer_key
           : Array(9).fill('')
       );
+      setTimerMinutes(material.timer_minutes || 180);
     }
   }, [material]);
 
@@ -62,6 +67,7 @@ const EditMaterialModal = ({
       description: description.trim(),
       year: showYear ? year : undefined,
       answerKey: showAnswerKey ? answerKey : undefined,
+      timerMinutes: showTimer ? timerMinutes : undefined,
     });
     onClose();
   };
@@ -156,6 +162,29 @@ const EditMaterialModal = ({
                 value={answerKey}
                 onChange={setAnswerKey}
               />
+            </div>
+          )}
+
+          {/* Custom Timer for TVC Complet */}
+          {showTimer && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-timerMinutes" className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gold" />
+                Durată Timer (minute)
+              </Label>
+              <Input
+                id="edit-timerMinutes"
+                type="number"
+                min={1}
+                max={600}
+                value={timerMinutes}
+                onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 180))}
+                placeholder="180"
+                className="bg-background"
+              />
+              <p className="text-xs text-muted-foreground">
+                Setează durata testului în minute (ex: 180 = 3 ore). La expirare, testul se trimite automat.
+              </p>
             </div>
           )}
 
