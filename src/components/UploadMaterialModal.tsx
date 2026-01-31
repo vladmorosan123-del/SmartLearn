@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, FileText } from 'lucide-react';
+import { X, FileText, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,12 +20,14 @@ interface UploadMaterialModalProps {
     fileSize: number;
     answerKey?: string[];
     oficiu?: number;
+    timerMinutes?: number;
   }) => void;
   title: string;
   category: string;
   subject: string;
   showYear?: boolean;
   showAnswerKey?: boolean;
+  showTimer?: boolean;
 }
 
 const UploadMaterialModal = ({ 
@@ -36,7 +38,8 @@ const UploadMaterialModal = ({
   category,
   subject,
   showYear = false,
-  showAnswerKey = false
+  showAnswerKey = false,
+  showTimer = false
 }: UploadMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -44,6 +47,7 @@ const UploadMaterialModal = ({
   const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [oficiu, setOficiu] = useState<number>(0);
+  const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [uploadedFile, setUploadedFile] = useState<{
     url: string;
     name: string;
@@ -72,6 +76,7 @@ const UploadMaterialModal = ({
     setQuestionCount(9);
     setAnswerKey(Array(9).fill(''));
     setOficiu(0);
+    setTimerMinutes(180);
     setUploadedFile(null);
   };
 
@@ -98,6 +103,7 @@ const UploadMaterialModal = ({
       fileSize: uploadedFile.size,
       answerKey: showAnswerKey ? answerKey : undefined,
       oficiu: showAnswerKey ? oficiu : undefined,
+      timerMinutes: showTimer ? timerMinutes : undefined,
     });
     resetForm();
     onClose();
@@ -242,6 +248,29 @@ const UploadMaterialModal = ({
                 onChange={setAnswerKey}
                 questionCount={questionCount}
               />
+            </div>
+          )}
+
+          {/* Custom Timer for TVC Complet */}
+          {showTimer && (
+            <div className="space-y-2">
+              <Label htmlFor="timerMinutes" className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gold" />
+                Durată Timer (minute)
+              </Label>
+              <Input
+                id="timerMinutes"
+                type="number"
+                min={1}
+                max={600}
+                value={timerMinutes}
+                onChange={(e) => setTimerMinutes(Math.max(1, parseInt(e.target.value) || 180))}
+                placeholder="180"
+                className="bg-background"
+              />
+              <p className="text-xs text-muted-foreground">
+                Setează durata testului în minute (ex: 180 = 3 ore). La expirare, testul se trimite automat.
+              </p>
             </div>
           )}
 
