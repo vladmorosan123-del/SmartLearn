@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Shield, BookOpen, ClipboardList, Settings, LogOut, 
   ChevronRight, Plus, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -267,6 +267,15 @@ const Dashboard = () => {
               >
                 <BookMarked className="w-5 h-5" />
                 <span>Portofoliu Formule</span>
+              </a>
+            )}
+            {subject !== 'romana' && (
+              <a 
+                onClick={() => navigate('/tvc-complet')}
+                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
+              >
+                <Timer className="w-5 h-5" />
+                <span>TVC Complet</span>
               </a>
             )}
             {subject === 'romana' && (
