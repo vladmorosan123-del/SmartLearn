@@ -21,6 +21,7 @@ interface UploadMaterialModalProps {
     answerKey?: string[];
     oficiu?: number;
     timerMinutes?: number;
+    subject?: string;
   }) => void;
   title: string;
   category: string;
@@ -28,7 +29,14 @@ interface UploadMaterialModalProps {
   showYear?: boolean;
   showAnswerKey?: boolean;
   showTimer?: boolean;
+  showSubjectSelector?: boolean;
 }
+
+const tvcSubjectOptions = [
+  { value: 'matematica', label: 'Matematică' },
+  { value: 'informatica', label: 'Informatică' },
+  { value: 'fizica', label: 'Fizică' },
+];
 
 const UploadMaterialModal = ({ 
   isOpen, 
@@ -39,11 +47,13 @@ const UploadMaterialModal = ({
   subject,
   showYear = false,
   showAnswerKey = false,
-  showTimer = false
+  showTimer = false,
+  showSubjectSelector = false
 }: UploadMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
+  const [selectedSubject, setSelectedSubject] = useState(subject);
   const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [oficiu, setOficiu] = useState<number>(0);
@@ -73,6 +83,7 @@ const UploadMaterialModal = ({
     setTitle('');
     setDescription('');
     setYear(new Date().getFullYear());
+    setSelectedSubject(subject);
     setQuestionCount(9);
     setAnswerKey(Array(9).fill(''));
     setOficiu(0);
@@ -104,6 +115,7 @@ const UploadMaterialModal = ({
       answerKey: showAnswerKey ? answerKey : undefined,
       oficiu: showAnswerKey ? oficiu : undefined,
       timerMinutes: showTimer ? timerMinutes : undefined,
+      subject: showSubjectSelector ? selectedSubject : undefined,
     });
     resetForm();
     onClose();
@@ -150,6 +162,24 @@ const UploadMaterialModal = ({
               className="bg-background"
             />
           </div>
+
+          {showSubjectSelector && (
+            <div className="space-y-2">
+              <Label htmlFor="subject">Materie *</Label>
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue placeholder="Selectează materia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tvcSubjectOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {showYear && (
             <div className="space-y-2">
@@ -203,7 +233,7 @@ const UploadMaterialModal = ({
               <FileUpload
                 onUploadComplete={handleUploadComplete}
                 category={category}
-                subject={subject}
+                subject={showSubjectSelector ? selectedSubject : subject}
               />
             )}
           </div>
