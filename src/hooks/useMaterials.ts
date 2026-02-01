@@ -21,6 +21,7 @@ export interface Material {
   oficiu?: number | null;
   timer_minutes?: number | null;
   has_answer_key?: boolean; // New field to indicate if answer key exists without exposing it
+  publish_at?: string | null; // Scheduled publish time
   created_at: string;
   updated_at: string;
 }
