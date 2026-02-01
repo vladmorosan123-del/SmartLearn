@@ -113,6 +113,7 @@ const TesteAcademii = () => {
     fileSize: number;
     answerKey?: string[];
     oficiu?: number;
+    timerMinutes?: number;
   }) => {
     try {
       await addMaterial({
@@ -130,6 +131,7 @@ const TesteAcademii = () => {
         year: data.year || null,
         answer_key: data.answerKey || null,
         oficiu: data.oficiu ?? 0,
+        timer_minutes: data.timerMinutes ?? 180,
       });
       toast({ title: 'Material salvat', description: 'Materialul TVC a fost salvat cu succes.' });
     } catch (error) {
@@ -146,6 +148,7 @@ const TesteAcademii = () => {
     description: string;
     year?: number;
     answerKey?: string[];
+    timerMinutes?: number;
   }) => {
     if (!editingMaterial) return;
     
@@ -155,6 +158,7 @@ const TesteAcademii = () => {
         description: data.description,
         year: data.year || null,
         answer_key: data.answerKey || null,
+        timer_minutes: data.timerMinutes ?? 180,
       });
       toast({ title: 'Material actualizat', description: 'Modificările au fost salvate cu succes.' });
       setEditingMaterial(null);
@@ -306,7 +310,7 @@ const TesteAcademii = () => {
                                 {getFileTypeLabel(material.file_type)}
                               </span>
                               {(material.has_answer_key || (material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0)) && (
-                                <span className="text-xs bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-0.5 rounded flex items-center gap-1">
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded flex items-center gap-1">
                                   <ClipboardCheck className="w-3 h-3" />
                                   Grilă disponibilă
                                 </span>
@@ -384,6 +388,7 @@ const TesteAcademii = () => {
           subject={selectedSubject}
           showYear={true}
           showAnswerKey={true}
+          showTimer={true}
         />
 
         {/* Edit Modal */}
@@ -394,6 +399,7 @@ const TesteAcademii = () => {
           material={editingMaterial}
           showYear={true}
           showAnswerKey={true}
+          showTimer={true}
         />
         {/* File Viewer */}
         {viewingFile && (

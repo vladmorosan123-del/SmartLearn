@@ -26,7 +26,7 @@ export interface Material {
 }
 
 interface UseMaterialsProps {
-  subject: string;
+  subject?: string;
   category: string;
 }
 
@@ -59,23 +59,33 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
       // Use materials_public view for non-privileged users to hide answer_key at database level
       // Privileged users (professors/admins) can access the full materials table
       if (isPrivilegedUser) {
-        const { data, error } = await supabase
+        let query = supabase
           .from('materials')
           .select('*')
-          .eq('subject', subject)
-          .eq('category', category)
-          .order('created_at', { ascending: false });
+          .eq('category', category);
+        
+        // Only filter by subject if provided
+        if (subject) {
+          query = query.eq('subject', subject);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
         setMaterials((data || []).map(d => mapToMaterial(d, false)));
       } else {
         // Students use the secure view that excludes answer_key
-        const { data, error } = await supabase
+        let query = supabase
           .from('materials_public')
           .select('*')
-          .eq('subject', subject)
-          .eq('category', category)
-          .order('created_at', { ascending: false });
+          .eq('category', category);
+        
+        // Only filter by subject if provided
+        if (subject) {
+          query = query.eq('subject', subject);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
         
