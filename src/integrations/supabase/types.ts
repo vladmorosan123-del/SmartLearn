@@ -83,6 +83,13 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lesson_views_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       materials: {
@@ -100,6 +107,7 @@ export type Database = {
           id: string
           lesson_number: number | null
           oficiu: number | null
+          publish_at: string | null
           subject: string
           timer_minutes: number | null
           title: string
@@ -120,6 +128,7 @@ export type Database = {
           id?: string
           lesson_number?: number | null
           oficiu?: number | null
+          publish_at?: string | null
           subject: string
           timer_minutes?: number | null
           title: string
@@ -140,6 +149,7 @@ export type Database = {
           id?: string
           lesson_number?: number | null
           oficiu?: number | null
+          publish_at?: string | null
           subject?: string
           timer_minutes?: number | null
           title?: string
@@ -220,6 +230,13 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tvc_submissions_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -258,10 +275,47 @@ export type Database = {
           genre: string | null
           id: string | null
           lesson_number: number | null
+          publish_at: string | null
           subject: string | null
           title: string | null
           updated_at: string | null
           year: number | null
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          genre?: string | null
+          id?: string | null
+          lesson_number?: number | null
+          publish_at?: string | null
+          subject?: string | null
+          title?: string | null
+          updated_at?: string | null
+          year?: number | null
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          genre?: string | null
+          id?: string | null
+          lesson_number?: number | null
+          publish_at?: string | null
+          subject?: string | null
+          title?: string | null
+          updated_at?: string | null
+          year?: number | null
         }
         Relationships: []
       }
@@ -286,7 +340,10 @@ export type Database = {
           genre: string
           id: string
           lesson_number: number
+          oficiu: number
+          publish_at: string
           subject: string
+          timer_minutes: number
           title: string
           updated_at: string
           year: number
