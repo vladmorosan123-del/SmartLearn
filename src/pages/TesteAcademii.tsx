@@ -114,6 +114,7 @@ const TesteAcademii = () => {
     answerKey?: string[];
     oficiu?: number;
     timerMinutes?: number;
+    publishAt?: string;
   }) => {
     try {
       await addMaterial({
@@ -132,6 +133,7 @@ const TesteAcademii = () => {
         answer_key: data.answerKey || null,
         oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
+        publish_at: data.publishAt || null,
       });
       toast({ title: 'Material salvat', description: 'Materialul TVC a fost salvat cu succes.' });
     } catch (error) {
@@ -149,6 +151,7 @@ const TesteAcademii = () => {
     year?: number;
     answerKey?: string[];
     timerMinutes?: number;
+    publishAt?: string | null;
   }) => {
     if (!editingMaterial) return;
     
@@ -159,6 +162,7 @@ const TesteAcademii = () => {
         year: data.year || null,
         answer_key: data.answerKey || null,
         timer_minutes: data.timerMinutes ?? 180,
+        publish_at: data.publishAt,
       });
       toast({ title: 'Material actualizat', description: 'Modificările au fost salvate cu succes.' });
       setEditingMaterial(null);
