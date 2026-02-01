@@ -74,24 +74,19 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         if (error) throw error;
         setMaterials((data || []).map(d => mapToMaterial(d, false)));
       } else {
-        // Students use the secure view that excludes answer_key
-        let query = supabase
-          .from('materials_public')
-          .select('*')
-          .eq('category', category);
-        
-        // Only filter by subject if provided
-        if (subject) {
-          query = query.eq('subject', subject);
-        }
-        
-        const { data, error } = await query.order('created_at', { ascending: false });
-
+        // Students use a backend function that returns materials WITHOUT answer_key
+        // (prevents exposing answer_key while keeping the base table SELECT locked down)
+        const { data, error } = await supabase.rpc('get_materials_for_students');
         if (error) throw error;
-        
+
+        const filtered = (data || [])
+          .filter((m: any) => m.category === category)
+          .filter((m: any) => (subject ? m.subject === subject : true))
+          .sort((a: any, b: any) => (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+
         // For students, also fetch question count securely via RPC
         const materialsWithQuestionCount = await Promise.all(
-          (data || []).map(async (material) => {
+          filtered.map(async (material: any) => {
             const { data: questionCount } = await supabase
               .rpc('get_material_question_count', { _material_id: material.id });
             return {
@@ -101,7 +96,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
             };
           })
         );
-        
+
         setMaterials(materialsWithQuestionCount as Material[]);
       }
     } catch (error: any) {
