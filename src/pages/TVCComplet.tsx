@@ -53,7 +53,7 @@ const TVCComplet = () => {
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
-  const isProfessor = role === 'profesor' || authRole === 'admin';
+  const isProfessor = authRole === 'profesor' || authRole === 'admin' || role === 'profesor' || role === 'admin';
 
   // Fetch all materials for tvc_complet category (all subjects in one query)
   const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
