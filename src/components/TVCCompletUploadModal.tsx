@@ -343,6 +343,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                   </div>
                 ) : (
                   <FileUpload
+                    key={currentEntry.id}
                     onUploadComplete={(url, name, type, size) => handleUploadComplete(activeTab, url, name, type, size)}
                     category="tvc_complet"
                     subject={currentEntry.subject}
