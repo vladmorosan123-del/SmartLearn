@@ -10,7 +10,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
-import UploadMaterialModal from '@/components/UploadMaterialModal';
+import TVCCompletUploadModal from '@/components/TVCCompletUploadModal';
 import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimerComplet from '@/components/TVCTimerComplet';
@@ -326,18 +326,11 @@ const TVCComplet = () => {
         </div>
       </main>
 
-      {/* Upload Modal with subject selector and custom timer */}
-      <UploadMaterialModal
+      {/* Upload Modal with multiple file support */}
+      <TVCCompletUploadModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleSaveMaterial}
-        title="Încarcă Test TVC Complet"
-        category="tvc_complet"
-        subject="matematica"
-        showYear={true}
-        showAnswerKey={true}
-        showTimer={true}
-        showSubjectSelector={true}
       />
 
       {/* Edit Modal with custom timer support */}
