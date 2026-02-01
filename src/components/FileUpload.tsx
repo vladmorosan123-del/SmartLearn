@@ -3,6 +3,7 @@ import { Upload, X, FileText, Image, FileSpreadsheet, FileType, File, Video, Pre
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const ALLOWED_EXTENSIONS = [
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', 
@@ -56,6 +57,7 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { isAuthenticated, role } = useAuthContext();
 
   const validateFile = (file: File): boolean => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -119,6 +121,26 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
 
   const uploadFile = async () => {
     if (!selectedFile) return;
+
+    // Storage upload requires an authenticated session (and for this app: profesor/admin)
+    if (!isAuthenticated) {
+      toast({
+        title: 'Trebuie să fii autentificat',
+        description: 'Te rog să te autentifici înainte să încarci fișiere.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const canUpload = role === 'profesor' || role === 'admin';
+    if (!canUpload) {
+      toast({
+        title: 'Fără permisiuni',
+        description: 'Doar profesorii și administratorii pot încărca fișiere.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsUploading(true);
     try {
