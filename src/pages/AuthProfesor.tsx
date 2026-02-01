@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -16,7 +16,7 @@ type AuthView = 'login' | 'signup' | 'verify-code';
 const AuthProfesor = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading, signInWithUsername, role: authRole } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, signInWithUsername, role: authRole } = useAuthContext();
   const { setRole } = useApp();
   
   const [view, setView] = useState<AuthView>('login');
