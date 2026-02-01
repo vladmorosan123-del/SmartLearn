@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 type AuthView = 'login' | 'change-password';
@@ -14,7 +14,7 @@ type AuthView = 'login' | 'change-password';
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading, signInWithUsername, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, signInWithUsername, user } = useAuthContext();
   
   const [view, setView] = useState<AuthView>('login');
   const [username, setUsername] = useState('');
