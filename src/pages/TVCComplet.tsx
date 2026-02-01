@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, 
   File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, 
-  FileText, ClipboardCheck, Pencil, Timer, Calculator, Code, Atom
+  FileText, ClipboardCheck, Pencil, Timer, Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useApp, Subject } from '@/contexts/AppContext';
+import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
@@ -15,13 +15,11 @@ import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimerComplet from '@/components/TVCTimerComplet';
 
-type TVCSubject = 'matematica' | 'informatica' | 'fizica';
-
-const tvcSubjects: { key: TVCSubject; name: string; icon: typeof Calculator }[] = [
-  { key: 'matematica', name: 'Matematică', icon: Calculator },
-  { key: 'informatica', name: 'Informatică', icon: Code },
-  { key: 'fizica', name: 'Fizică', icon: Atom },
-];
+const subjectNames: Record<string, string> = {
+  informatica: 'Informatică',
+  matematica: 'Matematică',
+  fizica: 'Fizică',
+};
 
 const getFileIcon = (fileType?: string) => {
   if (!fileType) return <FileText className="w-3 h-3" />;
@@ -49,27 +47,28 @@ const TVCComplet = () => {
   const { role: authRole } = useAuthContext();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedSubject, setSelectedSubject] = useState<TVCSubject>('matematica');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addingForSubject, setAddingForSubject] = useState<TVCSubject>('matematica');
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
 
-  // Fetch materials for all 3 subjects
-  const mateMaterials = useMaterials({ subject: 'matematica', category: 'tvc_complet' });
-  const infoMaterials = useMaterials({ subject: 'informatica', category: 'tvc_complet' });
-  const fizicaMaterials = useMaterials({ subject: 'fizica', category: 'tvc_complet' });
+  // Fetch all materials for tvc_complet category (all subjects in one query)
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
+    category: 'tvc_complet',
+  });
 
-  const getMaterialsForSubject = (subj: TVCSubject) => {
-    switch (subj) {
-      case 'matematica': return mateMaterials;
-      case 'informatica': return infoMaterials;
-      case 'fizica': return fizicaMaterials;
-    }
-  };
+  // Filter materials based on search
+  const filteredMaterials = useMemo(() => {
+    if (!searchQuery.trim()) return materials;
+    return materials.filter(m => 
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      subjectNames[m.subject]?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [materials, searchQuery]);
 
   const handleSaveMaterial = async (data: {
     title: string;
@@ -82,9 +81,8 @@ const TVCComplet = () => {
     answerKey?: string[];
     oficiu?: number;
     timerMinutes?: number;
+    subject?: string;
   }) => {
-    const { addMaterial } = getMaterialsForSubject(addingForSubject);
-    
     try {
       await addMaterial({
         title: data.title,
@@ -93,7 +91,7 @@ const TVCComplet = () => {
         file_type: data.fileType,
         file_url: data.fileUrl,
         file_size: data.fileSize,
-        subject: addingForSubject,
+        subject: data.subject || 'matematica',
         category: 'tvc_complet',
         lesson_number: null,
         author: null,
@@ -103,14 +101,13 @@ const TVCComplet = () => {
         oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
       });
-      toast({ title: 'Material salvat', description: 'Testul TVC a fost salvat cu succes.' });
+      toast({ title: 'Material salvat', description: 'Testul TVC Complet a fost salvat cu succes.' });
     } catch (error) {
       console.error('Error saving material:', error);
     }
   };
 
-  const handleDeleteMaterial = async (material: Material, subj: TVCSubject) => {
-    const { deleteMaterial } = getMaterialsForSubject(subj);
+  const handleDeleteMaterial = async (material: Material) => {
     await deleteMaterial(material.id, material.file_url);
   };
 
@@ -122,9 +119,6 @@ const TVCComplet = () => {
     timerMinutes?: number;
   }) => {
     if (!editingMaterial) return;
-    
-    const subj = editingMaterial.subject as TVCSubject;
-    const { updateMaterial } = getMaterialsForSubject(subj);
     
     try {
       await updateMaterial(editingMaterial.id, {
@@ -139,156 +133,6 @@ const TVCComplet = () => {
     } catch (error) {
       console.error('Error updating material:', error);
     }
-  };
-
-  const handleOpenAdd = (subj: TVCSubject) => {
-    setAddingForSubject(subj);
-    setIsAddModalOpen(true);
-  };
-
-  const renderSubjectCard = (subjectInfo: typeof tvcSubjects[0]) => {
-    const { key, name, icon: Icon } = subjectInfo;
-    const { materials, isLoading } = getMaterialsForSubject(key);
-    const material = materials[0]; // Only first material (one per subject)
-
-    return (
-      <div key={key} className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-gold/10 to-transparent border-b border-border">
-          <div className="w-10 h-10 rounded-lg bg-gold/20 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-gold" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-display text-lg text-foreground">{name}</h3>
-            <p className="text-sm text-muted-foreground">Test TVC Complet</p>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          {isLoading ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground text-sm">Se încarcă...</p>
-            </div>
-          ) : material ? (
-            <div className="space-y-4">
-              {/* Material Info */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-foreground">{material.title}</h4>
-                {material.description && (
-                  <p className="text-sm text-muted-foreground">{material.description}</p>
-                )}
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="bg-gold/10 text-gold px-2 py-1 rounded flex items-center gap-1">
-                    {getFileIcon(material.file_type)}
-                    {getFileTypeLabel(material.file_type)}
-                  </span>
-                  <span className="bg-primary/10 text-primary px-2 py-1 rounded flex items-center gap-1">
-                    <Timer className="w-3 h-3" />
-                    {(material as any).timer_minutes || 180} min
-                  </span>
-                  {(material.has_answer_key || (material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0)) && (
-                    <span className="bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded flex items-center gap-1">
-                      <ClipboardCheck className="w-3 h-3" />
-                      Grilă ({material.answer_key?.length || '?'} întreb.)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-wrap gap-2">
-                {isProfessor ? (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1"
-                      onClick={() => setViewingFile({ 
-                        url: material.file_url, 
-                        name: material.file_name, 
-                        type: material.file_type 
-                      })}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Vezi
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1"
-                      onClick={() => setEditingMaterial(material)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                      Editează
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-destructive gap-1"
-                      onClick={() => handleDeleteMaterial(material, key)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Șterge
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1"
-                      onClick={() => setViewingFile({ 
-                        url: material.file_url, 
-                        name: material.file_name, 
-                        type: material.file_type 
-                      })}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Vezi PDF
-                    </Button>
-                    <Button 
-                      variant="gold" 
-                      size="sm"
-                      className="gap-1"
-                      onClick={() => setTimerMaterial(material)}
-                    >
-                      <Timer className="w-4 h-4" />
-                      Începe Testul
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              {isProfessor ? (
-                <div className="space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                    <Plus className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground text-sm">Niciun test încărcat</p>
-                  <Button 
-                    variant="gold" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => handleOpenAdd(key)}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Încarcă Test
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-muted-foreground text-sm">Testul nu a fost încărcat încă</p>
-                  <p className="text-xs text-muted-foreground">Profesorul va încărca subiectul în curând.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -323,33 +167,177 @@ const TVCComplet = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Actions Bar */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8 animate-fade-up">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input 
+              type="text"
+              placeholder="Caută teste TVC Complet..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+            />
+          </div>
+          {isProfessor && (
+            <Button variant="gold" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Adaugă Test
+            </Button>
+          )}
+        </div>
+
         {/* Info Box */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-8 animate-fade-up">
+        <div className="bg-card border border-border rounded-xl p-6 mb-8 animate-fade-up delay-100">
           <h3 className="font-display text-lg text-foreground mb-2">Despre TVC Complet</h3>
           <p className="text-muted-foreground">
-            Secțiunea TVC Complet conține câte un test pentru fiecare materie: Matematică, Informatică și Fizică. 
+            Secțiunea TVC Complet conține teste pentru Matematică, Informatică și Fizică. 
             Fiecare test are un timer personalizat de către profesor. La expirarea timpului, testul se trimite automat 
             cu răspunsurile completate până în acel moment.
           </p>
         </div>
 
-        {/* Subject Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up delay-100">
-          {tvcSubjects.map(renderSubjectCard)}
+        {/* Materials List */}
+        <div className="space-y-4 animate-fade-up delay-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-2xl text-foreground">
+              Teste TVC Complet
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {materials.length} teste încărcate
+            </p>
+          </div>
+          
+          {isLoading ? (
+            <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
+              <p className="text-muted-foreground">Se încarcă...</p>
+            </div>
+          ) : filteredMaterials.length === 0 ? (
+            <div className="bg-card rounded-xl p-8 shadow-card border border-border text-center">
+              {searchQuery ? (
+                <>
+                  <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-medium text-foreground mb-2">Niciun test găsit</h3>
+                  <p className="text-muted-foreground text-sm">Încearcă alte cuvinte cheie</p>
+                </>
+              ) : (
+                <>
+                  <Award className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-medium text-foreground mb-2">Niciun test încărcat</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    {isProfessor ? 'Adaugă primul test TVC Complet.' : 'Profesorul va încărca testele în curând.'}
+                  </p>
+                  {isProfessor && (
+                    <Button variant="gold" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+                      <Plus className="w-4 h-4" />
+                      Adaugă Test
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            filteredMaterials.map((material, index) => (
+              <div 
+                key={material.id}
+                className="bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gold/20 text-gold">
+                      <span className="font-bold">{index + 1}</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground">{material.title}</h3>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          {subjectNames[material.subject] || material.subject}
+                        </span>
+                        {material.year && (
+                          <span className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {material.year}
+                          </span>
+                        )}
+                        <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
+                          {getFileIcon(material.file_type)}
+                          {getFileTypeLabel(material.file_type)}
+                        </span>
+                        <span className="text-xs bg-accent/50 text-accent-foreground px-2 py-0.5 rounded flex items-center gap-1">
+                          <Timer className="w-3 h-3" />
+                          {material.timer_minutes || 180} min
+                        </span>
+                        {(material.has_answer_key || (material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0)) && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded flex items-center gap-1">
+                            <ClipboardCheck className="w-3 h-3" />
+                            Grilă ({material.answer_key?.length || '?'} întreb.)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isProfessor ? (
+                      <>
+                        <Button 
+                          variant="outline" size="sm" className="gap-1"
+                          onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                        >
+                          <Eye className="w-4 h-4" />
+                          Vezi
+                        </Button>
+                        <Button 
+                          variant="outline" size="sm" className="gap-1"
+                          onClick={() => setEditingMaterial(material)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                          Editează
+                        </Button>
+                        <Button 
+                          variant="ghost" size="icon" className="text-destructive"
+                          onClick={() => handleDeleteMaterial(material)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" size="sm" className="gap-1"
+                          onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                        >
+                          <Eye className="w-4 h-4" />
+                          Vezi PDF
+                        </Button>
+                        <Button 
+                          variant="gold" size="sm" className="gap-1"
+                          onClick={() => setTimerMaterial(material)}
+                        >
+                          <Timer className="w-4 h-4" />
+                          Începe Testul
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </main>
 
-      {/* Upload Modal with custom timer support */}
+      {/* Upload Modal with subject selector and custom timer */}
       <UploadMaterialModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleSaveMaterial}
-        title={`Încarcă Test TVC - ${tvcSubjects.find(s => s.key === addingForSubject)?.name}`}
+        title="Încarcă Test TVC Complet"
         category="tvc_complet"
-        subject={addingForSubject}
+        subject="matematica"
         showYear={true}
         showAnswerKey={true}
         showTimer={true}
+        showSubjectSelector={true}
       />
 
       {/* Edit Modal with custom timer support */}
@@ -382,7 +370,7 @@ const TVCComplet = () => {
           hasAnswerKey={timerMaterial.has_answer_key || (timerMaterial.answer_key && timerMaterial.answer_key.length > 0)}
           questionCount={timerMaterial.answer_key?.length || 0}
           materialId={timerMaterial.id}
-          timerMinutes={(timerMaterial as any).timer_minutes || 180}
+          timerMinutes={timerMaterial.timer_minutes || 180}
           onClose={() => setTimerMaterial(null)} 
         />
       )}
