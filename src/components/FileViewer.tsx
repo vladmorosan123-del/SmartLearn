@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -28,6 +29,12 @@ const canPreviewInBrowser = (fileType: string) => {
 };
 
 const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewerProps) => {
+  const [imageError, setImageError] = useState(false);
+  const safeFileUrl = useMemo(() => {
+    // Prevent accidental whitespace issues from breaking previews
+    return (fileUrl || '').trim();
+  }, [fileUrl]);
+
   if (!isOpen) return null;
 
   const type = fileType.toLowerCase();
@@ -40,7 +47,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = fileUrl;
+    link.href = safeFileUrl;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
@@ -112,16 +119,37 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
           {canPreview ? (
             <div className="w-full h-full flex items-center justify-center">
               {isImage && (
-                <img
-                  src={fileUrl}
-                  alt={fileName}
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                />
+                imageError ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
+                    {getFileIcon(fileType)}
+                    <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Nu s-a putut previzualiza imaginea</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Descarcă fișierul sau deschide-l într-un tab nou.
+                    </p>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <Button variant="gold" onClick={handleDownload}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Descarcă
+                      </Button>
+                      <Button variant="outline" onClick={() => window.open(safeFileUrl, '_blank')}>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Tab nou
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={safeFileUrl}
+                    alt={fileName}
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                    onError={() => setImageError(true)}
+                  />
+                )
               )}
               
               {isPdf && (
                 <iframe
-                  src={getGoogleViewerUrl(fileUrl)}
+                  src={getGoogleViewerUrl(safeFileUrl)}
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title={fileName}
                   allow="autoplay"
@@ -130,7 +158,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
               
               {isTxt && (
                 <iframe
-                  src={fileUrl}
+                  src={safeFileUrl}
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title={fileName}
                 />
@@ -138,19 +166,19 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
               {isVideo && (
                 <video
-                  src={fileUrl}
+                  src={safeFileUrl}
                   controls
                   className="max-w-full max-h-full rounded-lg shadow-lg"
                   controlsList="nodownload"
                 >
-                  <source src={fileUrl} type={getVideoMimeType(type)} />
+                  <source src={safeFileUrl} type={getVideoMimeType(type)} />
                   Browser-ul tău nu suportă redarea video.
                 </video>
               )}
 
               {isOfficeDoc && (
                 <iframe
-                  src={getGoogleViewerUrl(fileUrl)}
+                  src={getGoogleViewerUrl(safeFileUrl)}
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title={fileName}
                   allow="autoplay"
