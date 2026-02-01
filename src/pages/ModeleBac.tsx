@@ -122,6 +122,7 @@ const ModeleBac = () => {
     fileName: string;
     fileType: string;
     fileSize: number;
+    publishAt?: string;
   }) => {
     try {
       await addMaterial({
@@ -137,6 +138,7 @@ const ModeleBac = () => {
         author: null,
         genre: null,
         year: data.year || null,
+        publish_at: data.publishAt || null,
       });
       toast({ title: 'Model salvat', description: 'Modelul BAC a fost salvat cu succes.' });
     } catch (error) {
@@ -152,6 +154,7 @@ const ModeleBac = () => {
     title: string;
     description: string;
     year?: number;
+    publishAt?: string | null;
   }) => {
     if (!editingMaterial) return;
     
@@ -160,6 +163,7 @@ const ModeleBac = () => {
         title: data.title,
         description: data.description,
         year: data.year || null,
+        publish_at: data.publishAt,
       });
       toast({ title: 'Model actualizat', description: 'Modificările au fost salvate cu succes.' });
       setEditingMaterial(null);

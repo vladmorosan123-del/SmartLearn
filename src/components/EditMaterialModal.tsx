@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Save, Pencil, Clock } from 'lucide-react';
+import { X, FileText, Save, Pencil, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { ro } from 'date-fns/locale';
 import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
 import { Material } from '@/hooks/useMaterials';
 
@@ -15,6 +20,7 @@ interface EditMaterialModalProps {
     year?: number;
     answerKey?: string[];
     timerMinutes?: number;
+    publishAt?: string | null;
   }) => void;
   material: Material | null;
   showYear?: boolean;
@@ -36,6 +42,8 @@ const EditMaterialModal = ({
   const [year, setYear] = useState(new Date().getFullYear());
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
+  const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
+  const [publishTime, setPublishTime] = useState<string>('');
 
   // Populate form when material changes
   useEffect(() => {
@@ -49,6 +57,16 @@ const EditMaterialModal = ({
           : Array(9).fill('')
       );
       setTimerMinutes(material.timer_minutes || 180);
+      
+      // Parse existing publish_at
+      if (material.publish_at) {
+        const parsed = parseISO(material.publish_at);
+        setPublishDate(parsed);
+        setPublishTime(format(parsed, 'HH:mm'));
+      } else {
+        setPublishDate(undefined);
+        setPublishTime('');
+      }
     }
   }, [material]);
 
@@ -62,12 +80,21 @@ const EditMaterialModal = ({
     e.preventDefault();
     if (!title.trim()) return;
 
+    // Build publish_at timestamp if date is set
+    let publishAt: string | null = null;
+    if (publishDate) {
+      const dateStr = format(publishDate, 'yyyy-MM-dd');
+      const timeStr = publishTime || '00:00';
+      publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+    }
+
     onSave({
       title: title.trim(),
       description: description.trim(),
       year: showYear ? year : undefined,
       answerKey: showAnswerKey ? answerKey : undefined,
       timerMinutes: showTimer ? timerMinutes : undefined,
+      publishAt,
     });
     onClose();
   };
@@ -187,6 +214,69 @@ const EditMaterialModal = ({
               </p>
             </div>
           )}
+
+          {/* Scheduled Publish Date/Time */}
+          <div className="space-y-2 pt-2 border-t border-border">
+            <Label className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gold" />
+              Programează Publicarea (opțional)
+            </Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Dacă setezi o dată, materialul va fi vizibil pentru elevi doar după acea dată și oră.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !publishDate && "text-muted-foreground"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {publishDate ? format(publishDate, "d MMM yyyy", { locale: ro }) : "Selectează data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={publishDate}
+                    onSelect={setPublishDate}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Input
+                type="time"
+                value={publishTime}
+                onChange={(e) => setPublishTime(e.target.value)}
+                placeholder="Ora"
+                className="bg-background"
+                disabled={!publishDate}
+              />
+            </div>
+            {publishDate && (
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gold">
+                  Va fi publicat: {format(publishDate, "d MMMM yyyy", { locale: ro })} la ora {publishTime || '00:00'}
+                </p>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => { setPublishDate(undefined); setPublishTime(''); }}
+                  className="text-xs h-6"
+                >
+                  Șterge programarea
+                </Button>
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={handleClose} className="flex-1">

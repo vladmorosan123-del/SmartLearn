@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { X, FileText, Clock } from 'lucide-react';
+import { X, FileText, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
 import FileUpload from '@/components/FileUpload';
 import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
 
@@ -22,6 +27,7 @@ interface UploadMaterialModalProps {
     oficiu?: number;
     timerMinutes?: number;
     subject?: string;
+    publishAt?: string;
   }) => void;
   title: string;
   category: string;
@@ -58,6 +64,8 @@ const UploadMaterialModal = ({
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [oficiu, setOficiu] = useState<number>(0);
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
+  const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
+  const [publishTime, setPublishTime] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<{
     url: string;
     name: string;
@@ -88,6 +96,8 @@ const UploadMaterialModal = ({
     setAnswerKey(Array(9).fill(''));
     setOficiu(0);
     setTimerMinutes(180);
+    setPublishDate(undefined);
+    setPublishTime('');
     setUploadedFile(null);
   };
 
@@ -104,6 +114,14 @@ const UploadMaterialModal = ({
     const hasValidAnswerKey = !showAnswerKey || answerKey.every(a => a !== '');
     if (showAnswerKey && !hasValidAnswerKey) return;
 
+    // Build publish_at timestamp if date is set
+    let publishAt: string | undefined;
+    if (publishDate) {
+      const dateStr = format(publishDate, 'yyyy-MM-dd');
+      const timeStr = publishTime || '00:00';
+      publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+    }
+
     onSave({
       title: title.trim(),
       description: description.trim(),
@@ -116,6 +134,7 @@ const UploadMaterialModal = ({
       oficiu: showAnswerKey ? oficiu : undefined,
       timerMinutes: showTimer ? timerMinutes : undefined,
       subject: showSubjectSelector ? selectedSubject : undefined,
+      publishAt,
     });
     resetForm();
     onClose();
@@ -303,6 +322,69 @@ const UploadMaterialModal = ({
               </p>
             </div>
           )}
+
+          {/* Scheduled Publish Date/Time */}
+          <div className="space-y-2 pt-2 border-t border-border">
+            <Label className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gold" />
+              Programează Publicarea (opțional)
+            </Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Dacă setezi o dată, materialul va fi vizibil pentru elevi doar după acea dată și oră.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !publishDate && "text-muted-foreground"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {publishDate ? format(publishDate, "d MMM yyyy", { locale: ro }) : "Selectează data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={publishDate}
+                    onSelect={setPublishDate}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Input
+                type="time"
+                value={publishTime}
+                onChange={(e) => setPublishTime(e.target.value)}
+                placeholder="Ora"
+                className="bg-background"
+                disabled={!publishDate}
+              />
+            </div>
+            {publishDate && (
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gold">
+                  Va fi publicat: {format(publishDate, "d MMMM yyyy", { locale: ro })} la ora {publishTime || '00:00'}
+                </p>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => { setPublishDate(undefined); setPublishTime(''); }}
+                  className="text-xs h-6"
+                >
+                  Șterge programarea
+                </Button>
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={handleClose} className="flex-1">

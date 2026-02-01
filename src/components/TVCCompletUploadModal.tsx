@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { X, FileText, Clock, Plus, Trash2, Calculator, Code, Atom } from 'lucide-react';
+import { X, FileText, Clock, Plus, Trash2, Calculator, Code, Atom, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
 import FileUpload from '@/components/FileUpload';
 import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
 
@@ -17,6 +22,8 @@ interface FileEntry {
   answerKey: string[];
   oficiu: number;
   timerMinutes: number;
+  publishDate: Date | undefined;
+  publishTime: string;
   uploadedFile: {
     url: string;
     name: string;
@@ -40,6 +47,7 @@ interface TVCCompletUploadModalProps {
     oficiu?: number;
     timerMinutes?: number;
     subject?: string;
+    publishAt?: string;
   }) => Promise<void>;
 }
 
@@ -59,6 +67,8 @@ const createEmptyEntry = (): FileEntry => ({
   answerKey: Array(9).fill(''),
   oficiu: 0,
   timerMinutes: 180,
+  publishDate: undefined,
+  publishTime: '',
   uploadedFile: null,
 });
 
@@ -131,6 +141,14 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
     try {
       // Save all valid entries
       for (const entry of validEntries) {
+        // Build publish_at timestamp if date is set
+        let publishAt: string | undefined;
+        if (entry.publishDate) {
+          const dateStr = format(entry.publishDate, 'yyyy-MM-dd');
+          const timeStr = entry.publishTime || '00:00';
+          publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+        }
+
         await onSave({
           title: entry.title.trim(),
           description: entry.description.trim(),
@@ -143,6 +161,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
           oficiu: entry.oficiu,
           timerMinutes: entry.timerMinutes,
           subject: entry.subject,
+          publishAt,
         });
       }
       resetForm();
@@ -414,6 +433,69 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                   onChange={(newKey) => updateEntry(activeTab, { answerKey: newKey })}
                   questionCount={currentEntry.questionCount}
                 />
+              </div>
+
+              {/* Scheduled Publish Date/Time */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-gold" />
+                  Programează Publicarea (opțional)
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Dacă setezi o dată, materialul va fi vizibil pentru elevi doar după acea dată și oră.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !currentEntry.publishDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {currentEntry.publishDate ? format(currentEntry.publishDate, "d MMM yyyy", { locale: ro }) : "Selectează data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={currentEntry.publishDate}
+                        onSelect={(date) => updateEntry(activeTab, { publishDate: date })}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Input
+                    type="time"
+                    value={currentEntry.publishTime}
+                    onChange={(e) => updateEntry(activeTab, { publishTime: e.target.value })}
+                    placeholder="Ora"
+                    className="bg-background"
+                    disabled={!currentEntry.publishDate}
+                  />
+                </div>
+                {currentEntry.publishDate && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gold">
+                      Va fi publicat: {format(currentEntry.publishDate, "d MMMM yyyy", { locale: ro })} la ora {currentEntry.publishTime || '00:00'}
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => updateEntry(activeTab, { publishDate: undefined, publishTime: '' })}
+                      className="text-xs h-6"
+                    >
+                      Șterge programarea
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
