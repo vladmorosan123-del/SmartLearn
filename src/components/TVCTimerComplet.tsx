@@ -8,6 +8,8 @@ interface TVCTimerCompletProps {
   subjectTitle: string;
   onClose: () => void;
   pdfUrl?: string;
+  fileType?: string;
+  fileName?: string;
   hasAnswerKey?: boolean;
   questionCount?: number;
   materialId?: string;
@@ -23,6 +25,8 @@ const TVCTimerComplet = ({
   subjectTitle, 
   onClose, 
   pdfUrl, 
+  fileType,
+  fileName,
   hasAnswerKey, 
   questionCount: initialQuestionCount, 
   materialId,
@@ -131,6 +135,10 @@ const TVCTimerComplet = ({
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
 
+  const ext = (fileType || pdfUrl?.split('?')[0]?.split('.').pop() || '').toLowerCase();
+  const isPdf = ext === 'pdf';
+  const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+
   // Time-based color
   const getTimerColor = () => {
     if (isTimeUp) return 'text-destructive';
@@ -202,12 +210,32 @@ const TVCTimerComplet = ({
           {/* PDF Content Area */}
           <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
             {pdfUrl ? (
-              <iframe 
-                src={getPdfViewerUrl(pdfUrl)} 
-                className="w-full h-full rounded-lg border border-border bg-white"
-                title="TVC Subject PDF"
-                allow="autoplay"
-              />
+              isImage ? (
+                <img
+                  src={pdfUrl}
+                  alt={fileName || subjectTitle}
+                  className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background"
+                />
+              ) : isPdf ? (
+                <iframe 
+                  src={getPdfViewerUrl(pdfUrl)} 
+                  className="w-full h-full rounded-lg border border-border bg-white"
+                  title="TVC Subject PDF"
+                  allow="autoplay"
+                />
+              ) : (
+                <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-display text-lg text-foreground mb-2">
+                    Fișierul nu poate fi afișat aici
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Descarcă fișierul sau deschide-l într-un tab nou.
+                  </p>
+                </div>
+              )
             ) : (
               <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">

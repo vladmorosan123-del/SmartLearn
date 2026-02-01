@@ -360,6 +360,8 @@ const TVCComplet = () => {
         <TVCTimerComplet 
           subjectTitle={timerMaterial.title}
           pdfUrl={timerMaterial.file_url}
+          fileType={timerMaterial.file_type}
+          fileName={timerMaterial.file_name}
           hasAnswerKey={timerMaterial.has_answer_key || (timerMaterial.answer_key && timerMaterial.answer_key.length > 0)}
           questionCount={timerMaterial.answer_key?.length || 0}
           materialId={timerMaterial.id}
