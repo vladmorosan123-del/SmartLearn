@@ -302,7 +302,7 @@ const EseuriBAC = () => {
             </Button>
             <div className="flex items-center gap-3">
               <Shield className="w-8 h-8 text-gold" />
-              <span className="font-display text-lg hidden md:block">LM Ștefan cel Mare</span>
+              <span className="font-display text-lg hidden md:block">CNM Ștefan cel Mare</span>
             </div>
           </div>
           <div className="animate-fade-up">

@@ -167,7 +167,7 @@ const Auth = () => {
             <GraduationCap className="w-10 h-10 text-primary-foreground" />
           </div>
           <h1 className="font-display text-2xl text-foreground">
-            Liceul Militar „Ștefan cel Mare"
+            Colegiul Național Militar „Ștefan cel Mare"
           </h1>
           <p className="text-muted-foreground mt-1">Platformă Educațională</p>
         </div>
@@ -367,7 +367,7 @@ const Auth = () => {
         )}
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 Liceul Militar „Ștefan cel Mare" • Toate drepturile rezervate
+          © 2024 Colegiul Național Militar „Ștefan cel Mare" • Toate drepturile rezervate
         </p>
       </div>
     </div>

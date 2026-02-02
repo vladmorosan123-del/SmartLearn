@@ -118,7 +118,7 @@ const RoleSelection = () => {
         {/* Footer */}
         <footer className="mt-16 text-center animate-fade-up delay-500">
           <p className="text-sm text-muted-foreground">
-            Liceul Militar „Ștefan cel Mare" • Platformă Educațională Oficială
+            Colegiul Național Militar „Ștefan cel Mare" • Platformă Educațională Oficială
           </p>
         </footer>
       </div>

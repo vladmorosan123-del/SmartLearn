@@ -48,7 +48,7 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
           <div className="relative inline-block">
             <Shield className="w-24 h-24 text-gold animate-glow" strokeWidth={1.5} />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-gold font-display text-2xl font-bold">LM</span>
+              <span className="text-gold font-display text-2xl font-bold">CNM</span>
             </div>
           </div>
         </div>
@@ -61,7 +61,7 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
         {/* School name */}
         <div className={`transition-all duration-1000 ${phase >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <p className="text-gold text-xl md:text-2xl font-medium tracking-wide mb-2">
-            Liceul Militar
+            Colegiul Național Militar
           </p>
           <h2 className="font-display text-3xl md:text-5xl text-gradient-gold">
             „Ștefan cel Mare"
