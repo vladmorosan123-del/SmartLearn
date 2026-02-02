@@ -11,6 +11,7 @@ export interface Lesson {
   fileType?: string;
   fileSize?: number;
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
+  materialId?: string;
 }
 
 interface LessonCardProps {

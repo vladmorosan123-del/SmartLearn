@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import AddLessonModal from '@/components/AddLessonModal';
+import AddLessonModal, { LessonEditData } from '@/components/AddLessonModal';
 import LessonCard, { Lesson } from '@/components/LessonCard';
 import StatsCard from '@/components/StatsCard';
 import SearchInput from '@/components/SearchInput';
@@ -47,6 +47,7 @@ const Dashboard = () => {
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLessonNumber, setSelectedLessonNumber] = useState<number>(1);
+  const [editingLesson, setEditingLesson] = useState<LessonEditData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
   
@@ -55,7 +56,7 @@ const Dashboard = () => {
   const subjectName = subject ? subjectNames[subject] : 'Materie';
   const subjectColor = subject ? subjectColors[subject] : 'from-gray-500 to-gray-700';
   
-  const { materials, isLoading, addMaterial, deleteMaterial } = useMaterials({
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject: subject || 'informatica',
     category: 'lesson',
   });
@@ -121,11 +122,39 @@ const Dashboard = () => {
 
   const handleAddLesson = (lessonNumber: number) => {
     setSelectedLessonNumber(lessonNumber);
+    setEditingLesson(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditLesson = (lessonId: number) => {
+    const lesson = currentLessons.find(l => l.id === lessonId);
+    if (!lesson || !lesson.materialId) return;
+    
+    const material = materials.find(m => m.id === lesson.materialId);
+    if (!material) return;
+    
+    // Parse duration from description (format: "45 min - description")
+    const durationMatch = material.description?.match(/^(\d+\s*min)/);
+    const duration = durationMatch ? durationMatch[1] : '45 min';
+    const description = material.description?.replace(/^\d+\s*min\s*-\s*/, '') || '';
+    
+    setSelectedLessonNumber(lessonId);
+    setEditingLesson({
+      materialId: material.id,
+      title: material.title,
+      duration,
+      description,
+      fileUrl: material.file_url,
+      fileName: material.file_name,
+      fileType: material.file_type,
+      fileSize: material.file_size || 0,
+    });
     setIsModalOpen(true);
   };
 
   const handleAddNewLesson = () => {
     setSelectedLessonNumber(currentLessons.length + 1);
+    setEditingLesson(null);
     setIsModalOpen(true);
   };
 
@@ -138,32 +167,63 @@ const Dashboard = () => {
     fileType?: string;
     fileSize?: number;
   }) => {
-    if (!subject || !lessonData.fileUrl) {
+    if (!subject) {
       toast({ 
         title: 'Eroare', 
-        description: 'Te rugăm să încarci un fișier.', 
+        description: 'Selectează o materie.', 
         variant: 'destructive' 
       });
       return;
     }
     
     try {
-      await addMaterial({
-        title: lessonData.title,
-        description: `${lessonData.duration} - ${lessonData.description}`,
-        file_name: lessonData.fileName || 'unknown',
-        file_type: lessonData.fileType || 'unknown',
-        file_url: lessonData.fileUrl,
-        file_size: lessonData.fileSize || 0,
-        subject: subject,
-        category: 'lesson',
-        lesson_number: selectedLessonNumber,
-        author: null,
-        genre: null,
-        year: null,
-      });
+      // If editing an existing lesson
+      if (editingLesson) {
+        const updates: any = {
+          title: lessonData.title,
+          description: `${lessonData.duration} - ${lessonData.description}`,
+        };
+        
+        // Only update file info if a new file was uploaded
+        if (lessonData.fileUrl && lessonData.fileUrl !== editingLesson.fileUrl) {
+          updates.file_name = lessonData.fileName;
+          updates.file_type = lessonData.fileType;
+          updates.file_url = lessonData.fileUrl;
+          updates.file_size = lessonData.fileSize;
+        }
+        
+        await updateMaterial(editingLesson.materialId, updates);
+        toast({ title: 'Lecție actualizată', description: 'Modificările au fost salvate cu succes.' });
+      } else {
+        // Adding new lesson - file is required
+        if (!lessonData.fileUrl) {
+          toast({ 
+            title: 'Eroare', 
+            description: 'Te rugăm să încarci un fișier.', 
+            variant: 'destructive' 
+          });
+          return;
+        }
+        
+        await addMaterial({
+          title: lessonData.title,
+          description: `${lessonData.duration} - ${lessonData.description}`,
+          file_name: lessonData.fileName || 'unknown',
+          file_type: lessonData.fileType || 'unknown',
+          file_url: lessonData.fileUrl,
+          file_size: lessonData.fileSize || 0,
+          subject: subject,
+          category: 'lesson',
+          lesson_number: selectedLessonNumber,
+          author: null,
+          genre: null,
+          year: null,
+        });
+        
+        toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
+      }
       
-      toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
+      setEditingLesson(null);
     } catch (error) {
       console.error('Error saving lesson:', error);
     }
@@ -442,7 +502,7 @@ const Dashboard = () => {
                   index={currentLessons.findIndex(l => l.id === lesson.id)}
                   isProfessor={isProfessor}
                   onAdd={handleAddLesson}
-                  onEdit={handleAddLesson}
+                  onEdit={handleEditLesson}
                   onDelete={handleDeleteLesson}
                   onViewFile={handleViewFile}
                 />
@@ -456,10 +516,12 @@ const Dashboard = () => {
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
+            setEditingLesson(null);
           }}
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonNumber}
           subject={subject || 'informatica'}
+          editData={editingLesson}
         />
 
         {/* File Viewer */}

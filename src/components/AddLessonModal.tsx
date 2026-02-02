@@ -1,11 +1,23 @@
-import { useState } from 'react';
-import { X, FileText, Video, Presentation } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, FileText, Video, Presentation, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileUpload from '@/components/FileUpload';
+
+// Data for an existing lesson when editing
+export interface LessonEditData {
+  materialId: string;
+  title: string;
+  duration: string;
+  description: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
 
 interface AddLessonModalProps {
   isOpen: boolean;
@@ -21,9 +33,11 @@ interface AddLessonModalProps {
   }) => void;
   lessonNumber: number;
   subject: string;
+  // Optional: if provided, we're editing an existing lesson
+  editData?: LessonEditData | null;
 }
 
-const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddLessonModalProps) => {
+const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData }: AddLessonModalProps) => {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
@@ -34,6 +48,26 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
     size: number;
   } | null>(null);
   const [activeTab, setActiveTab] = useState('document');
+
+  const isEditing = !!editData;
+
+  // Populate form with existing data when editing
+  useEffect(() => {
+    if (editData && isOpen) {
+      setTitle(editData.title);
+      setDuration(editData.duration);
+      setDescription(editData.description);
+      setUploadedFile({
+        url: editData.fileUrl,
+        name: editData.fileName,
+        type: editData.fileType,
+        size: editData.fileSize,
+      });
+    } else if (!isOpen) {
+      // Reset when modal closes
+      resetForm();
+    }
+  }, [editData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -118,8 +152,12 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <div>
-            <h2 className="font-display text-xl text-foreground">Adaugă Lecția {lessonNumber}</h2>
-            <p className="text-sm text-muted-foreground mt-1">Completează detaliile lecției</p>
+            <h2 className="font-display text-xl text-foreground">
+              {isEditing ? `Editează Lecția ${lessonNumber}` : `Adaugă Lecția ${lessonNumber}`}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isEditing ? 'Modifică detaliile lecției' : 'Completează detaliile lecției'}
+            </p>
           </div>
           <button 
             onClick={handleClose}
@@ -170,39 +208,47 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
           {/* File Upload Section with Tabs */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-base font-semibold">
-              Materiale pentru lecție (opțional)
+              Materiale pentru lecție {!isEditing && '(opțional)'}
             </Label>
             
             {uploadedFile ? (
-              <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-                ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(uploadedFile.type.toLowerCase())
-                  ? 'bg-red-500/5 border-red-500/30'
-                  : ['ppt', 'pptx'].includes(uploadedFile.type.toLowerCase())
-                  ? 'bg-orange-500/5 border-orange-500/30'
-                  : 'bg-gold/5 border-gold/30'
-              }`}>
-                <div className="flex items-center gap-3">
-                  {getFileTypeIcon(uploadedFile.type)}
-                  <div>
-                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                      {uploadedFile.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {getFileTypeLabel(uploadedFile.type)} • {uploadedFile.size >= 1024 * 1024 
-                        ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`
-                        : `${(uploadedFile.size / 1024).toFixed(1)} KB`
-                      }
-                    </p>
+              <div className="space-y-3">
+                <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+                  ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(uploadedFile.type.toLowerCase())
+                    ? 'bg-red-500/5 border-red-500/30'
+                    : ['ppt', 'pptx'].includes(uploadedFile.type.toLowerCase())
+                    ? 'bg-orange-500/5 border-orange-500/30'
+                    : 'bg-gold/5 border-gold/30'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {getFileTypeIcon(uploadedFile.type)}
+                    <div>
+                      <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                        {uploadedFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {getFileTypeLabel(uploadedFile.type)} • {uploadedFile.size >= 1024 * 1024 
+                          ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`
+                          : `${(uploadedFile.size / 1024).toFixed(1)} KB`
+                        }
+                      </p>
+                    </div>
                   </div>
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setUploadedFile(null)}
+                    title="Înlocuiește fișierul"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button 
-                  type="button"
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setUploadedFile(null)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                {isEditing && (
+                  <p className="text-xs text-muted-foreground">
+                    Apasă X pentru a înlocui fișierul cu unul nou.
+                  </p>
+                )}
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -278,10 +324,17 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject }: AddL
             <Button 
               type="submit" 
               variant="gold"
-              className="flex-1"
+              className="flex-1 gap-2"
               disabled={!title.trim() || !duration.trim()}
             >
-              Salvează lecția
+              {isEditing ? (
+                <>
+                  <Save className="w-4 h-4" />
+                  Salvează modificările
+                </>
+              ) : (
+                'Salvează lecția'
+              )}
             </Button>
           </div>
         </form>
