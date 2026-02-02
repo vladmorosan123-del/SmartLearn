@@ -223,7 +223,7 @@ const AuthProfesor = () => {
             <BookOpen className="w-10 h-10 text-navy-dark" />
           </div>
           <h1 className="font-display text-2xl text-foreground">
-            Liceul Militar „Ștefan cel Mare"
+            Colegiul Național Militar „Ștefan cel Mare"
           </h1>
           <p className="text-muted-foreground mt-1">Portal Profesori</p>
         </div>
@@ -516,7 +516,7 @@ const AuthProfesor = () => {
         )}
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 Liceul Militar „Ștefan cel Mare" • Toate drepturile rezervate
+          © 2024 Colegiul Național Militar „Ștefan cel Mare" • Toate drepturile rezervate
         </p>
       </div>
     </div>
