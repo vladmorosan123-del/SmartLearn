@@ -198,7 +198,7 @@ const Dashboard = () => {
           <div className="flex items-center gap-3 mb-8 p-2">
             <Shield className="w-10 h-10 text-gold" />
             <div>
-              <span className="font-display text-lg text-primary-foreground block">LM Ștefan cel Mare</span>
+              <span className="font-display text-lg text-primary-foreground block">CNM Ștefan cel Mare</span>
               <span className="text-xs text-primary-foreground/60">Platformă Educațională</span>
             </div>
           </div>
