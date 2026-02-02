@@ -51,6 +51,15 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
 
   const isEditing = !!editData;
 
+  // Define resetForm before using it in useEffect
+  const resetForm = () => {
+    setTitle('');
+    setDuration('');
+    setDescription('');
+    setUploadedFile(null);
+    setActiveTab('document');
+  };
+
   // Populate form with existing data when editing
   useEffect(() => {
     if (editData && isOpen) {
@@ -86,14 +95,6 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
       resetForm();
       onClose();
     }
-  };
-
-  const resetForm = () => {
-    setTitle('');
-    setDuration('');
-    setDescription('');
-    setUploadedFile(null);
-    setActiveTab('document');
   };
 
   const handleClose = () => {
