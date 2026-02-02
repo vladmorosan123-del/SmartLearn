@@ -56,6 +56,8 @@ interface TVCSubmission {
   profile?: {
     username: string;
     full_name: string | null;
+    study_year: number | null;
+    study_class: string | null;
   };
   material?: {
     title: string;
@@ -100,7 +102,7 @@ const TVCSubmissionsViewer = () => {
       const userIds = [...new Set(submissionsData.map(s => s.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, username, full_name')
+        .select('user_id, username, full_name, study_year, study_class')
         .in('user_id', userIds);
 
       // Fetch materials for all submissions
@@ -239,6 +241,7 @@ const TVCSubmissionsViewer = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Elev</TableHead>
+                  <TableHead>Clasă</TableHead>
                   <TableHead>Subiect TVC</TableHead>
                   <TableHead>Materie</TableHead>
                   <TableHead className="text-center">Scor</TableHead>
@@ -254,6 +257,15 @@ const TVCSubmissionsViewer = () => {
                         <User className="w-4 h-4 text-muted-foreground" />
                         {submission.profile?.full_name || submission.profile?.username || 'Necunoscut'}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {submission.profile?.study_year && submission.profile?.study_class ? (
+                        <span className="text-xs px-2 py-1 rounded-full bg-muted font-mono">
+                          {submission.profile.study_year}{submission.profile.study_class}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>{submission.material?.title || 'Material șters'}</TableCell>
                     <TableCell>
