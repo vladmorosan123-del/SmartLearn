@@ -11,6 +11,8 @@ interface CreateUserRequest {
   password: string;
   fullName?: string;
   role: 'student' | 'profesor';
+  studyYear?: number;
+  studyClass?: string;
 }
 
 serve(async (req: Request) => {
@@ -74,7 +76,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const { username, password, fullName, role }: CreateUserRequest = await req.json();
+    const { username, password, fullName, role, studyYear, studyClass }: CreateUserRequest = await req.json();
 
     // Validate input
     if (!username || !password || !role) {
@@ -82,6 +84,28 @@ serve(async (req: Request) => {
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Validate study year and class for students
+    if (role === 'student') {
+      if (!studyYear || !studyClass) {
+        return new Response(
+          JSON.stringify({ error: 'Anul și clasa sunt obligatorii pentru elevi' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (![11, 12].includes(studyYear)) {
+        return new Response(
+          JSON.stringify({ error: 'Anul trebuie să fie 11 sau 12' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(studyClass.toUpperCase())) {
+        return new Response(
+          JSON.stringify({ error: 'Clasa trebuie să fie între A și G' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // ========== SECURITY: Only allow creating student accounts ==========
@@ -114,12 +138,19 @@ serve(async (req: Request) => {
 
     const userId = userData.user.id;
 
-    // Create profile
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+    // Create profile with study year and class for students
+    const profileData: Record<string, any> = {
       user_id: userId,
       username,
       full_name: fullName || username,
-    });
+    };
+    
+    if (role === 'student' && studyYear && studyClass) {
+      profileData.study_year = studyYear;
+      profileData.study_class = studyClass.toUpperCase();
+    }
+
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData);
 
     if (profileError) {
       console.error('Error creating profile:', profileError);

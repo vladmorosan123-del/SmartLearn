@@ -164,6 +164,8 @@ export type Database = {
           full_name: string | null
           id: string
           is_blocked: boolean
+          study_class: string | null
+          study_year: number | null
           updated_at: string
           user_id: string
           username: string
@@ -173,6 +175,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_blocked?: boolean
+          study_class?: string | null
+          study_year?: number | null
           updated_at?: string
           user_id: string
           username: string
@@ -182,6 +186,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_blocked?: boolean
+          study_class?: string | null
+          study_year?: number | null
           updated_at?: string
           user_id?: string
           username?: string
