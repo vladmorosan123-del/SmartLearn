@@ -46,14 +46,14 @@ interface MaterialStats {
   fizica: { lessons: number; bacModels: number; tvcMaterials: number };
 }
 
-// Mock data for recent activity (will be replaced with real data later)
-const recentActivity = [
-  { id: 1, action: 'Lecție adăugată', subject: 'informatica', title: 'Algoritmi de sortare', time: 'Acum 2 ore', type: 'add' },
-  { id: 2, action: 'Model BAC încărcat', subject: 'romana', title: 'Subiect BAC 2024', time: 'Acum 5 ore', type: 'add' },
-  { id: 3, action: 'Material TVC șters', subject: 'fizica', title: 'Probleme mecanică', time: 'Ieri', type: 'delete' },
-  { id: 4, action: 'Lecție modificată', subject: 'matematica', title: 'Funcții trigonometrice', time: 'Ieri', type: 'edit' },
-  { id: 5, action: 'Model BAC adăugat', subject: 'informatica', title: 'Varianta 2023 - II', time: 'Acum 2 zile', type: 'add' },
-];
+interface RecentMaterial {
+  id: string;
+  title: string;
+  subject: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const AdminPanel = () => {
   const { role } = useApp();
@@ -63,6 +63,7 @@ const AdminPanel = () => {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const isAdmin = authRole === 'admin';
   const [materialStats, setMaterialStats] = useState<MaterialStats | null>(null);
+  const [recentMaterials, setRecentMaterials] = useState<RecentMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const { students: progressStudents, stats: progressStats, isLoading: isProgressLoading, refetch: refetchProgress, formatTime } = useStudentProgress();
@@ -95,10 +96,11 @@ const AdminPanel = () => {
           setStudents([]);
         }
 
-        // Fetch materials count by category and subject
+        // Fetch materials count by category and subject + recent materials
         const { data: materials } = await supabase
           .from('materials')
-          .select('category, subject');
+          .select('id, title, category, subject, created_at, updated_at')
+          .order('updated_at', { ascending: false });
 
         if (materials) {
           const stats: MaterialStats = {
@@ -118,6 +120,9 @@ const AdminPanel = () => {
           });
 
           setMaterialStats(stats);
+          
+          // Set recent materials (last 10)
+          setRecentMaterials(materials.slice(0, 10) as RecentMaterial[]);
         }
       } catch (error) {
         console.error('Error fetching admin data:', error);
@@ -659,33 +664,62 @@ const AdminPanel = () => {
           <div className="space-y-6 animate-fade-up">
             <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
               <div className="p-6 border-b border-border">
-                <h3 className="font-display text-lg text-foreground">Activitate Recentă</h3>
+                <h3 className="font-display text-lg text-foreground">Activitate Recentă - Ultimele Materiale</h3>
               </div>
-              <div className="divide-y divide-border">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      activity.type === 'add' ? 'bg-emerald-500/10 text-emerald-500' :
-                      activity.type === 'delete' ? 'bg-destructive/10 text-destructive' :
-                      'bg-gold/10 text-gold'
-                    }`}>
-                      {activity.type === 'add' ? <Plus className="w-5 h-5" /> :
-                       activity.type === 'delete' ? <Trash2 className="w-5 h-5" /> :
-                       <Eye className="w-5 h-5" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{activity.action}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.title} • {subjectNames[activity.subject as Subject]}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      {activity.time}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {recentMaterials.length > 0 ? (
+                <div className="divide-y divide-border">
+                  {recentMaterials.map((material) => {
+                    const isNew = new Date(material.created_at).getTime() === new Date(material.updated_at).getTime();
+                    const categoryLabel = material.category === 'lectie' ? 'Lecție' : 
+                                         material.category === 'bac' ? 'Model BAC' : 
+                                         material.category === 'tvc' ? 'Material TVC' : 
+                                         material.category === 'eseu' ? 'Eseu' : 
+                                         material.category === 'portofoliu' ? 'Portofoliu' : 'Material';
+                    
+                    const formatRelativeTime = (dateStr: string) => {
+                      const date = new Date(dateStr);
+                      const now = new Date();
+                      const diffMs = now.getTime() - date.getTime();
+                      const diffMins = Math.floor(diffMs / 60000);
+                      const diffHours = Math.floor(diffMs / 3600000);
+                      const diffDays = Math.floor(diffMs / 86400000);
+                      
+                      if (diffMins < 60) return `Acum ${diffMins} minute`;
+                      if (diffHours < 24) return `Acum ${diffHours} ore`;
+                      if (diffDays === 1) return 'Ieri';
+                      if (diffDays < 7) return `Acum ${diffDays} zile`;
+                      return date.toLocaleDateString('ro-RO');
+                    };
+                    
+                    return (
+                      <div key={material.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          isNew ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gold/10 text-gold'
+                        }`}>
+                          {isNew ? <Plus className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">
+                            {isNew ? `${categoryLabel} adăugat` : `${categoryLabel} modificat`}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {material.title} • {subjectNames[material.subject as Subject]}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          {formatRelativeTime(material.updated_at)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-12 text-center">
+                  <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground">Nu există activitate recentă încă.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
