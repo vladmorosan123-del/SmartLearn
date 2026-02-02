@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Users, Key, UserX, Lock, Unlock, Pencil, Trash2, Copy, 
-  CheckCircle, Loader2, AlertTriangle, RefreshCw, Ticket
+  CheckCircle, Loader2, AlertTriangle, RefreshCw, Ticket, Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -43,6 +44,8 @@ interface UserWithRole {
   is_blocked: boolean;
   created_at: string;
   role: 'student' | 'profesor' | 'admin';
+  study_year: number | null;
+  study_class: string | null;
 }
 
 interface GeneratedCode {
@@ -50,12 +53,20 @@ interface GeneratedCode {
   expiresAt: string;
 }
 
+const STUDY_YEARS = [11, 12] as const;
+const STUDY_CLASSES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
+
 const AdminUserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  
+  // Filter states
+  const [filterYear, setFilterYear] = useState<number | null>(null);
+  const [filterClass, setFilterClass] = useState<string | null>(null);
+  const [filterRole, setFilterRole] = useState<'all' | 'student' | 'profesor' | 'admin'>('all');
   
   // Dialog states
   const [editPasswordDialog, setEditPasswordDialog] = useState<{ open: boolean; user: UserWithRole | null }>({ open: false, user: null });
@@ -254,6 +265,21 @@ const AdminUserManagement = () => {
     }
   };
 
+  // Filter users based on selected filters
+  const filteredUsers = users.filter(user => {
+    if (filterRole !== 'all' && user.role !== filterRole) return false;
+    if (user.role === 'student') {
+      if (filterYear && user.study_year !== filterYear) return false;
+      if (filterClass && user.study_class !== filterClass) return false;
+    }
+    return true;
+  });
+
+  // Count students per class
+  const getStudentCount = (year: number, cls: string) => {
+    return users.filter(u => u.role === 'student' && u.study_year === year && u.study_class === cls).length;
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -322,15 +348,92 @@ const AdminUserManagement = () => {
 
       {/* User List */}
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6 text-primary" />
-            <h3 className="font-display text-lg text-foreground">Gestionare Utilizatori</h3>
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Users className="w-6 h-6 text-primary" />
+              <h3 className="font-display text-lg text-foreground">Gestionare Utilizatori</h3>
+            </div>
+            <Button variant="outline" size="sm" onClick={fetchUsers}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reîmprospătează
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchUsers}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Reîmprospătează
-          </Button>
+          
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-border">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Filtrează:</span>
+            </div>
+            
+            <Select
+              value={filterRole}
+              onValueChange={(val) => setFilterRole(val as any)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Rol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toți</SelectItem>
+                <SelectItem value="student">Elevi</SelectItem>
+                <SelectItem value="profesor">Profesori</SelectItem>
+                <SelectItem value="admin">Admini</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filterYear?.toString() || 'all'}
+              onValueChange={(val) => setFilterYear(val === 'all' ? null : parseInt(val))}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Anul" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toți anii</SelectItem>
+                {STUDY_YEARS.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    Clasa a {year}-a
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filterClass || 'all'}
+              onValueChange={(val) => setFilterClass(val === 'all' ? null : val)}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Clasa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toate</SelectItem>
+                {STUDY_CLASSES.map((cls) => (
+                  <SelectItem key={cls} value={cls}>
+                    {cls}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {(filterRole !== 'all' || filterYear || filterClass) && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setFilterRole('all');
+                  setFilterYear(null);
+                  setFilterClass(null);
+                }}
+              >
+                Resetează
+              </Button>
+            )}
+
+            <span className="text-sm text-muted-foreground ml-auto">
+              {filteredUsers.length} utilizatori
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -340,17 +443,27 @@ const AdminUserManagement = () => {
                 <TableHead>Utilizator</TableHead>
                 <TableHead>Nume</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Clasă</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Acțiuni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id} className={user.is_blocked ? 'opacity-60' : ''}>
                   <TableCell className="font-medium">{user.username}</TableCell>
                   <TableCell>{user.full_name || '-'}</TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>
+                    {user.role === 'student' && user.study_year && user.study_class ? (
+                      <Badge variant="outline" className="font-mono">
+                        {user.study_year}{user.study_class}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {user.is_blocked ? (
                       <Badge variant="destructive">Blocat</Badge>
@@ -409,10 +522,10 @@ const AdminUserManagement = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {users.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Nu există utilizatori înregistrați
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    Nu există utilizatori care să corespundă filtrelor
                   </TableCell>
                 </TableRow>
               )}
