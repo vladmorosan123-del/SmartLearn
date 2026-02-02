@@ -3,6 +3,7 @@ import { UserPlus, Loader2, Eye, EyeOff, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -10,10 +11,15 @@ interface CreateStudentFormProps {
   onStudentCreated?: () => void;
 }
 
+const STUDY_YEARS = [11, 12] as const;
+const STUDY_CLASSES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
+
 const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [studyYear, setStudyYear] = useState<number | null>(null);
+  const [studyClass, setStudyClass] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [createdUser, setCreatedUser] = useState<string | null>(null);
@@ -40,6 +46,15 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
       return;
     }
 
+    if (!studyYear || !studyClass) {
+      toast({
+        title: 'Eroare',
+        description: 'Anul și clasa sunt obligatorii.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     setCreatedUser(null);
 
@@ -50,6 +65,8 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
           password,
           fullName: fullName || username,
           role: 'student',
+          studyYear,
+          studyClass,
         },
       });
 
@@ -82,6 +99,8 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
       setUsername('');
       setPassword('');
       setFullName('');
+      setStudyYear(null);
+      setStudyClass(null);
       
       onStudentCreated?.();
     } catch (error) {
@@ -136,6 +155,48 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Anul de studiu *</Label>
+            <Select
+              value={studyYear?.toString() || ''}
+              onValueChange={(val) => setStudyYear(parseInt(val))}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selectează anul" />
+              </SelectTrigger>
+              <SelectContent>
+                {STUDY_YEARS.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    Clasa a {year}-a
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Clasa *</Label>
+            <Select
+              value={studyClass || ''}
+              onValueChange={setStudyClass}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selectează clasa" />
+              </SelectTrigger>
+              <SelectContent>
+                {STUDY_CLASSES.map((cls) => (
+                  <SelectItem key={cls} value={cls}>
+                    {cls}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="password">Parolă *</Label>
           <div className="relative">
@@ -162,7 +223,7 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
           type="submit" 
           variant="gold" 
           className="w-full gap-2"
-          disabled={isLoading || !username || !password}
+          disabled={isLoading || !username || !password || !studyYear || !studyClass}
         >
           {isLoading ? (
             <>
