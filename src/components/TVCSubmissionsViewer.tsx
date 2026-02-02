@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ClipboardCheck, User, Calendar, CheckCircle, XCircle, Loader2, Search, X, Filter, Trash2 } from 'lucide-react';
+import { ClipboardCheck, User, Calendar, CheckCircle, XCircle, Loader2, Search, X, Filter, Trash2, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -35,6 +35,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 type Subject = 'informatica' | 'romana' | 'matematica' | 'fizica';
 
@@ -44,6 +46,9 @@ const subjectNames: Record<Subject, string> = {
   matematica: 'Matematică',
   fizica: 'Fizică',
 };
+
+const STUDY_YEARS = [11, 12] as const;
+const STUDY_CLASSES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
 
 interface TVCSubmission {
   id: string;
@@ -74,6 +79,7 @@ const TVCSubmissionsViewer = () => {
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [submissionToDelete, setSubmissionToDelete] = useState<TVCSubmission | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<string>('all');
 
   useEffect(() => {
     fetchSubmissions();
@@ -168,15 +174,40 @@ const TVCSubmissionsViewer = () => {
     }
   };
 
-  // Filter submissions based on search and subject
+  // Get available classes from submissions
+  const availableClasses = useMemo(() => {
+    const classSet = new Set<string>();
+    submissions.forEach((submission) => {
+      if (submission.profile?.study_year && submission.profile?.study_class) {
+        classSet.add(`${submission.profile.study_year}${submission.profile.study_class}`);
+      }
+    });
+    return Array.from(classSet).sort();
+  }, [submissions]);
+
+  // Count submissions per class
+  const getClassSubmissionCount = (classKey: string) => {
+    return submissions.filter((s) => {
+      const studentClass = s.profile?.study_year && s.profile?.study_class 
+        ? `${s.profile.study_year}${s.profile.study_class}` 
+        : null;
+      return studentClass === classKey;
+    }).length;
+  };
+
+  // Filter submissions based on search, subject, and class
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((submission) => {
       const studentName = submission.profile?.full_name || submission.profile?.username || '';
       const matchesSearch = studentName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSubject = selectedSubject === 'all' || submission.material?.subject === selectedSubject;
-      return matchesSearch && matchesSubject;
+      const studentClass = submission.profile?.study_year && submission.profile?.study_class 
+        ? `${submission.profile.study_year}${submission.profile.study_class}` 
+        : null;
+      const matchesClass = selectedClass === 'all' || studentClass === selectedClass;
+      return matchesSearch && matchesSubject && matchesClass;
     });
-  }, [submissions, searchQuery, selectedSubject]);
+  }, [submissions, searchQuery, selectedSubject, selectedClass]);
 
   if (isLoading) {
     return (
@@ -195,6 +226,25 @@ const TVCSubmissionsViewer = () => {
             <h3 className="font-display text-lg text-foreground">Răspunsuri TVC de la Elevi</h3>
           </div>
           
+          {/* Class Tabs */}
+          <Tabs value={selectedClass} onValueChange={setSelectedClass} className="mb-4">
+            <TabsList className="flex-wrap h-auto gap-1 bg-muted/50 p-1">
+              <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Users className="w-4 h-4 mr-1" />
+                Toate ({submissions.length})
+              </TabsTrigger>
+              {availableClasses.map((cls) => (
+                <TabsTrigger 
+                  key={cls} 
+                  value={cls}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  {cls} ({getClassSubmissionCount(cls)})
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           {/* Search and Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search Input */}
@@ -313,7 +363,7 @@ const TVCSubmissionsViewer = () => {
               variant="ghost" 
               size="sm" 
               className="mt-2"
-              onClick={() => { setSearchQuery(''); setSelectedSubject('all'); }}
+              onClick={() => { setSearchQuery(''); setSelectedSubject('all'); setSelectedClass('all'); }}
             >
               Resetează filtrele
             </Button>
