@@ -85,7 +85,7 @@ const SubjectSelection = () => {
           </Button>
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-gold" />
-            <span className="font-display text-lg text-foreground">LM Ștefan cel Mare</span>
+            <span className="font-display text-lg text-foreground">CNM Ștefan cel Mare</span>
           </div>
           <div className="flex items-center gap-3">
             {isAuthenticated && profile && (
