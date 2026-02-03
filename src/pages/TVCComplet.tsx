@@ -11,7 +11,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
 import TVCCompletUploadModal from '@/components/TVCCompletUploadModal';
-import EditMaterialModal from '@/components/EditMaterialModal';
+import EditTVCCompletModal from '@/components/EditTVCCompletModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimerComplet from '@/components/TVCTimerComplet';
 
@@ -337,15 +337,13 @@ const TVCComplet = () => {
         onSave={handleSaveMaterial}
       />
 
-      {/* Edit Modal with custom timer support */}
-      <EditMaterialModal
+      {/* Edit Modal with custom timer support and additional test upload */}
+      <EditTVCCompletModal
         isOpen={!!editingMaterial}
         onClose={() => setEditingMaterial(null)}
         onSave={handleEditMaterial}
+        onAddTest={handleSaveMaterial}
         material={editingMaterial}
-        showYear={true}
-        showAnswerKey={true}
-        showTimer={true}
       />
 
       {/* File Viewer */}
