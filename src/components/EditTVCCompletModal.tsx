@@ -93,6 +93,7 @@ const EditTVCCompletModal = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
+  const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
@@ -109,11 +110,15 @@ const EditTVCCompletModal = ({
       setTitle(material.title || '');
       setDescription(material.description || '');
       setYear(material.year || new Date().getFullYear());
-      setAnswerKey(
-        Array.isArray(material.answer_key) && material.answer_key.length > 0
-          ? material.answer_key
-          : Array(9).fill('')
-      );
+      
+      // Preserve existing answer key with correct question count
+      const existingAnswerKey = Array.isArray(material.answer_key) && material.answer_key.length > 0
+        ? material.answer_key
+        : Array(9).fill('');
+      const existingCount = existingAnswerKey.length;
+      
+      setQuestionCount(existingCount);
+      setAnswerKey(existingAnswerKey);
       setTimerMinutes(material.timer_minutes || 180);
       
       if (material.publish_at) {
@@ -397,10 +402,41 @@ const EditTVCCompletModal = ({
               </div>
 
               {/* Answer Key */}
-              <TVCAnswerKeyInput
-                value={answerKey}
-                onChange={setAnswerKey}
-              />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Număr de întrebări</Label>
+                  <Select 
+                    value={questionCount.toString()} 
+                    onValueChange={(value) => {
+                      const newCount = parseInt(value, 10);
+                      const newAnswerKey = Array(newCount).fill('');
+                      // Preserve existing answers
+                      for (let i = 0; i < Math.min(answerKey.length, newCount); i++) {
+                        newAnswerKey[i] = answerKey[i];
+                      }
+                      setQuestionCount(newCount);
+                      setAnswerKey(newAnswerKey);
+                    }}
+                  >
+                    <SelectTrigger className="w-full bg-background">
+                      <SelectValue placeholder="Selectează" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 60 }, (_, i) => i + 1).map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num} {num === 1 ? 'întrebare' : 'întrebări'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <TVCAnswerKeyInput
+                  value={answerKey}
+                  onChange={setAnswerKey}
+                  questionCount={questionCount}
+                />
+              </div>
 
               {/* Scheduled Publish */}
               <div className="space-y-2 pt-2 border-t border-border">
