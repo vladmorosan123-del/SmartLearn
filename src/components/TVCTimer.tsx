@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TVCQuizInterfaceSecure from '@/components/TVCQuizInterfaceSecure';
+import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TVCTimerProps {
@@ -30,6 +30,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   const [isLoadingQuestionCount, setIsLoadingQuestionCount] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showTimeUpWarning, setShowTimeUpWarning] = useState(false);
+  const [autoSubmitQuiz, setAutoSubmitQuiz] = useState(false);
+  
+  const quizRef = useRef<TVCQuizInterfaceRef>(null);
 
   // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
@@ -67,6 +70,8 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             setIsRunning(false);
             setIsTimeUp(true);
             setHasSubmitted(true);
+            // Trigger auto-submit when time runs out
+            setAutoSubmitQuiz(true);
             return 0;
           }
           // Show warning at 5 minutes remaining
@@ -100,6 +105,8 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     setIsRunning(false);
     setIsTimeUp(true);
     setHasSubmitted(true);
+    // Also trigger auto-submit on manual submit
+    setAutoSubmitQuiz(true);
   };
 
   const handleClose = () => {
@@ -321,7 +328,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                 {isTimeUp && (
                   <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-center">
                     <p className="text-destructive text-sm font-medium">
-                      ⏰ Timpul a expirat! Testul a fost trimis.
+                      ⏰ Timpul a expirat! Testul a fost trimis automat.
                     </p>
                   </div>
                 )}
@@ -337,8 +344,10 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                   
                   {quizAvailable ? (
                     <TVCQuizInterfaceSecure 
+                      ref={quizRef}
                       materialId={materialId} 
-                      questionCount={questionCount} 
+                      questionCount={questionCount}
+                      autoSubmit={autoSubmitQuiz}
                     />
                   ) : (
                     <div className="text-center py-8">
