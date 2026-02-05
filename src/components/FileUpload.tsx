@@ -59,6 +59,24 @@ const getFileIcon = (fileType: string) => {
   return <File className="w-5 h-5" />;
 };
 
+// Sanitize filename to remove special characters (diacritics, spaces, etc.)
+const sanitizeFileName = (fileName: string): string => {
+  // Get file extension
+  const lastDot = fileName.lastIndexOf('.');
+  const name = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
+  const ext = lastDot > 0 ? fileName.substring(lastDot) : '';
+  
+  // Replace diacritics and special chars with ASCII equivalents
+  const sanitized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace other special chars with underscore
+    .replace(/_+/g, '_') // Replace multiple underscores with single
+    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  
+  return sanitized + ext.toLowerCase();
+};
+
 const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: FileUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
@@ -196,7 +214,8 @@ const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: Fi
 
       try {
         const fileExt = uploadedFile.file.name.split('.').pop()?.toLowerCase() || '';
-        const fileName = `${category}/${subject}/${Date.now()}_${uploadedFile.file.name}`;
+        const sanitizedName = sanitizeFileName(uploadedFile.file.name);
+        const fileName = `${category}/${subject}/${Date.now()}_${sanitizedName}`;
         
         const { data, error } = await supabase.storage
           .from('materials')
