@@ -40,7 +40,7 @@ const subjectColors = {
 
 const Dashboard = () => {
   const { role, subject, setSubject, clearSession } = useApp();
-  const { role: authRole } = useAuthContext();
+  const { role: authRole, signOut } = useAuthContext();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -114,7 +114,8 @@ const Dashboard = () => {
     setSearchQuery('');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(); // End Supabase session completely
     clearSession();
     navigate('/');
     toast({ title: 'Deconectat', description: 'Te-ai deconectat cu succes.' });
