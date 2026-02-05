@@ -91,6 +91,7 @@ const TVCComplet = () => {
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
+    subjectConfig?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number }>;
   }) => {
     try {
       await addMaterial({
@@ -110,6 +111,7 @@ const TVCComplet = () => {
         oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
         publish_at: data.publishAt || null,
+        subject_config: data.subjectConfig || null,
       });
       toast({ title: 'Material salvat', description: 'Testul TVC Complet a fost salvat cu succes.' });
     } catch (error) {
@@ -400,6 +402,7 @@ const TVCComplet = () => {
           questionCount={timerMaterial.answer_key?.length || 0}
           materialId={timerMaterial.id}
           timerMinutes={timerMaterial.timer_minutes || 180}
+          subjectConfig={timerMaterial.subject_config}
           onClose={() => setTimerMaterial(null)} 
         />
       )}

@@ -109,6 +109,7 @@ export type Database = {
           oficiu: number | null
           publish_at: string | null
           subject: string
+          subject_config: Json | null
           timer_minutes: number | null
           title: string
           updated_at: string
@@ -130,6 +131,7 @@ export type Database = {
           oficiu?: number | null
           publish_at?: string | null
           subject: string
+          subject_config?: Json | null
           timer_minutes?: number | null
           title: string
           updated_at?: string
@@ -151,6 +153,7 @@ export type Database = {
           oficiu?: number | null
           publish_at?: string | null
           subject?: string
+          subject_config?: Json | null
           timer_minutes?: number | null
           title?: string
           updated_at?: string
