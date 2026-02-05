@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Send, X, Clock, FileText, Download, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +37,6 @@ const TVCTimerComplet = ({
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'timer' | 'quiz'>('timer');
   const [questionCount, setQuestionCount] = useState(initialQuestionCount || 0);
   const [isLoadingQuestionCount, setIsLoadingQuestionCount] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
@@ -125,6 +124,13 @@ const TVCTimerComplet = ({
     }
   };
 
+  // Allow closing only after submission
+  const handleClose = () => {
+    if (hasSubmitted || isTimeUp) {
+      onClose();
+    }
+  };
+
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
 
@@ -190,14 +196,7 @@ const TVCTimerComplet = ({
                     Descarcă PDF
                   </Button>
                 )}
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={onClose}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
+                {/* No X button here - can only submit to exit */}
               </div>
             </div>
             
@@ -254,46 +253,26 @@ const TVCTimerComplet = ({
               </div>
               <h2 className="font-display text-2xl text-foreground mb-4">{subjectTitle}</h2>
               <p className="text-muted-foreground mb-6">
-                Apasă butonul "Start Timer" pentru a începe testul. <br />
+                Apasă butonul "Începe Testul" pentru a începe. <br />
                 Ai la dispoziție <span className="text-gold font-bold">{timerMinutes} minute</span> pentru a rezolva subiectul.
               </p>
               <Button variant="gold" size="lg" onClick={handleStart} className="gap-2">
                 <Play className="w-5 h-5" />
-                Start Timer
+                Începe Testul
               </Button>
             </div>
           </div>
         )}
 
-        {/* Right Side - Timer & Quiz (only show quiz tab after start) */}
+        {/* Right Side - Unified Timer & Quiz Panel */}
         <div className="w-80 lg:w-[480px] flex flex-col bg-card border-l border-border overflow-hidden">
-          {/* Tabs Header - only show quiz tab after timer started */}
-          {hasStarted && (
-            <div className="flex border-b border-border">
-              <button
-                onClick={() => setActiveTab('timer')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'timer' 
-                    ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                <Clock className="w-4 h-4" />
-                Timer
-              </button>
-              <button
-                onClick={() => setActiveTab('quiz')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'quiz' 
-                    ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                <ClipboardCheck className="w-4 h-4" />
-                Grilă {quizAvailable ? `(${questionCount})` : ''}
-              </button>
-            </div>
-          )}
+          {/* Header */}
+          <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-border bg-gold/10">
+            <Clock className="w-4 h-4 text-gold" />
+            <span className="text-sm font-medium text-gold">
+              {hasStarted ? 'Test în desfășurare' : 'Pregătit pentru test'}
+            </span>
+          </div>
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto">
@@ -307,7 +286,7 @@ const TVCTimerComplet = ({
                   Pregătit pentru test?
                 </h3>
                 <p className="text-muted-foreground text-sm text-center mb-6">
-                  Apasă "Start Timer" pentru a începe.
+                  Apasă "Începe Testul" pentru a vedea subiectul și a completa grila.
                 </p>
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
                   <span className="font-mono text-3xl font-bold text-gold">
@@ -318,131 +297,116 @@ const TVCTimerComplet = ({
                   </p>
                 </div>
               </div>
-            ) : activeTab === 'timer' ? (
-              /* Timer Content */
-              <div className="flex flex-col items-center justify-center p-6 h-full">
-                {/* Timer Display */}
-                <div className="relative mb-8">
-                  <div className="w-40 h-40 lg:w-48 lg:h-48 relative">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="45%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        className="text-muted"
-                      />
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="45%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        className={`transition-all duration-1000 ${getTimerColor()}`}
-                        strokeLinecap="round"
-                        style={{ 
-                          strokeDasharray: `${2 * Math.PI * 72} ${2 * Math.PI * 72}`, 
-                          strokeDashoffset: 2 * Math.PI * 72 * (1 - progress / 100) 
-                        }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className={`font-mono text-2xl lg:text-3xl font-bold ${getTimerColor()}`}>
-                        {formatTime(timeLeft)}
-                      </span>
-                      {isRunning && (
-                        <span className="text-xs text-gold mt-2 animate-pulse">În desfășurare</span>
-                      )}
-                      {isTimeUp && (
-                        <span className="text-xs text-destructive mt-2 font-medium">Timp expirat!</span>
-                      )}
+            ) : (
+              /* After start - show timer + quiz in one unified view */
+              <div className="p-6 space-y-6">
+                {/* Compact Timer Display */}
+                <div className="flex items-center justify-center">
+                  <div className="relative">
+                    <div className="w-32 h-32 lg:w-40 lg:h-40 relative">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="50%"
+                          cy="50%"
+                          r="45%"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="none"
+                          className="text-muted"
+                        />
+                        <circle
+                          cx="50%"
+                          cy="50%"
+                          r="45%"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="none"
+                          className={`transition-all duration-1000 ${getTimerColor()}`}
+                          strokeLinecap="round"
+                          style={{ 
+                            strokeDasharray: `${2 * Math.PI * 72} ${2 * Math.PI * 72}`, 
+                            strokeDashoffset: 2 * Math.PI * 72 * (1 - progress / 100) 
+                          }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={`font-mono text-xl lg:text-2xl font-bold ${getTimerColor()}`}>
+                          {formatTime(timeLeft)}
+                        </span>
+                        {isRunning && (
+                          <span className="text-xs text-gold mt-1 animate-pulse">În desfășurare</span>
+                        )}
+                        {isTimeUp && (
+                          <span className="text-xs text-destructive mt-1 font-medium">Timp expirat!</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Controls */}
-                <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-                  {!hasSubmitted && (
-                    <Button 
-                      variant="gold" 
-                      size="lg" 
-                      onClick={handleSubmitTest} 
-                      className="gap-2 w-full"
-                      disabled={isTimeUp}
-                    >
-                      <Send className="w-5 h-5" />
-                      Predă Testul
-                    </Button>
-                  )}
-                </div>
-
-                {/* Info */}
-                <p className="text-center text-muted-foreground text-xs mt-6">
-                  {timerMinutes < 60 
-                    ? `Ai la dispoziție ${timerMinutes} minute pentru a rezolva subiectul TVC.`
-                    : `Ai la dispoziție ${timerMinutes} minute (${Math.floor(timerMinutes / 60)}h ${timerMinutes % 60}min) pentru a rezolva subiectul TVC.`
-                  }
-                </p>
+                {/* Submit Button */}
+                {!hasSubmitted && !isTimeUp && (
+                  <Button 
+                    variant="gold" 
+                    size="lg" 
+                    onClick={handleSubmitTest} 
+                    className="gap-2 w-full"
+                  >
+                    <Send className="w-5 h-5" />
+                    Predă Testul
+                  </Button>
+                )}
 
                 {/* Time up warning */}
                 {isTimeUp && (
-                  <div className="mt-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-center">
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-center">
                     <p className="text-destructive text-sm font-medium">
                       ⏰ Timpul a expirat! Testul a fost trimis automat.
                     </p>
                   </div>
                 )}
 
-                {/* Quiz CTA */}
-                {quizAvailable && !isTimeUp && (
-                  <Button 
-                    variant="gold" 
-                    onClick={() => setActiveTab('quiz')} 
-                    className="mt-4 gap-2"
-                  >
-                    <ClipboardCheck className="w-4 h-4" />
-                    Completează Grila
-                  </Button>
-                )}
-              </div>
-            ) : null}
-            
-            {/* Quiz Content - always mounted but hidden when not active to keep ref alive */}
-            {hasStarted && (
-              <div className={`p-6 ${activeTab === 'quiz' ? '' : 'hidden'}`}>
-                {quizAvailable ? (
-                  <TVCQuizAutoSubmit 
-                    ref={quizRef}
-                    materialId={materialId} 
-                    questionCount={questionCount}
-                    isTimeUp={isTimeUp}
-                    elapsedSeconds={INITIAL_TIME - timeLeft}
-                  />
-                ) : (
-                  <div className="text-center py-12">
-                    <ClipboardCheck className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="font-display text-lg text-foreground mb-2">
-                      Grilă indisponibilă
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      Profesorul nu a adăugat încă baremul pentru acest subiect.
-                    </p>
+                {/* Quiz Section */}
+                <div className="border-t border-border pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ClipboardCheck className="w-5 h-5 text-gold" />
+                    <h4 className="font-display text-lg text-foreground">
+                      Grilă de Răspunsuri {quizAvailable ? `(${questionCount} întrebări)` : ''}
+                    </h4>
                   </div>
-                )}
+                  
+                  {quizAvailable ? (
+                    <TVCQuizAutoSubmit 
+                      ref={quizRef}
+                      materialId={materialId} 
+                      questionCount={questionCount}
+                      isTimeUp={isTimeUp}
+                      elapsedSeconds={INITIAL_TIME - timeLeft}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <ClipboardCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <h3 className="font-display text-base text-foreground mb-2">
+                        Grilă indisponibilă
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        Profesorul nu a adăugat încă baremul pentru acest subiect.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Exit Button */}
-          <div className="p-4 border-t border-border">
-            <Button variant="ghost" onClick={onClose} className="w-full text-muted-foreground">
-              <X className="w-4 h-4 mr-2" />
-              Închide subiectul
-            </Button>
-          </div>
+          {/* Exit Button - only shown after submission */}
+          {(hasSubmitted || isTimeUp) && (
+            <div className="p-4 border-t border-border">
+              <Button variant="outline" onClick={handleClose} className="w-full">
+                Închide testul
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
