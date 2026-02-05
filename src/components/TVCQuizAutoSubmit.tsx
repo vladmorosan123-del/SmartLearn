@@ -122,13 +122,7 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
     return (
       <div className="space-y-6">
         {/* Progress Display */}
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-gold" />
-            <span className="font-mono text-lg font-bold text-foreground">
-              {formatTime(elapsedSeconds)}
-            </span>
-          </div>
+        <div className="flex items-center justify-end p-3 bg-muted/50 rounded-lg">
           <span className="text-sm text-muted-foreground">
             {answeredCount}/{questionCount} completate
           </span>
