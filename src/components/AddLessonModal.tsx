@@ -84,13 +84,13 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim() && duration.trim()) {
+    if (title.trim()) {
       // Check if we have a link
       const hasLink = activeTab === 'link' && linkUrl.trim();
       
       onSave({ 
         title: title.trim(), 
-        duration: duration.trim(), 
+        duration: duration.trim() || '', 
         description: description.trim(),
         fileUrl: hasLink ? linkUrl.trim() : uploadedFile?.url,
         fileName: hasLink ? linkUrl.trim() : uploadedFile?.name,
@@ -188,13 +188,12 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="duration">Durata *</Label>
+            <Label htmlFor="duration">Durata (opțional)</Label>
             <Input
               id="duration"
               placeholder="ex: 45 min"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              required
               className="bg-background"
             />
           </div>
@@ -351,7 +350,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
               type="submit" 
               variant="gold"
               className="flex-1 gap-2"
-              disabled={!title.trim() || !duration.trim()}
+              disabled={!title.trim()}
             >
               {isEditing ? (
                 <>
