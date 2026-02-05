@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { CheckCircle, XCircle, Send, RotateCcw, Loader2, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -130,7 +130,6 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
     hasAutoSubmitted.current = false;
   };
 
-  const allAnswered = userAnswers.every(answer => answer !== '');
   const answeredCount = userAnswers.filter(answer => answer !== '').length;
 
   return (
@@ -255,28 +254,9 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
         })}
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        {!isSubmitted ? (
-          <Button 
-            variant="gold" 
-            onClick={() => handleSubmit(false)} 
-            disabled={!allAnswered || isSubmitting}
-            className="gap-2 flex-1"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Se verifică...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Verifică Răspunsurile
-              </>
-            )}
-          </Button>
-        ) : (
+      {/* Actions - only show reset after submission */}
+      {isSubmitted && (
+        <div className="flex gap-3">
           <Button 
             variant="outline" 
             onClick={handleReset}
@@ -285,12 +265,13 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
             <RotateCcw className="w-4 h-4" />
             Încearcă Din Nou
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {!isSubmitted && !allAnswered && (
+      {/* Progress indicator */}
+      {!isSubmitted && (
         <p className="text-xs text-muted-foreground text-center">
-          {answeredCount}/{questionCount} răspunsuri completate. Răspunde la toate pentru a verifica.
+          {answeredCount}/{questionCount} răspunsuri completate
         </p>
       )}
     </div>
