@@ -63,7 +63,7 @@ const EseuriBAC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedGenreId, setSelectedGenreId] = useState<string | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<{ url: string; name: string; type: string; size: number }[]>([]);
   const [essayTitle, setEssayTitle] = useState('');
   const [essayAuthor, setEssayAuthor] = useState('');
   const [essayDescription, setEssayDescription] = useState('');
@@ -149,7 +149,7 @@ const EseuriBAC = () => {
 
   const handleUploadEssay = (genreId: string) => {
     setSelectedGenreId(genreId);
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setEssayTitle('');
     setEssayAuthor('');
     setEssayDescription('');
@@ -157,24 +157,26 @@ const EseuriBAC = () => {
   };
 
   const handleSaveEssay = async () => {
-    if (!uploadedFile || !selectedGenreId || !essayTitle.trim()) return;
+    if (uploadedFiles.length === 0 || !selectedGenreId || !essayTitle.trim()) return;
 
     try {
-      await addMaterial({
-        title: essayTitle.trim(),
-        description: essayDescription.trim() || null,
-        file_name: uploadedFile.name,
-        file_type: uploadedFile.type,
-        file_url: uploadedFile.url,
-        file_size: uploadedFile.size,
-        subject: 'romana',
-        category: 'eseu',
-        lesson_number: null,
-        author: essayAuthor.trim() || null,
-        genre: selectedGenreId,
-        year: null,
-      });
-      toast({ title: 'Eseu salvat', description: 'Eseul a fost salvat cu succes.' });
+      for (const file of uploadedFiles) {
+        await addMaterial({
+          title: uploadedFiles.length > 1 ? `${essayTitle.trim()} - ${file.name}` : essayTitle.trim(),
+          description: essayDescription.trim() || null,
+          file_name: file.name,
+          file_type: file.type,
+          file_url: file.url,
+          file_size: file.size,
+          subject: 'romana',
+          category: 'eseu',
+          lesson_number: null,
+          author: essayAuthor.trim() || null,
+          genre: selectedGenreId,
+          year: null,
+        });
+      }
+      toast({ title: 'Eseuri salvate', description: `${uploadedFiles.length} ${uploadedFiles.length === 1 ? 'eseu salvat' : 'eseuri salvate'} cu succes.` });
       setIsUploadModalOpen(false);
       resetForm();
     } catch (error) {
@@ -184,7 +186,7 @@ const EseuriBAC = () => {
   };
 
   const resetForm = () => {
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setEssayTitle('');
     setEssayAuthor('');
     setEssayDescription('');
@@ -221,7 +223,7 @@ const EseuriBAC = () => {
   };
 
   const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
-    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+    setUploadedFiles(prev => [...prev, { url: fileUrl, name: fileName, type: fileType, size: fileSize }]);
   };
 
   const handleAddGenre = async () => {
@@ -538,28 +540,31 @@ const EseuriBAC = () => {
               />
             </div>
 
-            {uploadedFile ? (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  {getFileIcon(uploadedFile.type)}
-                  <div>
-                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{uploadedFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
-                    </p>
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {getFileIcon(file.type)}
+                      <div>
+                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getFileTypeLabel(file.type)} • {(file.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}>
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
+                ))}
               </div>
-            ) : (
-              <FileUpload
-                onUploadComplete={handleUploadComplete}
-                category="eseu"
-                subject="romana"
-              />
             )}
+            <FileUpload
+              onUploadComplete={handleUploadComplete}
+              category="eseu"
+              subject="romana"
+            />
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => { setIsUploadModalOpen(false); resetForm(); }}>
@@ -569,7 +574,7 @@ const EseuriBAC = () => {
                 variant="gold" 
                 className="flex-1" 
                 onClick={handleSaveEssay} 
-                disabled={!uploadedFile || !essayTitle.trim()}
+                disabled={uploadedFiles.length === 0 || !essayTitle.trim()}
               >
                 Salvează
               </Button>
