@@ -69,12 +69,12 @@ const UploadMaterialModal = ({
   const [publishTime, setPublishTime] = useState<string>('');
   const [uploadTab, setUploadTab] = useState<'file' | 'link'>('file');
   const [linkUrl, setLinkUrl] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{
+  const [uploadedFiles, setUploadedFiles] = useState<{
     url: string;
     name: string;
     type: string;
     size: number;
-  } | null>(null);
+  }[]>([]);
 
   if (!isOpen) return null;
 
@@ -103,7 +103,7 @@ const UploadMaterialModal = ({
     setPublishTime('');
     setUploadTab('file');
     setLinkUrl('');
-    setUploadedFile(null);
+    setUploadedFiles([]);
   };
 
   const handleClose = () => {
@@ -114,13 +114,10 @@ const UploadMaterialModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if we have either a file or a link
-    const hasFile = !!uploadedFile;
     const hasLink = uploadTab === 'link' && linkUrl.trim();
     
-    if (!title.trim() || (!hasFile && !hasLink)) return;
+    if (!title.trim() || (uploadedFiles.length === 0 && !hasLink)) return;
 
-    // Build publish_at timestamp if date is set
     let publishAt: string | undefined;
     if (publishDate) {
       const dateStr = format(publishDate, 'yyyy-MM-dd');
@@ -128,32 +125,45 @@ const UploadMaterialModal = ({
       publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
     }
 
-    // If link is provided, use it as the file URL
-    const fileUrl = hasLink ? linkUrl.trim() : uploadedFile!.url;
-    const fileName = hasLink ? linkUrl.trim() : uploadedFile!.name;
-    const fileType = hasLink ? 'link' : uploadedFile!.type;
-    const fileSize = hasLink ? 0 : uploadedFile!.size;
-
-    onSave({
-      title: title.trim(),
-      description: description.trim(),
-      year: showYear ? year : undefined,
-      fileUrl,
-      fileName,
-      fileType,
-      fileSize,
-      answerKey: showAnswerKey ? answerKey : undefined,
-      oficiu: showAnswerKey ? oficiu : undefined,
-      timerMinutes: showTimer ? timerMinutes : undefined,
-      subject: showSubjectSelector ? selectedSubject : undefined,
-      publishAt,
-    });
+    if (hasLink) {
+      onSave({
+        title: title.trim(),
+        description: description.trim(),
+        year: showYear ? year : undefined,
+        fileUrl: linkUrl.trim(),
+        fileName: linkUrl.trim(),
+        fileType: 'link',
+        fileSize: 0,
+        answerKey: showAnswerKey ? answerKey : undefined,
+        oficiu: showAnswerKey ? oficiu : undefined,
+        timerMinutes: showTimer ? timerMinutes : undefined,
+        subject: showSubjectSelector ? selectedSubject : undefined,
+        publishAt,
+      });
+    } else {
+      for (const file of uploadedFiles) {
+        onSave({
+          title: uploadedFiles.length > 1 ? `${title.trim()} - ${file.name}` : title.trim(),
+          description: description.trim(),
+          year: showYear ? year : undefined,
+          fileUrl: file.url,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          answerKey: showAnswerKey ? answerKey : undefined,
+          oficiu: showAnswerKey ? oficiu : undefined,
+          timerMinutes: showTimer ? timerMinutes : undefined,
+          subject: showSubjectSelector ? selectedSubject : undefined,
+          publishAt,
+        });
+      }
+    }
     resetForm();
     onClose();
   };
 
   const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
-    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+    setUploadedFiles(prev => [...prev, { url: fileUrl, name: fileName, type: fileType, size: fileSize }]);
   };
 
   const getFileTypeLabel = (type: string) => {
@@ -256,30 +266,35 @@ const UploadMaterialModal = ({
               </TabsList>
               
               <TabsContent value="file" className="mt-0">
-                {uploadedFile ? (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gold" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                          {uploadedFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
-                        </p>
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {uploadedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-gold" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {getFileTypeLabel(file.type)} • {file.size >= 1024 * 1024 
+                                ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                                : `${(file.size / 1024).toFixed(1)} KB`}
+                            </p>
+                          </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}>
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
-                      <X className="w-4 h-4" />
-                    </Button>
+                    ))}
                   </div>
-                ) : (
-                  <FileUpload
-                    onUploadComplete={handleUploadComplete}
-                    category={category}
-                    subject={showSubjectSelector ? selectedSubject : subject}
-                  />
                 )}
+                <FileUpload
+                  onUploadComplete={handleUploadComplete}
+                  category={category}
+                  subject={showSubjectSelector ? selectedSubject : subject}
+                />
               </TabsContent>
               
               <TabsContent value="link" className="mt-0">
@@ -436,7 +451,7 @@ const UploadMaterialModal = ({
               type="submit" 
               variant="gold"
               className="flex-1"
-              disabled={!title.trim() || (!uploadedFile && !(uploadTab === 'link' && linkUrl.trim()))}
+              disabled={!title.trim() || (uploadedFiles.length === 0 && !(uploadTab === 'link' && linkUrl.trim()))}
             >
               Salvează
             </Button>

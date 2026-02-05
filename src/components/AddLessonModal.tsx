@@ -41,12 +41,12 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{
+  const [uploadedFiles, setUploadedFiles] = useState<{
     url: string;
     name: string;
     type: string;
     size: number;
-  } | null>(null);
+  }[]>([]);
   const [activeTab, setActiveTab] = useState('document');
   const [linkUrl, setLinkUrl] = useState('');
 
@@ -57,7 +57,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     setTitle('');
     setDuration('');
     setDescription('');
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setActiveTab('document');
     setLinkUrl('');
   };
@@ -68,12 +68,12 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
       setTitle(editData.title);
       setDuration(editData.duration);
       setDescription(editData.description);
-      setUploadedFile({
+      setUploadedFiles([{
         url: editData.fileUrl,
         name: editData.fileName,
         type: editData.fileType,
         size: editData.fileSize,
-      });
+      }]);
     } else if (!isOpen) {
       // Reset when modal closes
       resetForm();
@@ -85,18 +85,39 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
-      // Check if we have a link
       const hasLink = activeTab === 'link' && linkUrl.trim();
       
-      onSave({ 
-        title: title.trim(), 
-        duration: duration.trim() || '', 
-        description: description.trim(),
-        fileUrl: hasLink ? linkUrl.trim() : uploadedFile?.url,
-        fileName: hasLink ? linkUrl.trim() : uploadedFile?.name,
-        fileType: hasLink ? 'link' : uploadedFile?.type,
-        fileSize: hasLink ? 0 : uploadedFile?.size,
-      });
+      if (hasLink) {
+        onSave({ 
+          title: title.trim(), 
+          duration: duration.trim() || '', 
+          description: description.trim(),
+          fileUrl: linkUrl.trim(),
+          fileName: linkUrl.trim(),
+          fileType: 'link',
+          fileSize: 0,
+        });
+      } else if (uploadedFiles.length > 0) {
+        // Save each uploaded file as a separate entry
+        for (const file of uploadedFiles) {
+          onSave({ 
+            title: uploadedFiles.length > 1 ? `${title.trim()} - ${file.name}` : title.trim(), 
+            duration: duration.trim() || '', 
+            description: description.trim(),
+            fileUrl: file.url,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+          });
+        }
+      } else {
+        // No file, just metadata
+        onSave({ 
+          title: title.trim(), 
+          duration: duration.trim() || '', 
+          description: description.trim(),
+        });
+      }
       resetForm();
       onClose();
     }
@@ -108,7 +129,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   };
 
   const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
-    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+    setUploadedFiles(prev => [...prev, { url: fileUrl, name: fileName, type: fileType, size: fileSize }]);
   };
 
   const getFileTypeLabel = (type: string) => {
@@ -216,124 +237,122 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
               Materiale pentru lecție {!isEditing && '(opțional)'}
             </Label>
             
-            {uploadedFile ? (
-              <div className="space-y-3">
-                <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-                  ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(uploadedFile.type.toLowerCase())
-                    ? 'bg-red-500/5 border-red-500/30'
-                    : ['ppt', 'pptx'].includes(uploadedFile.type.toLowerCase())
-                    ? 'bg-orange-500/5 border-orange-500/30'
-                    : 'bg-gold/5 border-gold/30'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    {getFileTypeIcon(uploadedFile.type)}
-                    <div>
-                      <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                        {uploadedFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {getFileTypeLabel(uploadedFile.type)} • {uploadedFile.size >= 1024 * 1024 
-                          ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`
-                          : `${(uploadedFile.size / 1024).toFixed(1)} KB`
-                        }
-                      </p>
+            {/* Uploaded files list */}
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className={`flex items-center justify-between p-3 rounded-lg border ${
+                    ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(file.type.toLowerCase())
+                      ? 'bg-red-500/5 border-red-500/30'
+                      : ['ppt', 'pptx'].includes(file.type.toLowerCase())
+                      ? 'bg-orange-500/5 border-orange-500/30'
+                      : 'bg-gold/5 border-gold/30'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {getFileTypeIcon(file.type)}
+                      <div>
+                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {getFileTypeLabel(file.type)} • {file.size >= 1024 * 1024 
+                            ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                            : `${(file.size / 1024).toFixed(1)} KB`
+                          }
+                        </p>
+                      </div>
                     </div>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setUploadedFile(null)}
-                    title="Înlocuiește fișierul"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                {isEditing && (
-                  <p className="text-xs text-muted-foreground">
-                    Apasă X pentru a înlocui fișierul cu unul nou.
-                  </p>
-                )}
+                ))}
               </div>
-            ) : (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 mb-3">
-                  <TabsTrigger value="document" className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Document
-                  </TabsTrigger>
-                  <TabsTrigger value="video" className="flex items-center gap-2">
-                    <Video className="w-4 h-4" />
-                    Video
-                  </TabsTrigger>
-                  <TabsTrigger value="powerpoint" className="flex items-center gap-2">
-                    <Presentation className="w-4 h-4" />
-                    PPT
-                  </TabsTrigger>
-                  <TabsTrigger value="link" className="flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4" />
-                    Link
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="document" className="mt-0">
-                  <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Încarcă PDF, Word, Excel, Text sau imagini (max 10MB)
-                    </p>
-                    <FileUpload
-                      onUploadComplete={handleUploadComplete}
-                      category="lesson"
-                      subject={subject}
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="video" className="mt-0">
-                  <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/20">
-                    <p className="text-xs text-red-400 mb-3 flex items-center gap-2">
-                      <Video className="w-4 h-4" />
-                      Încarcă video MP4, WebM, MOV, AVI sau MKV (max 100MB)
-                    </p>
-                    <FileUpload
-                      onUploadComplete={handleUploadComplete}
-                      category="lesson"
-                      subject={subject}
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="powerpoint" className="mt-0">
-                  <div className="p-3 bg-orange-500/5 rounded-lg border border-orange-500/20">
-                    <p className="text-xs text-orange-400 mb-3 flex items-center gap-2">
-                      <Presentation className="w-4 h-4" />
-                      Încarcă prezentări PowerPoint .ppt sau .pptx (max 10MB)
-                    </p>
-                    <FileUpload
-                      onUploadComplete={handleUploadComplete}
-                      category="lesson"
-                      subject={subject}
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="link" className="mt-0">
-                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                    <p className="text-xs text-primary mb-3 flex items-center gap-2">
-                      <LinkIcon className="w-4 h-4" />
-                      Adaugă un link extern (YouTube, Google Drive, etc.)
-                    </p>
-                    <Input
-                      type="url"
-                      placeholder="https://..."
-                      value={linkUrl}
-                      onChange={(e) => setLinkUrl(e.target.value)}
-                      className="bg-background"
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
             )}
+
+            {/* Upload tabs - always visible */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-3">
+                <TabsTrigger value="document" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Document
+                </TabsTrigger>
+                <TabsTrigger value="video" className="flex items-center gap-2">
+                  <Video className="w-4 h-4" />
+                  Video
+                </TabsTrigger>
+                <TabsTrigger value="powerpoint" className="flex items-center gap-2">
+                  <Presentation className="w-4 h-4" />
+                  PPT
+                </TabsTrigger>
+                <TabsTrigger value="link" className="flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4" />
+                  Link
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="document" className="mt-0">
+                <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Încarcă PDF, Word, Excel, Text sau imagini (max 10MB)
+                  </p>
+                  <FileUpload
+                    onUploadComplete={handleUploadComplete}
+                    category="lesson"
+                    subject={subject}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="video" className="mt-0">
+                <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/20">
+                  <p className="text-xs text-red-400 mb-3 flex items-center gap-2">
+                    <Video className="w-4 h-4" />
+                    Încarcă video MP4, WebM, MOV, AVI sau MKV (max 100MB)
+                  </p>
+                  <FileUpload
+                    onUploadComplete={handleUploadComplete}
+                    category="lesson"
+                    subject={subject}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="powerpoint" className="mt-0">
+                <div className="p-3 bg-orange-500/5 rounded-lg border border-orange-500/20">
+                  <p className="text-xs text-orange-400 mb-3 flex items-center gap-2">
+                    <Presentation className="w-4 h-4" />
+                    Încarcă prezentări PowerPoint .ppt sau .pptx (max 10MB)
+                  </p>
+                  <FileUpload
+                    onUploadComplete={handleUploadComplete}
+                    category="lesson"
+                    subject={subject}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="link" className="mt-0">
+                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="text-xs text-primary mb-3 flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4" />
+                    Adaugă un link extern (YouTube, Google Drive, etc.)
+                  </p>
+                  <Input
+                    type="url"
+                    placeholder="https://..."
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    className="bg-background"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Actions */}
