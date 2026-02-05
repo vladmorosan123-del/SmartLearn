@@ -76,10 +76,10 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get the answer key from the material (using admin client to bypass RLS)
+    // Get the answer key and oficiu from the material (using admin client to bypass RLS)
     const { data: material, error: materialError } = await supabaseAdmin
       .from('materials')
-      .select('answer_key, title')
+      .select('answer_key, title, oficiu')
       .eq('id', materialId)
       .single();
 
@@ -117,6 +117,11 @@ serve(async (req: Request) => {
 
     const score = results.filter(r => r.isCorrect).length;
     const totalQuestions = answerKey.length;
+    const oficiu = material.oficiu || 0;
+    
+    // Calculate final grade (score out of 100 + oficiu)
+    const baseGrade = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+    const finalGrade = Math.min(100, baseGrade + oficiu);
 
     // Save submission to database
     const { error: insertError } = await supabaseAdmin.from('tvc_submissions').insert({
@@ -142,6 +147,9 @@ serve(async (req: Request) => {
         totalQuestions,
         results,
         timeSpentSeconds,
+        oficiu,
+        baseGrade,
+        finalGrade,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
