@@ -368,37 +368,15 @@ const TesteAcademii = () => {
                       ) : (
                         !isEmpty && (
                           <div className="flex gap-2">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      className="gap-1"
-                                      disabled={!studentSubmissions[material.id]}
-                                      onClick={() => {
-                                        if (studentSubmissions[material.id]) {
-                                          setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
-                                        }
-                                      }}
-                                    >
-                                      {studentSubmissions[material.id] ? (
-                                        <Eye className="w-4 h-4" />
-                                      ) : (
-                                        <Lock className="w-4 h-4" />
-                                      )}
-                                      Vezi
-                                    </Button>
-                                  </span>
-                                </TooltipTrigger>
-                                {!studentSubmissions[material.id] && (
-                                  <TooltipContent>
-                                    <p>Trebuie să rezolvi testul o dată pentru a putea vizualiza PDF-ul</p>
-                                  </TooltipContent>
-                                )}
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="gap-1"
+                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Vezi
+                            </Button>
                             <Button 
                               variant="gold" size="sm"
                               onClick={() => setTimerMaterial(material)}
