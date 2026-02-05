@@ -408,9 +408,11 @@ const TVCTimerComplet = ({
                   </Button>
                 )}
               </div>
-            ) : (
-              /* Quiz Content */
-              <div className="p-6">
+            ) : null}
+            
+            {/* Quiz Content - always mounted but hidden when not active to keep ref alive */}
+            {hasStarted && (
+              <div className={`p-6 ${activeTab === 'quiz' ? '' : 'hidden'}`}>
                 {quizAvailable ? (
                   <TVCQuizAutoSubmit 
                     ref={quizRef}
