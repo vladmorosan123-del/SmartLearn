@@ -32,6 +32,9 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [results, setResults] = useState<QuizResult[]>([]);
   const [score, setScore] = useState(0);
+  const [oficiu, setOficiu] = useState(0);
+  const [baseGrade, setBaseGrade] = useState(0);
+  const [finalGrade, setFinalGrade] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startTimeRef = useRef<Date>(new Date());
   const hasAutoSubmitted = useRef(false);
@@ -89,12 +92,19 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
 
       setResults(data.results);
       setScore(data.score);
+      setOficiu(data.oficiu || 0);
+      setBaseGrade(data.baseGrade || 0);
+      setFinalGrade(data.finalGrade || 0);
       setIsSubmitted(true);
       onComplete?.(data.score, data.totalQuestions);
       
+      const gradeMessage = data.oficiu > 0 
+        ? `Nota: ${data.finalGrade} (${data.baseGrade} + ${data.oficiu} oficiu)`
+        : `Nota: ${data.finalGrade}`;
+      
       toast({
         title: forceSubmit ? "Timp expirat - Test trimis automat!" : "Răspunsuri verificate!",
-        description: `Scor: ${data.score}/${data.totalQuestions} - Timp: ${formatTime(data.timeSpentSeconds)}`,
+        description: `${gradeMessage} - Timp: ${formatTime(data.timeSpentSeconds)}`,
       });
     } catch (error: any) {
       console.error('Error verifying quiz:', error);
@@ -126,6 +136,9 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
     setIsSubmitted(false);
     setResults([]);
     setScore(0);
+    setOficiu(0);
+    setBaseGrade(0);
+    setFinalGrade(0);
     setElapsedSeconds(0);
     startTimeRef.current = new Date();
     hasAutoSubmitted.current = false;
@@ -151,21 +164,38 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
       {/* Score Display */}
       {isSubmitted && (
         <div className={`p-4 rounded-lg text-center ${
-          score >= questionCount * 0.7 
+          finalGrade >= 70 
             ? 'bg-green-500/20 border border-green-500/50' 
-            : score >= questionCount * 0.5 
+            : finalGrade >= 50 
             ? 'bg-yellow-500/20 border border-yellow-500/50' 
             : 'bg-destructive/20 border border-destructive/50'
         }`}>
-          <p className="text-lg font-bold">
-            Scor: {score} / {questionCount} puncte
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {score === questionCount 
-              ? '🎉 Excelent! Toate răspunsurile sunt corecte!' 
-              : score >= questionCount * 0.7 
-              ? '👍 Foarte bine! Mai poți îmbunătăți câteva.' 
-              : score >= questionCount * 0.5 
+          {/* Main Grade Display */}
+          <div className="mb-3">
+            <p className="text-2xl font-bold text-foreground">
+              Nota: {finalGrade}
+            </p>
+            {oficiu > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                ({baseGrade} puncte + {oficiu} din oficiu)
+              </p>
+            )}
+          </div>
+          
+          {/* Raw Score */}
+          <div className="pt-2 border-t border-border/50">
+            <p className="text-sm text-muted-foreground">
+              Răspunsuri corecte: {score} / {questionCount}
+            </p>
+          </div>
+          
+          {/* Motivational Message */}
+          <p className="text-sm mt-3">
+            {finalGrade >= 90 
+              ? '🎉 Excelent! Rezultat remarcabil!' 
+              : finalGrade >= 70 
+              ? '👍 Foarte bine! Continuă tot așa!' 
+              : finalGrade >= 50 
               ? '📚 Continuă să exersezi!' 
               : '💪 Nu renunța! Revizuiește materialul și încearcă din nou.'}
           </p>
