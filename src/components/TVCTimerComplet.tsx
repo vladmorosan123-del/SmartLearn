@@ -5,6 +5,16 @@ import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { supabase } from '@/integrations/supabase/client';
 
+interface SubjectConfig {
+  questionCount: number;
+  answerKey: string[];
+  oficiu: number;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+}
+
 interface TVCTimerCompletProps {
   subjectTitle: string;
   onClose: () => void;
@@ -15,11 +25,17 @@ interface TVCTimerCompletProps {
   questionCount?: number;
   materialId?: string;
   timerMinutes?: number;
-  subjectConfig?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number }> | null;
+  subjectConfig?: Record<string, SubjectConfig> | null;
 }
 
 const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+};
+
+const subjectMeta: Record<string, { label: string; icon: typeof Calculator; color: string }> = {
+  matematica: { label: 'Matematică', icon: Calculator, color: 'text-emerald-500' },
+  informatica: { label: 'Informatică', icon: Code, color: 'text-blue-500' },
+  fizica: { label: 'Fizică', icon: Atom, color: 'text-violet-500' },
 };
 
 const TVCTimerComplet = ({ 
@@ -45,10 +61,26 @@ const TVCTimerComplet = ({
   const [showTimeUpWarning, setShowTimeUpWarning] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   
+  // Track active subject for file switching in multi-subject mode
+  const [activeViewSubject, setActiveViewSubject] = useState<string>('matematica');
+  
   const quizRef = useRef<{ forceSubmit: () => void } | null>(null);
   const multiSubjectQuizRef = useRef<{ forceSubmit: () => void } | null>(null);
 
   const isMultiSubject = !!subjectConfig && Object.keys(subjectConfig).length > 0;
+
+  // Get current file URL based on active subject (for multi-subject) or fallback
+  const getCurrentFileInfo = () => {
+    if (isMultiSubject && subjectConfig) {
+      const cfg = subjectConfig[activeViewSubject];
+      if (cfg?.fileUrl) {
+        return { url: cfg.fileUrl, type: cfg.fileType || '', name: cfg.fileName || '' };
+      }
+    }
+    return { url: pdfUrl || '', type: fileType || '', name: fileName || '' };
+  };
+
+  const currentFile = getCurrentFileInfo();
 
   // Fetch question count if not provided (for legacy single-subject tests)
   useEffect(() => {
@@ -126,7 +158,7 @@ const TVCTimerComplet = ({
   const quizAvailable = isMultiSubject || (hasAnswerKey && questionCount > 0 && materialId);
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
 
-  const ext = (fileType || pdfUrl?.split('?')[0]?.split('.').pop() || '').toLowerCase();
+  const ext = (currentFile.type || currentFile.url?.split('?')[0]?.split('.').pop() || '').toLowerCase();
   const isPdf = ext === 'pdf';
   const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
 
@@ -136,6 +168,11 @@ const TVCTimerComplet = ({
     if (timeLeft <= 600) return 'text-yellow-500';
     return 'text-gold';
   };
+
+  // Subject label for the file viewer header
+  const activeSubjectLabel = isMultiSubject && subjectMeta[activeViewSubject] 
+    ? `${subjectTitle} — ${subjectMeta[activeViewSubject].label}` 
+    : subjectTitle;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -157,26 +194,26 @@ const TVCTimerComplet = ({
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-gold" />
-                <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
+                <h2 className="font-display text-lg text-foreground">{activeSubjectLabel}</h2>
               </div>
               <div className="flex items-center gap-3">
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted ${getTimerColor()}`}>
                   <Clock className="w-4 h-4" />
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
-                {pdfUrl && (
+                {currentFile.url && (
                   <Button variant="gold" size="sm" className="gap-2"
                     onClick={() => {
                       const link = document.createElement('a');
-                      link.href = pdfUrl;
-                      link.download = `${subjectTitle}.pdf`;
+                      link.href = currentFile.url;
+                      link.download = currentFile.name || `${subjectTitle}.pdf`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
                     }}
                   >
                     <Download className="w-4 h-4" />
-                    Descarcă PDF
+                    Descarcă
                   </Button>
                 )}
                 <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground">
@@ -184,13 +221,49 @@ const TVCTimerComplet = ({
                 </Button>
               </div>
             </div>
+
+            {/* Subject file tabs for multi-subject */}
+            {isMultiSubject && subjectConfig && (
+              <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30">
+                {Object.keys(subjectConfig).map((subject) => {
+                  const meta = subjectMeta[subject];
+                  if (!meta) return null;
+                  const Icon = meta.icon;
+                  const hasFile = !!subjectConfig[subject]?.fileUrl;
+                  return (
+                    <button
+                      key={subject}
+                      type="button"
+                      onClick={() => setActiveViewSubject(subject)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                        activeViewSubject === subject 
+                          ? 'bg-gold text-primary-foreground' 
+                          : hasFile 
+                          ? 'bg-background hover:bg-muted border border-border' 
+                          : 'bg-background/50 text-muted-foreground border border-border/50'
+                      }`}
+                      disabled={!hasFile}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span className="font-medium">{meta.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-              {pdfUrl ? (
+              {currentFile.url ? (
                 isImage ? (
-                  <img src={pdfUrl} alt={fileName || subjectTitle} className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background" />
+                  <img src={currentFile.url} alt={currentFile.name || subjectTitle} className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background" />
                 ) : isPdf ? (
-                  <iframe src={getPdfViewerUrl(pdfUrl)} className="w-full h-full rounded-lg border border-border bg-white" title="TVC Subject PDF" allow="autoplay" />
+                  <iframe 
+                    key={currentFile.url}
+                    src={getPdfViewerUrl(currentFile.url)} 
+                    className="w-full h-full rounded-lg border border-border bg-white" 
+                    title="TVC Subject PDF" 
+                    allow="autoplay" 
+                  />
                 ) : (
                   <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                     <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-4" />
@@ -201,7 +274,8 @@ const TVCTimerComplet = ({
               ) : (
                 <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                   <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-display text-lg text-foreground mb-2">PDF-ul nu a fost încărcat</h3>
+                  <h3 className="font-display text-lg text-foreground mb-2">Nu există fișier pentru această materie</h3>
+                  <p className="text-muted-foreground text-sm">Selectează o altă materie din tab-urile de sus.</p>
                 </div>
               )}
             </div>
@@ -310,6 +384,7 @@ const TVCTimerComplet = ({
                       subjectConfig={subjectConfig!}
                       isTimeUp={isTimeUp}
                       elapsedSeconds={INITIAL_TIME - timeLeft}
+                      onActiveSubjectChange={(subject) => setActiveViewSubject(subject)}
                     />
                   ) : quizAvailable && materialId ? (
                     <TVCQuizAutoSubmit 
