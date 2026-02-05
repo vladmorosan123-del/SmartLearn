@@ -22,7 +22,7 @@ export interface Material {
   timer_minutes?: number | null;
   has_answer_key?: boolean;
   publish_at?: string | null;
-  subject_config?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number }> | null;
+  subject_config?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number; fileUrl?: string; fileName?: string; fileType?: string; fileSize?: number }> | null;
   created_at: string;
   updated_at: string;
 }
