@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface FileViewerProps {
@@ -29,12 +29,59 @@ const canPreviewInBrowser = (fileType: string) => {
 
 const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewerProps) => {
   const [imageError, setImageError] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
+  const [iframeError, setIframeError] = useState(false);
+  const [loadTimeout, setLoadTimeout] = useState(false);
   
   const safeFileUrl = useMemo(() => {
     return (fileUrl || '').trim();
   }, [fileUrl]);
 
+  // Reset states when URL changes or modal opens
+  useEffect(() => {
+    if (isOpen && safeFileUrl) {
+      setImageError(false);
+      setIframeLoading(true);
+      setIframeError(false);
+      setLoadTimeout(false);
+      
+      // Set a timeout for iframe loading (15 seconds)
+      const timer = setTimeout(() => {
+        setLoadTimeout(true);
+        setIframeLoading(false);
+      }, 15000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, safeFileUrl]);
+
   if (!isOpen) return null;
+
+  // Check if URL is valid
+  const hasValidUrl = safeFileUrl && safeFileUrl.length > 0 && safeFileUrl.startsWith('http');
+
+  if (!hasValidUrl) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div 
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div className="relative w-full max-w-md m-4 flex flex-col bg-background rounded-2xl border border-border overflow-hidden animate-scale-in p-8">
+          <div className="flex flex-col items-center text-center">
+            <AlertCircle className="w-16 h-16 text-destructive mb-4" />
+            <h3 className="text-xl font-display text-foreground mb-2">Fișier indisponibil</h3>
+            <p className="text-muted-foreground mb-6">
+              Nu s-a putut încărca fișierul. URL-ul este invalid sau lipsește.
+            </p>
+            <Button variant="outline" onClick={onClose}>
+              Închide
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const type = fileType.toLowerCase();
   const canPreview = canPreviewInBrowser(fileType);
@@ -64,6 +111,43 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
     };
     return mimeTypes[ext] || 'video/mp4';
   };
+
+  const handleIframeLoad = () => {
+    setIframeLoading(false);
+  };
+
+  const handleIframeError = () => {
+    setIframeError(true);
+    setIframeLoading(false);
+  };
+
+  const renderFallbackOptions = () => (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
+      {loadTimeout ? (
+        <AlertCircle className="w-16 h-16 text-amber-500" />
+      ) : (
+        getFileIcon(fileType)
+      )}
+      <h3 className="text-lg font-medium text-foreground mt-4 mb-2">
+        {loadTimeout ? 'Încărcarea durează prea mult' : 'Nu s-a putut previzualiza'}
+      </h3>
+      <p className="text-sm text-muted-foreground mb-6">
+        {loadTimeout 
+          ? 'Încearcă să descarci fișierul sau să-l deschizi într-un tab nou.'
+          : 'Descarcă fișierul sau deschide-l într-un tab nou.'}
+      </p>
+      <div className="flex flex-wrap gap-3 justify-center">
+        <Button variant="gold" onClick={handleDownload}>
+          <Download className="w-4 h-4 mr-2" />
+          Descarcă
+        </Button>
+        <Button variant="outline" onClick={() => window.open(safeFileUrl, '_blank')}>
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Tab nou
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -114,72 +198,77 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
         {/* Content Area */}
         <div className="flex-1 flex items-center justify-center p-4 overflow-auto bg-muted/30">
           {canPreview ? (
-            <div className="w-full h-full flex items-center justify-center">
-              {isImage && (
-                imageError ? (
-                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
-                    {getFileIcon(fileType)}
-                    <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Nu s-a putut previzualiza imaginea</h3>
-                    <p className="text-sm text-muted-foreground mb-6">
-                      Descarcă fișierul sau deschide-l într-un tab nou.
-                    </p>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      <Button variant="gold" onClick={handleDownload}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Descarcă
-                      </Button>
-                      <Button variant="outline" onClick={() => window.open(safeFileUrl, '_blank')}>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Tab nou
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    src={safeFileUrl}
-                    alt={fileName}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                    onError={() => setImageError(true)}
-                  />
-                )
-              )}
-              
-              {isPdf && (
-                <iframe
-                  src={getGoogleViewerUrl(safeFileUrl)}
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title={fileName}
-                  allow="autoplay"
-                />
-              )}
-              
-              {isTxt && (
-                <iframe
-                  src={safeFileUrl}
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title={fileName}
-                />
+            <div className="w-full h-full flex items-center justify-center relative">
+              {/* Loading indicator for iframes */}
+              {iframeLoading && (isPdf || isOfficeDoc || isTxt) && !loadTimeout && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
+                  <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
+                  <p className="text-muted-foreground">Se încarcă documentul...</p>
+                </div>
               )}
 
-              {isVideo && (
-                <video
-                  src={safeFileUrl}
-                  controls
-                  className="max-w-full max-h-full rounded-lg shadow-lg"
-                  controlsList="nodownload"
-                >
-                  <source src={safeFileUrl} type={getVideoMimeType(type)} />
-                  Browser-ul tău nu suportă redarea video.
-                </video>
-              )}
+              {/* Show fallback if timeout or error */}
+              {(loadTimeout || iframeError) && (isPdf || isOfficeDoc) ? (
+                renderFallbackOptions()
+              ) : (
+                <>
+                  {isImage && (
+                    imageError ? (
+                      renderFallbackOptions()
+                    ) : (
+                      <img
+                        src={safeFileUrl}
+                        alt={fileName}
+                        className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                        onError={() => setImageError(true)}
+                      />
+                    )
+                  )}
+                  
+                  {isPdf && !loadTimeout && !iframeError && (
+                    <iframe
+                      src={getGoogleViewerUrl(safeFileUrl)}
+                      className="w-full h-full rounded-lg border border-border bg-white"
+                      title={fileName}
+                      allow="autoplay"
+                      onLoad={handleIframeLoad}
+                      onError={handleIframeError}
+                    />
+                  )}
+                  
+                  {isTxt && (
+                    <iframe
+                      src={safeFileUrl}
+                      className="w-full h-full rounded-lg border border-border bg-white"
+                      title={fileName}
+                      onLoad={handleIframeLoad}
+                      onError={handleIframeError}
+                    />
+                  )}
 
-              {isOfficeDoc && (
-                <iframe
-                  src={getGoogleViewerUrl(safeFileUrl)}
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title={fileName}
-                  allow="autoplay"
-                />
+                  {isVideo && (
+                    <video
+                      src={safeFileUrl}
+                      controls
+                      className="max-w-full max-h-full rounded-lg shadow-lg"
+                      controlsList="nodownload"
+                    >
+                      <source src={safeFileUrl} type={getVideoMimeType(type)} />
+                      Browser-ul tău nu suportă redarea video.
+                    </video>
+                  )}
+
+                  {isOfficeDoc && !loadTimeout && !iframeError && (
+                    <iframe
+                      src={getGoogleViewerUrl(safeFileUrl)}
+                      className="w-full h-full rounded-lg border border-border bg-white"
+                      title={fileName}
+                      allow="autoplay"
+                      onLoad={handleIframeLoad}
+                      onError={handleIframeError}
+                    />
+                  )}
+                </>
               )}
             </div>
           ) : (
