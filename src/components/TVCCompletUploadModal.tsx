@@ -430,12 +430,12 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                   min={1}
                   max={600}
                   value={currentEntry.timerMinutes}
-                  onChange={(e) => updateEntry(activeTab, { timerMinutes: Math.max(1, parseInt(e.target.value) || 180) })}
-                  placeholder="180"
+                  onChange={(e) => updateEntry(activeTab, { timerMinutes: Math.max(1, parseInt(e.target.value) || 1) })}
+                  placeholder="1"
                   className="bg-background"
                 />
                 <p className="text-xs text-muted-foreground">
-                  La expirare, testul se trimite automat.
+                  Minim 1 minut. La expirare, testul se trimite automat.
                 </p>
               </div>
 
