@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Play, Send, X, Clock, FileText, Upload, Download, ClipboardCheck, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizInterfaceSecure from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,8 +14,6 @@ interface TVCTimerProps {
   timerMinutes?: number;
 }
 
-const INITIAL_TIME_DEFAULT = 3 * 60 * 60; // 3 hours in seconds default
-
 // Helper function to get PDF viewer URL using Google Docs Viewer
 const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
@@ -28,9 +26,10 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'timer' | 'quiz'>('timer');
   const [questionCount, setQuestionCount] = useState(initialQuestionCount || 0);
   const [isLoadingQuestionCount, setIsLoadingQuestionCount] = useState(false);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [showTimeUpWarning, setShowTimeUpWarning] = useState(false);
 
   // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
@@ -63,11 +62,21 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
 
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setIsRunning(false);
+            setIsTimeUp(true);
+            setHasSubmitted(true);
+            return 0;
+          }
+          // Show warning at 5 minutes remaining
+          if (prev === 300) {
+            setShowTimeUpWarning(true);
+            setTimeout(() => setShowTimeUpWarning(false), 5000);
+          }
+          return prev - 1;
+        });
       }, 1000);
-    } else if (timeLeft === 0) {
-      setIsRunning(false);
-      setHasSubmitted(true);
     }
 
     return () => {
@@ -89,230 +98,268 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
 
   const handleSubmitTest = () => {
     setIsRunning(false);
+    setIsTimeUp(true);
     setHasSubmitted(true);
+  };
+
+  // Allow closing only after submission
+  const handleClose = () => {
+    if (hasSubmitted || isTimeUp) {
+      onClose();
+    }
   };
 
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
 
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
-  const isTimeUp = timeLeft === 0;
+
+  // Time-based color
+  const getTimerColor = () => {
+    if (isTimeUp) return 'text-destructive';
+    if (timeLeft <= 300) return 'text-orange-500';
+    if (timeLeft <= 600) return 'text-yellow-500';
+    return 'text-gold';
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/90" />
       
+      {/* Time-up Warning Toast */}
+      {showTimeUpWarning && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] animate-fade-up">
+          <div className="bg-orange-500 text-white px-6 py-3 rounded-lg flex items-center gap-3 shadow-lg">
+            <AlertTriangle className="w-5 h-5" />
+            <span className="font-medium">⚠️ Atenție! Mai ai doar 5 minute!</span>
+          </div>
+        </div>
+      )}
+      
       {/* Content Container */}
       <div className="relative flex w-full h-full">
         {/* Left Side - PDF Viewer */}
-        <div className="flex-1 flex flex-col bg-background/95 border-r border-border">
-          {/* PDF Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-gold" />
-              <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
+        {hasStarted ? (
+          <div className="flex-1 flex flex-col bg-background/95 border-r border-border">
+            {/* PDF Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-gold" />
+                <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Always visible timer in header */}
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted ${getTimerColor()}`}>
+                  <Clock className="w-4 h-4" />
+                  <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
+                </div>
+                {pdfUrl && (
+                  <Button 
+                    variant="gold" 
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = pdfUrl;
+                      link.download = `${subjectTitle}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Descarcă PDF
+                  </Button>
+                )}
+                {/* No X button - can only submit to exit */}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {pdfUrl && (
-                <Button 
-                  variant="gold" 
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = pdfUrl;
-                    link.download = `${subjectTitle}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                >
-                  <Download className="w-4 h-4" />
-                  Descarcă PDF
-                </Button>
+            
+            {/* PDF Content Area */}
+            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+              {pdfUrl ? (
+                <iframe 
+                  src={getPdfViewerUrl(pdfUrl)} 
+                  className="w-full h-full rounded-lg border border-border bg-white"
+                  title="TVC Subject PDF"
+                  allow="autoplay"
+                />
+              ) : (
+                <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-display text-lg text-foreground mb-2">
+                    PDF-ul nu a fost încărcat
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Profesorul va încărca subiectul TVC în format PDF. 
+                    Acesta va apărea aici când va fi disponibil.
+                  </p>
+                </div>
               )}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={onClose}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
+            </div>
+          </div>
+        ) : (
+          /* Before start - show start screen */
+          <div className="flex-1 flex flex-col bg-background/95 border-r border-border items-center justify-center">
+            <div className="text-center p-12 max-w-md">
+              <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Clock className="w-12 h-12 text-gold" />
+              </div>
+              <h2 className="font-display text-2xl text-foreground mb-4">{subjectTitle}</h2>
+              <p className="text-muted-foreground mb-6">
+                Apasă butonul "Începe Testul" pentru a începe. <br />
+                Ai la dispoziție <span className="text-gold font-bold">{timerMinutes} minute</span> pentru a rezolva subiectul.
+              </p>
+              <Button variant="gold" size="lg" onClick={handleStart} className="gap-2">
+                <Play className="w-5 h-5" />
+                Începe Testul
               </Button>
             </div>
           </div>
-          
-          {/* PDF Content Area */}
-          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-            {pdfUrl ? (
-              <iframe 
-                src={getPdfViewerUrl(pdfUrl)} 
-                className="w-full h-full rounded-lg border border-border bg-white"
-                title="TVC Subject PDF"
-                allow="autoplay"
-              />
-            ) : (
-              <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="font-display text-lg text-foreground mb-2">
-                  PDF-ul nu a fost încărcat
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Profesorul va încărca subiectul TVC în format PDF. 
-                  Acesta va apărea aici când va fi disponibil.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
-        {/* Right Side - Timer & Quiz */}
+        {/* Right Side - Unified Timer & Quiz Panel */}
         <div className="w-80 lg:w-[480px] flex flex-col bg-card border-l border-border overflow-hidden">
-          {/* Tabs Header */}
-          <div className="flex border-b border-border">
-            <button
-              onClick={() => setActiveTab('timer')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'timer' 
-                  ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              Timer
-            </button>
-            <button
-              onClick={() => setActiveTab('quiz')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'quiz' 
-                  ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              }`}
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              Grilă {quizAvailable ? `(${questionCount})` : ''}
-            </button>
+          {/* Header */}
+          <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-border bg-gold/10">
+            <Clock className="w-4 h-4 text-gold" />
+            <span className="text-sm font-medium text-gold">
+              {hasStarted ? 'Test în desfășurare' : 'Pregătit pentru test'}
+            </span>
           </div>
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto">
-            {activeTab === 'timer' ? (
-              /* Timer Content */
+            {!hasStarted ? (
+              /* Before start - show waiting screen */
               <div className="flex flex-col items-center justify-center p-6 h-full">
-                {/* Timer Display */}
-                <div className="relative mb-8">
-                  <div className="w-40 h-40 lg:w-48 lg:h-48 relative">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="45%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        className="text-muted"
-                      />
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="45%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        strokeDasharray={`${2 * Math.PI * 45} ${2 * Math.PI * 45}`}
-                        strokeDashoffset={2 * Math.PI * 45 * (1 - progress / 100)}
-                        className={`transition-all duration-1000 ${isTimeUp ? 'text-destructive' : 'text-gold'}`}
-                        strokeLinecap="round"
-                        style={{ strokeDasharray: `${2 * Math.PI * 72} ${2 * Math.PI * 72}`, strokeDashoffset: 2 * Math.PI * 72 * (1 - progress / 100) }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className={`font-mono text-2xl lg:text-3xl font-bold ${isTimeUp ? 'text-destructive' : 'text-foreground'}`}>
-                        {formatTime(timeLeft)}
-                      </span>
-                      {isRunning && (
-                        <span className="text-xs text-gold mt-2 animate-pulse">În desfășurare</span>
-                      )}
-                      {!isRunning && hasStarted && !isTimeUp && (
-                        <span className="text-xs text-muted-foreground mt-2">Pauză</span>
-                      )}
-                      {isTimeUp && (
-                        <span className="text-xs text-destructive mt-2 font-medium">Timp expirat!</span>
-                      )}
+                <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Clock className="w-12 h-12 text-gold" />
+                </div>
+                <h3 className="font-display text-xl text-foreground mb-2 text-center">
+                  Pregătit pentru test?
+                </h3>
+                <p className="text-muted-foreground text-sm text-center mb-6">
+                  Apasă "Începe Testul" pentru a vedea subiectul și a completa grila.
+                </p>
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <span className="font-mono text-3xl font-bold text-gold">
+                    {formatTime(INITIAL_TIME)}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Timp disponibil
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* After start - unified timer + quiz view */
+              <div className="p-6 space-y-6">
+                {/* Compact Timer Display */}
+                <div className="flex items-center justify-center">
+                  <div className="relative">
+                    <div className="w-32 h-32 lg:w-40 lg:h-40 relative">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="50%"
+                          cy="50%"
+                          r="45%"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="none"
+                          className="text-muted"
+                        />
+                        <circle
+                          cx="50%"
+                          cy="50%"
+                          r="45%"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="none"
+                          className={`transition-all duration-1000 ${getTimerColor()}`}
+                          strokeLinecap="round"
+                          style={{ 
+                            strokeDasharray: `${2 * Math.PI * 72} ${2 * Math.PI * 72}`, 
+                            strokeDashoffset: 2 * Math.PI * 72 * (1 - progress / 100) 
+                          }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={`font-mono text-xl lg:text-2xl font-bold ${getTimerColor()}`}>
+                          {formatTime(timeLeft)}
+                        </span>
+                        {isRunning && (
+                          <span className="text-xs text-gold mt-1 animate-pulse">În desfășurare</span>
+                        )}
+                        {isTimeUp && (
+                          <span className="text-xs text-destructive mt-1 font-medium">Timp expirat!</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Controls */}
-                <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-                  {!hasStarted ? (
-                    <Button variant="gold" size="lg" onClick={handleStart} className="gap-2 w-full">
-                      <Play className="w-5 h-5" />
-                      Start Timer
-                    </Button>
-                  ) : !hasSubmitted && (
-                    <Button 
-                      variant="gold" 
-                      size="lg" 
-                      onClick={handleSubmitTest} 
-                      className="gap-2 w-full"
-                      disabled={isTimeUp}
-                    >
-                      <Send className="w-5 h-5" />
-                      Predă Testul
-                    </Button>
-                  )}
-                </div>
-
-                {/* Info */}
-                <p className="text-center text-muted-foreground text-xs mt-6">
-                  Ai la dispoziție {timerMinutes} minute pentru a rezolva subiectul TVC.
-                </p>
-
-                {/* Quiz CTA */}
-                {quizAvailable && (
+                {/* Submit Button */}
+                {!hasSubmitted && !isTimeUp && (
                   <Button 
                     variant="gold" 
-                    onClick={() => setActiveTab('quiz')} 
-                    className="mt-4 gap-2"
+                    size="lg" 
+                    onClick={handleSubmitTest} 
+                    className="gap-2 w-full"
                   >
-                    <ClipboardCheck className="w-4 h-4" />
-                    Completează Grila
+                    <Send className="w-5 h-5" />
+                    Predă Testul
                   </Button>
                 )}
-              </div>
-            ) : (
-              /* Quiz Content */
-              <div className="p-6">
-                {quizAvailable ? (
-                  <TVCQuizInterfaceSecure 
-                    materialId={materialId} 
-                    questionCount={questionCount} 
-                  />
-                ) : (
-                  <div className="text-center py-12">
-                    <ClipboardCheck className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="font-display text-lg text-foreground mb-2">
-                      Grilă indisponibilă
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      Profesorul nu a adăugat încă baremul pentru acest subiect.
+
+                {/* Time up warning */}
+                {isTimeUp && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-center">
+                    <p className="text-destructive text-sm font-medium">
+                      ⏰ Timpul a expirat! Testul a fost trimis.
                     </p>
                   </div>
                 )}
+
+                {/* Quiz Section */}
+                <div className="border-t border-border pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ClipboardCheck className="w-5 h-5 text-gold" />
+                    <h4 className="font-display text-lg text-foreground">
+                      Grilă de Răspunsuri {quizAvailable ? `(${questionCount} întrebări)` : ''}
+                    </h4>
+                  </div>
+                  
+                  {quizAvailable ? (
+                    <TVCQuizInterfaceSecure 
+                      materialId={materialId} 
+                      questionCount={questionCount} 
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <ClipboardCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <h3 className="font-display text-base text-foreground mb-2">
+                        Grilă indisponibilă
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        Profesorul nu a adăugat încă baremul pentru acest subiect.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Exit Button */}
-          <div className="p-4 border-t border-border">
-            <Button variant="ghost" onClick={onClose} className="w-full text-muted-foreground">
-              <X className="w-4 h-4 mr-2" />
-              Închide subiectul
-            </Button>
-          </div>
+          {/* Exit Button - only shown after submission */}
+          {(hasSubmitted || isTimeUp) && (
+            <div className="p-4 border-t border-border">
+              <Button variant="outline" onClick={handleClose} className="w-full">
+                Închide testul
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
