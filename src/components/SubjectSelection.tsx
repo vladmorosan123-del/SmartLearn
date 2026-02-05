@@ -48,6 +48,7 @@ const SubjectSelection = () => {
   };
 
   const handleLogout = async () => {
+    // Always sign out and clear session completely
     await signOut();
     clearSession();
     toast({
@@ -57,14 +58,11 @@ const SubjectSelection = () => {
     navigate('/');
   };
 
-  const handleBack = () => {
-    // If authenticated as student, do full logout
-    if (isAuthenticated && role === 'student') {
-      handleLogout();
-    } else {
-      // For professor or admin (authenticated), do full logout too
-      handleLogout();
-    }
+  const handleBack = async () => {
+    // Always do full logout when going back
+    await signOut();
+    clearSession();
+    navigate('/');
   };
 
   return (
