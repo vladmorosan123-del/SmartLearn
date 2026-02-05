@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { X, FileText, Clock, Plus, Trash2, Calculator, Code, Atom, Calendar } from 'lucide-react';
+import { X, FileText, Clock, Plus, Trash2, Calculator, Code, Atom, Calendar, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
@@ -24,6 +25,8 @@ interface FileEntry {
   timerMinutes: number;
   publishDate: Date | undefined;
   publishTime: string;
+  uploadTab: 'file' | 'link';
+  linkUrl: string;
   uploadedFile: {
     url: string;
     name: string;
@@ -69,6 +72,8 @@ const createEmptyEntry = (): FileEntry => ({
   timerMinutes: 180,
   publishDate: undefined,
   publishTime: '',
+  uploadTab: 'file',
+  linkUrl: '',
   uploadedFile: null,
 });
 
@@ -128,12 +133,12 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all entries
-    const validEntries = entries.filter(entry => 
-      entry.title.trim() && 
-      entry.uploadedFile && 
-      entry.answerKey.every(a => a !== '')
-    );
+    // Validate all entries - only require title and (file or link)
+    const validEntries = entries.filter(entry => {
+      const hasFile = !!entry.uploadedFile;
+      const hasLink = entry.uploadTab === 'link' && entry.linkUrl.trim();
+      return entry.title.trim() && (hasFile || hasLink);
+    });
 
     if (validEntries.length === 0) return;
 
@@ -149,14 +154,21 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
           publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
         }
 
+        // Check if link or file
+        const hasLink = entry.uploadTab === 'link' && entry.linkUrl.trim();
+        const fileUrl = hasLink ? entry.linkUrl.trim() : entry.uploadedFile!.url;
+        const fileName = hasLink ? entry.linkUrl.trim() : entry.uploadedFile!.name;
+        const fileType = hasLink ? 'link' : entry.uploadedFile!.type;
+        const fileSize = hasLink ? 0 : entry.uploadedFile!.size;
+
         await onSave({
           title: entry.title.trim(),
           description: entry.description.trim(),
           year: entry.year,
-          fileUrl: entry.uploadedFile!.url,
-          fileName: entry.uploadedFile!.name,
-          fileType: entry.uploadedFile!.type,
-          fileSize: entry.uploadedFile!.size,
+          fileUrl,
+          fileName,
+          fileType,
+          fileSize,
           answerKey: entry.answerKey,
           oficiu: entry.oficiu,
           timerMinutes: entry.timerMinutes,
@@ -183,15 +195,15 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
   };
 
   const currentEntry = entries[activeTab];
-  const isCurrentEntryValid = currentEntry?.title.trim() && 
-    currentEntry?.uploadedFile && 
-    currentEntry?.answerKey.every(a => a !== '');
+  const hasFile = !!currentEntry?.uploadedFile;
+  const hasLink = currentEntry?.uploadTab === 'link' && currentEntry?.linkUrl?.trim();
+  const isCurrentEntryValid = currentEntry?.title.trim() && (hasFile || hasLink);
 
-  const validEntriesCount = entries.filter(entry => 
-    entry.title.trim() && 
-    entry.uploadedFile && 
-    entry.answerKey.every(a => a !== '')
-  ).length;
+  const validEntriesCount = entries.filter(entry => {
+    const entryHasFile = !!entry.uploadedFile;
+    const entryHasLink = entry.uploadTab === 'link' && entry.linkUrl.trim();
+    return entry.title.trim() && (entryHasFile || entryHasLink);
+  }).length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -215,7 +227,9 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
         <div className="flex items-center gap-2 p-4 border-b border-border bg-muted/30">
           {entries.map((entry, index) => {
             const SubjectIcon = subjectOptions.find(s => s.value === entry.subject)?.icon || Calculator;
-            const isValid = entry.title.trim() && entry.uploadedFile && entry.answerKey.every(a => a !== '');
+            const entryHasFile = !!entry.uploadedFile;
+            const entryHasLink = entry.uploadTab === 'link' && entry.linkUrl.trim();
+            const isValid = entry.title.trim() && (entryHasFile || entryHasLink);
             return (
               <button
                 key={entry.id}
@@ -331,43 +345,77 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                 />
               </div>
 
-              {/* File Upload */}
+              {/* File Upload or Link */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-gold" />
-                  Încarcă fișier *
+                  Încarcă fișier sau link *
                 </Label>
                 
-                {currentEntry.uploadedFile ? (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gold" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                          {currentEntry.uploadedFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getFileTypeLabel(currentEntry.uploadedFile.type)} • {(currentEntry.uploadedFile.size / 1024).toFixed(1)} KB
-                        </p>
+                <Tabs 
+                  value={currentEntry.uploadTab} 
+                  onValueChange={(v) => updateEntry(activeTab, { uploadTab: v as 'file' | 'link' })} 
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2 mb-2">
+                    <TabsTrigger value="file" className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Fișier
+                    </TabsTrigger>
+                    <TabsTrigger value="link" className="flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4" />
+                      Link
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="file" className="mt-0">
+                    {currentEntry.uploadedFile ? (
+                      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-gold" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                              {currentEntry.uploadedFile.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {getFileTypeLabel(currentEntry.uploadedFile.type)} • {(currentEntry.uploadedFile.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => updateEntry(activeTab, { uploadedFile: null })}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
+                    ) : (
+                      <FileUpload
+                        key={currentEntry.id}
+                        onUploadComplete={(url, name, type, size) => handleUploadComplete(activeTab, url, name, type, size)}
+                        category="tvc_complet"
+                        subject={currentEntry.subject}
+                      />
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="link" className="mt-0">
+                    <div className="space-y-2">
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        value={currentEntry.linkUrl}
+                        onChange={(e) => updateEntry(activeTab, { linkUrl: e.target.value })}
+                        className="bg-background"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Adaugă un link extern (YouTube, Google Drive, etc.)
+                      </p>
                     </div>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => updateEntry(activeTab, { uploadedFile: null })}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <FileUpload
-                    key={currentEntry.id}
-                    onUploadComplete={(url, name, type, size) => handleUploadComplete(activeTab, url, name, type, size)}
-                    category="tvc_complet"
-                    subject={currentEntry.subject}
-                  />
-                )}
+                  </TabsContent>
+                </Tabs>
               </div>
 
               {/* Timer */}
