@@ -22,10 +22,11 @@ interface TVCQuizInterfaceSecureProps {
   questionCount: number;
   onComplete?: (score: number, total: number) => void;
   autoSubmit?: boolean;
+  onReset?: () => void;
 }
 
 const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceSecureProps>(
-  ({ materialId, questionCount, onComplete, autoSubmit }, ref) => {
+  ({ materialId, questionCount, onComplete, autoSubmit, onReset }, ref) => {
   const [userAnswers, setUserAnswers] = useState<string[]>(Array(questionCount).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -128,6 +129,8 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
     setElapsedSeconds(0);
     startTimeRef.current = new Date();
     hasAutoSubmitted.current = false;
+    // Notify parent to reset the timer
+    onReset?.();
   };
 
   const answeredCount = userAnswers.filter(answer => answer !== '').length;
