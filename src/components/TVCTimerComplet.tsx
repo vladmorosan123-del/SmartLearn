@@ -30,7 +30,7 @@ const TVCTimerComplet = ({
   hasAnswerKey, 
   questionCount: initialQuestionCount, 
   materialId,
-  timerMinutes = 180 
+  timerMinutes = 1 
 }: TVCTimerCompletProps) => {
   const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
   
@@ -157,125 +157,168 @@ const TVCTimerComplet = ({
       
       {/* Content Container */}
       <div className="relative flex w-full h-full">
-        {/* Left Side - PDF Viewer */}
-        <div className="flex-1 flex flex-col bg-background/95 border-r border-border">
-          {/* PDF Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-gold" />
-              <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Always visible timer in header */}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted ${getTimerColor()}`}>
-                <Clock className="w-4 h-4" />
-                <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
+        {/* Left Side - PDF Viewer (only shown after timer starts) */}
+        {hasStarted ? (
+          <div className="flex-1 flex flex-col bg-background/95 border-r border-border">
+            {/* PDF Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-gold" />
+                <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
               </div>
-              {pdfUrl && (
+              <div className="flex items-center gap-3">
+                {/* Always visible timer in header */}
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted ${getTimerColor()}`}>
+                  <Clock className="w-4 h-4" />
+                  <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
+                </div>
+                {pdfUrl && (
+                  <Button 
+                    variant="gold" 
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = pdfUrl;
+                      link.download = `${subjectTitle}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Descarcă PDF
+                  </Button>
+                )}
                 <Button 
-                  variant="gold" 
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = pdfUrl;
-                    link.download = `${subjectTitle}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
+                  variant="ghost" 
+                  size="icon"
+                  onClick={onClose}
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  <Download className="w-4 h-4" />
-                  Descarcă PDF
+                  <X className="w-5 h-5" />
                 </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={onClose}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </Button>
+              </div>
             </div>
-          </div>
-          
-          {/* PDF Content Area */}
-          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-            {pdfUrl ? (
-              isImage ? (
-                <img
-                  src={pdfUrl}
-                  alt={fileName || subjectTitle}
-                  className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background"
-                />
-              ) : isPdf ? (
-                <iframe 
-                  src={getPdfViewerUrl(pdfUrl)} 
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title="TVC Subject PDF"
-                  allow="autoplay"
-                />
+            
+            {/* PDF Content Area */}
+            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+              {pdfUrl ? (
+                isImage ? (
+                  <img
+                    src={pdfUrl}
+                    alt={fileName || subjectTitle}
+                    className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background"
+                  />
+                ) : isPdf ? (
+                  <iframe 
+                    src={getPdfViewerUrl(pdfUrl)} 
+                    className="w-full h-full rounded-lg border border-border bg-white"
+                    title="TVC Subject PDF"
+                    allow="autoplay"
+                  />
+                ) : (
+                  <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-display text-lg text-foreground mb-2">
+                      Fișierul nu poate fi afișat aici
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Descarcă fișierul sau deschide-l într-un tab nou.
+                    </p>
+                  </div>
+                )
               ) : (
                 <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                     <FileText className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <h3 className="font-display text-lg text-foreground mb-2">
-                    Fișierul nu poate fi afișat aici
+                    PDF-ul nu a fost încărcat
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    Descarcă fișierul sau deschide-l într-un tab nou.
+                    Profesorul va încărca subiectul TVC în format PDF.
                   </p>
                 </div>
-              )
-            ) : (
-              <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="font-display text-lg text-foreground mb-2">
-                  PDF-ul nu a fost încărcat
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Profesorul va încărca subiectul TVC în format PDF.
-                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Before start - show start screen on left side */
+          <div className="flex-1 flex flex-col bg-background/95 border-r border-border items-center justify-center">
+            <div className="text-center p-12 max-w-md">
+              <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Clock className="w-12 h-12 text-gold" />
               </div>
-            )}
+              <h2 className="font-display text-2xl text-foreground mb-4">{subjectTitle}</h2>
+              <p className="text-muted-foreground mb-6">
+                Apasă butonul "Start Timer" pentru a începe testul. <br />
+                Ai la dispoziție <span className="text-gold font-bold">{timerMinutes} minute</span> pentru a rezolva subiectul.
+              </p>
+              <Button variant="gold" size="lg" onClick={handleStart} className="gap-2">
+                <Play className="w-5 h-5" />
+                Start Timer
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Right Side - Timer & Quiz */}
+        {/* Right Side - Timer & Quiz (only show quiz tab after start) */}
         <div className="w-80 lg:w-[480px] flex flex-col bg-card border-l border-border overflow-hidden">
-          {/* Tabs Header */}
-          <div className="flex border-b border-border">
-            <button
-              onClick={() => setActiveTab('timer')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'timer' 
-                  ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              Timer
-            </button>
-            <button
-              onClick={() => setActiveTab('quiz')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'quiz' 
-                  ? 'bg-gold/10 text-gold border-b-2 border-gold' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              }`}
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              Grilă {quizAvailable ? `(${questionCount})` : ''}
-            </button>
-          </div>
+          {/* Tabs Header - only show quiz tab after timer started */}
+          {hasStarted && (
+            <div className="flex border-b border-border">
+              <button
+                onClick={() => setActiveTab('timer')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'timer' 
+                    ? 'bg-gold/10 text-gold border-b-2 border-gold' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Timer
+              </button>
+              <button
+                onClick={() => setActiveTab('quiz')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'quiz' 
+                    ? 'bg-gold/10 text-gold border-b-2 border-gold' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <ClipboardCheck className="w-4 h-4" />
+                Grilă {quizAvailable ? `(${questionCount})` : ''}
+              </button>
+            </div>
+          )}
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto">
-            {activeTab === 'timer' ? (
+            {!hasStarted ? (
+              /* Before start - show waiting screen */
+              <div className="flex flex-col items-center justify-center p-6 h-full">
+                <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Clock className="w-12 h-12 text-gold" />
+                </div>
+                <h3 className="font-display text-xl text-foreground mb-2 text-center">
+                  Pregătit pentru test?
+                </h3>
+                <p className="text-muted-foreground text-sm text-center mb-6">
+                  Apasă "Start Timer" pentru a începe.
+                </p>
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <span className="font-mono text-3xl font-bold text-gold">
+                    {formatTime(INITIAL_TIME)}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Timp disponibil
+                  </p>
+                </div>
+              </div>
+            ) : activeTab === 'timer' ? (
               /* Timer Content */
               <div className="flex flex-col items-center justify-center p-6 h-full">
                 {/* Timer Display */}
@@ -313,9 +356,6 @@ const TVCTimerComplet = ({
                       {isRunning && (
                         <span className="text-xs text-gold mt-2 animate-pulse">În desfășurare</span>
                       )}
-                      {!isRunning && hasStarted && !isTimeUp && (
-                        <span className="text-xs text-muted-foreground mt-2">Pauză</span>
-                      )}
                       {isTimeUp && (
                         <span className="text-xs text-destructive mt-2 font-medium">Timp expirat!</span>
                       )}
@@ -325,12 +365,7 @@ const TVCTimerComplet = ({
 
                 {/* Controls */}
                 <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-                  {!hasStarted ? (
-                    <Button variant="gold" size="lg" onClick={handleStart} className="gap-2 w-full">
-                      <Play className="w-5 h-5" />
-                      Start Timer
-                    </Button>
-                  ) : !hasSubmitted && (
+                  {!hasSubmitted && (
                     <Button 
                       variant="gold" 
                       size="lg" 
@@ -346,7 +381,10 @@ const TVCTimerComplet = ({
 
                 {/* Info */}
                 <p className="text-center text-muted-foreground text-xs mt-6">
-                  Ai la dispoziție {timerMinutes} minute ({Math.floor(timerMinutes / 60)}h {timerMinutes % 60}min) pentru a rezolva subiectul TVC.
+                  {timerMinutes < 60 
+                    ? `Ai la dispoziție ${timerMinutes} minute pentru a rezolva subiectul TVC.`
+                    : `Ai la dispoziție ${timerMinutes} minute (${Math.floor(timerMinutes / 60)}h ${timerMinutes % 60}min) pentru a rezolva subiectul TVC.`
+                  }
                 </p>
 
                 {/* Time up warning */}
