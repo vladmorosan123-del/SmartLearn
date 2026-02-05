@@ -109,6 +109,15 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     setAutoSubmitQuiz(true);
   };
 
+  const handleQuizReset = () => {
+    // Reset the timer and quiz state to start fresh
+    setTimeLeft(INITIAL_TIME);
+    setIsRunning(true);
+    setHasSubmitted(false);
+    setIsTimeUp(false);
+    setAutoSubmitQuiz(false);
+  };
+
   const handleClose = () => {
     onClose();
   };
@@ -348,6 +357,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                       materialId={materialId} 
                       questionCount={questionCount}
                       autoSubmit={autoSubmitQuiz}
+                      onReset={handleQuizReset}
                     />
                   ) : (
                     <div className="text-center py-8">
