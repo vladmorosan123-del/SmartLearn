@@ -2,18 +2,19 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Filter, 
-  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck, Pencil
+  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck, Pencil, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
+import { useHasSubmissions } from '@/hooks/useHasSubmission';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
 import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimer from '@/components/TVCTimer';
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 const tvcSubjects: Subject[] = ['informatica', 'matematica', 'fizica'];
 
 const subjectNames: Record<Subject, string> = {
@@ -64,6 +65,15 @@ const TesteAcademii = () => {
     subject: selectedSubject,
     category: 'tvc',
   });
+
+  // Get material IDs for submission check
+  const materialIds = useMemo(() => 
+    materials.filter(m => !(m as any)._isEmpty).map(m => m.id), 
+    [materials]
+  );
+  
+  // Check which materials the student has submitted
+  const { submissions: studentSubmissions } = useHasSubmissions(materialIds);
 
   // Filter models based on search
   const filteredMaterials = useMemo(() => {
@@ -358,13 +368,37 @@ const TesteAcademii = () => {
                       ) : (
                         !isEmpty && (
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" size="sm" className="gap-1"
-                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
-                            >
-                              <Eye className="w-4 h-4" />
-                              Vezi
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="gap-1"
+                                      disabled={!studentSubmissions[material.id]}
+                                      onClick={() => {
+                                        if (studentSubmissions[material.id]) {
+                                          setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
+                                        }
+                                      }}
+                                    >
+                                      {studentSubmissions[material.id] ? (
+                                        <Eye className="w-4 h-4" />
+                                      ) : (
+                                        <Lock className="w-4 h-4" />
+                                      )}
+                                      Vezi
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                {!studentSubmissions[material.id] && (
+                                  <TooltipContent>
+                                    <p>Trebuie să rezolvi testul o dată pentru a putea vizualiza PDF-ul</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
                             <Button 
                               variant="gold" size="sm"
                               onClick={() => setTimerMaterial(material)}
