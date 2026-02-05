@@ -16,14 +16,13 @@ const corsHeaders = {
   ].join(', '),
 };
 
-interface VerifyQuizRequest {
-  materialId: string;
-  answers: string[];
-  timeSpentSeconds: number;
-}
+const SUBJECT_WEIGHTS: Record<string, number> = {
+  matematica: 0.5,
+  informatica: 0.3,
+  fizica: 0.2,
+};
 
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -33,12 +32,8 @@ serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // Create admin client to access answer_key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
     // Verify user authentication
@@ -50,11 +45,8 @@ serve(async (req: Request) => {
       );
     }
 
-    // Create client with user's token to verify user
     const supabaseClient = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
+      global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
@@ -65,21 +57,20 @@ serve(async (req: Request) => {
       );
     }
 
-    const request: VerifyQuizRequest = await req.json();
-    const { materialId, answers, timeSpentSeconds } = request;
+    const request = await req.json();
+    const { materialId, answers, timeSpentSeconds, isMultiSubject, multiSubjectAnswers } = request;
 
-    // Validate input
-    if (!materialId || !answers || !Array.isArray(answers)) {
+    if (!materialId) {
       return new Response(
         JSON.stringify({ error: 'Date invalide' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get the answer key and oficiu from the material (using admin client to bypass RLS)
+    // Get material data
     const { data: material, error: materialError } = await supabaseAdmin
       .from('materials')
-      .select('answer_key, title, oficiu')
+      .select('answer_key, title, oficiu, subject_config')
       .eq('id', materialId)
       .single();
 
@@ -91,6 +82,89 @@ serve(async (req: Request) => {
       );
     }
 
+    // ===== MULTI-SUBJECT MODE =====
+    if (isMultiSubject && multiSubjectAnswers && material.subject_config) {
+      const subjectConfig = material.subject_config as Record<string, { questionCount: number; answerKey: string[]; oficiu: number }>;
+      const subjectResults: any[] = [];
+      let totalScore = 0;
+      let totalQuestions = 0;
+
+      for (const [subject, config] of Object.entries(subjectConfig)) {
+        const userAnswersForSubject = multiSubjectAnswers[subject] || [];
+        const answerKey = config.answerKey || [];
+        
+        const results = answerKey.map((correct: string, index: number) => ({
+          questionIndex: index,
+          userAnswer: userAnswersForSubject[index] || '',
+          correctAnswer: correct,
+          isCorrect: (userAnswersForSubject[index] || '') === correct,
+        }));
+
+        const score = results.filter((r: any) => r.isCorrect).length;
+        const oficiu = config.oficiu || 0;
+        const baseGrade = score;
+        const finalGrade = baseGrade + oficiu;
+
+        subjectResults.push({
+          subject,
+          score,
+          totalQuestions: answerKey.length,
+          oficiu,
+          baseGrade,
+          finalGrade,
+          results,
+        });
+
+        totalScore += score;
+        totalQuestions += answerKey.length;
+      }
+
+      // Calculate weighted average
+      let weightedAverage = 0;
+      for (const result of subjectResults) {
+        const weight = SUBJECT_WEIGHTS[result.subject] || 0;
+        weightedAverage += result.finalGrade * weight;
+      }
+
+      // Save submission
+      const allAnswers = Object.values(multiSubjectAnswers).flat();
+      const { error: insertError } = await supabaseAdmin.from('tvc_submissions').insert({
+        user_id: user.id,
+        material_id: materialId,
+        answers: multiSubjectAnswers,
+        score: totalScore,
+        total_questions: totalQuestions,
+        time_spent_seconds: timeSpentSeconds,
+      });
+
+      if (insertError) {
+        console.error('Error saving submission:', insertError);
+      }
+
+      console.log(`Multi-subject quiz verified for user ${user.id} on material ${materialId}. Weighted average: ${weightedAverage.toFixed(2)}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          isMultiSubject: true,
+          subjectResults,
+          weightedAverage,
+          totalScore,
+          totalQuestions,
+          timeSpentSeconds,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===== SINGLE-SUBJECT MODE (legacy) =====
+    if (!answers || !Array.isArray(answers)) {
+      return new Response(
+        JSON.stringify({ error: 'Date invalide' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const answerKey = material.answer_key as string[] | null;
     if (!answerKey || !Array.isArray(answerKey)) {
       return new Response(
@@ -99,7 +173,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validate answers array length
     if (answers.length !== answerKey.length) {
       return new Response(
         JSON.stringify({ error: 'Număr incorect de răspunsuri' }),
@@ -107,23 +180,19 @@ serve(async (req: Request) => {
       );
     }
 
-    // Calculate results
-    const results = answers.map((answer, index) => ({
+    const results = answers.map((answer: string, index: number) => ({
       questionIndex: index,
       userAnswer: answer,
       correctAnswer: answerKey[index],
       isCorrect: answer === answerKey[index],
     }));
 
-    const score = results.filter(r => r.isCorrect).length;
+    const score = results.filter((r: any) => r.isCorrect).length;
     const totalQuestions = answerKey.length;
     const oficiu = material.oficiu || 0;
-    
-    // Calculate final grade: each correct answer = 1 point + oficiu
-    const baseGrade = score; // Direct score (number of correct answers)
+    const baseGrade = score;
     const finalGrade = baseGrade + oficiu;
 
-    // Save submission to database
     const { error: insertError } = await supabaseAdmin.from('tvc_submissions').insert({
       user_id: user.id,
       material_id: materialId,
@@ -135,7 +204,6 @@ serve(async (req: Request) => {
 
     if (insertError) {
       console.error('Error saving submission:', insertError);
-      // Continue anyway - we still want to return results
     }
 
     console.log(`Quiz verified for user ${user.id}: ${score}/${totalQuestions} on material ${materialId}. Base grade: ${baseGrade}, Oficiu: ${oficiu}, Final: ${finalGrade}`);

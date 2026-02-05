@@ -20,8 +20,9 @@ export interface Material {
   answer_key?: string[] | null;
   oficiu?: number | null;
   timer_minutes?: number | null;
-  has_answer_key?: boolean; // New field to indicate if answer key exists without exposing it
-  publish_at?: string | null; // Scheduled publish time
+  has_answer_key?: boolean;
+  publish_at?: string | null;
+  subject_config?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number }> | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,13 +43,15 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   // Helper to convert Supabase data to Material type
   // For non-privileged users, we hide the actual answer_key but indicate if it exists
   const mapToMaterial = (data: any, hideAnswerKey: boolean): Material => {
-    const hasAnswerKey = Array.isArray(data.answer_key) && data.answer_key.length > 0;
+    const hasAnswerKey = (Array.isArray(data.answer_key) && data.answer_key.length > 0) ||
+      (data.subject_config && Object.values(data.subject_config as Record<string, any>).some(
+        (cfg: any) => Array.isArray(cfg.answerKey) && cfg.answerKey.some((a: string) => a !== '')
+      ));
     
     return {
       ...data,
-      // Only include actual answer_key for privileged users
       answer_key: hideAnswerKey ? null : (Array.isArray(data.answer_key) ? data.answer_key : null),
-      // Always indicate if answer key exists (for UI display)
+      subject_config: hideAnswerKey ? null : (data.subject_config || null),
       has_answer_key: hasAnswerKey,
     };
   };
