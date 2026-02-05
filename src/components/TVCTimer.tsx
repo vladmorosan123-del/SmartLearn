@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck } from 'lucide-react';
+import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizInterfaceSecure from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,11 +102,8 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     setHasSubmitted(true);
   };
 
-  // Allow closing only after submission
   const handleClose = () => {
-    if (hasSubmitted || isTimeUp) {
-      onClose();
-    }
+    onClose();
   };
 
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
@@ -171,7 +168,14 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                     Descarcă PDF
                   </Button>
                 )}
-                {/* No X button - can only submit to exit */}
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleClose}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
               </div>
             </div>
             
@@ -352,14 +356,12 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             )}
           </div>
 
-          {/* Exit Button - only shown after submission */}
-          {(hasSubmitted || isTimeUp) && (
-            <div className="p-4 border-t border-border">
-              <Button variant="outline" onClick={handleClose} className="w-full">
-                Închide testul
-              </Button>
-            </div>
-          )}
+          {/* Exit Button - always available */}
+          <div className="p-4 border-t border-border">
+            <Button variant="outline" onClick={handleClose} className="w-full">
+              Închide testul
+            </Button>
+          </div>
         </div>
       </div>
     </div>
