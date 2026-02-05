@@ -458,6 +458,7 @@ const TesteAcademii = () => {
             hasAnswerKey={timerMaterial.has_answer_key || (timerMaterial.answer_key && timerMaterial.answer_key.length > 0)}
             questionCount={timerMaterial.answer_key?.length || 0}
             materialId={timerMaterial.id}
+            timerMinutes={timerMaterial.timer_minutes || 180}
             onClose={() => setTimerMaterial(null)} 
           />
         )}
