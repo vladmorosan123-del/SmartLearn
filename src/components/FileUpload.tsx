@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, FileText, Image, FileSpreadsheet, FileType, File, Video, Presentation } from 'lucide-react';
+import { Upload, X, FileText, Image, FileSpreadsheet, FileType, File, Video, Presentation, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,10 +33,18 @@ const MIME_TYPES: Record<string, string> = {
   'mkv': 'video/x-matroska',
 };
 
+interface UploadedFile {
+  file: File;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+  progress?: number;
+  error?: string;
+}
+
 interface FileUploadProps {
   onUploadComplete: (fileUrl: string, fileName: string, fileType: string, fileSize: number) => void;
   category: string;
   subject: string;
+  multiple?: boolean;
 }
 
 const getFileIcon = (fileType: string) => {
@@ -51,9 +59,9 @@ const getFileIcon = (fileType: string) => {
   return <File className="w-5 h-5" />;
 };
 
-const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) => {
+const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: FileUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -78,7 +86,7 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
     if (file.size > maxSize) {
       toast({
         title: 'Fișier prea mare',
-        description: `Dimensiunea maximă permisă este ${maxSizeLabel}.`,
+        description: `${file.name}: Dimensiunea maximă permisă este ${maxSizeLabel}.`,
         variant: 'destructive',
       });
       return false;
@@ -102,25 +110,55 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
     e.stopPropagation();
     setDragActive(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (validateFile(file)) {
-        setSelectedFile(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      const validFiles = files.filter(validateFile);
+      
+      if (validFiles.length > 0) {
+        const newFiles: UploadedFile[] = validFiles.map(file => ({
+          file,
+          status: 'pending' as const,
+        }));
+        
+        if (multiple) {
+          setSelectedFiles(prev => [...prev, ...newFiles]);
+        } else {
+          setSelectedFiles(newFiles.slice(0, 1));
+        }
       }
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (validateFile(file)) {
-        setSelectedFile(file);
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      const validFiles = files.filter(validateFile);
+      
+      if (validFiles.length > 0) {
+        const newFiles: UploadedFile[] = validFiles.map(file => ({
+          file,
+          status: 'pending' as const,
+        }));
+        
+        if (multiple) {
+          setSelectedFiles(prev => [...prev, ...newFiles]);
+        } else {
+          setSelectedFiles(newFiles.slice(0, 1));
+        }
       }
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const uploadFile = async () => {
-    if (!selectedFile) return;
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFiles = async () => {
+    if (selectedFiles.length === 0) return;
 
     // Storage upload requires an authenticated session (and for this app: profesor/admin)
     if (!isAuthenticated) {
@@ -143,41 +181,79 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
     }
 
     setIsUploading(true);
-    try {
-      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-      const fileName = `${category}/${subject}/${Date.now()}_${selectedFile.name}`;
+    
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const uploadedFile = selectedFiles[i];
+      if (uploadedFile.status === 'success') continue;
       
-      const { data, error } = await supabase.storage
-        .from('materials')
-        .upload(fileName, selectedFile, {
-          contentType: MIME_TYPES[fileExt] || 'application/octet-stream',
-          upsert: false,
-        });
+      // Update status to uploading
+      setSelectedFiles(prev => prev.map((f, idx) => 
+        idx === i ? { ...f, status: 'uploading' as const } : f
+      ));
 
-      if (error) throw error;
+      try {
+        const fileExt = uploadedFile.file.name.split('.').pop()?.toLowerCase() || '';
+        const fileName = `${category}/${subject}/${Date.now()}_${uploadedFile.file.name}`;
+        
+        const { data, error } = await supabase.storage
+          .from('materials')
+          .upload(fileName, uploadedFile.file, {
+            contentType: MIME_TYPES[fileExt] || 'application/octet-stream',
+            upsert: false,
+          });
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('materials')
-        .getPublicUrl(data.path);
+        if (error) throw error;
 
-      onUploadComplete(publicUrl, selectedFile.name, fileExt, selectedFile.size);
-      setSelectedFile(null);
-      
+        const { data: { publicUrl } } = supabase.storage
+          .from('materials')
+          .getPublicUrl(data.path);
+
+        onUploadComplete(publicUrl, uploadedFile.file.name, fileExt, uploadedFile.file.size);
+        
+        // Update status to success
+        setSelectedFiles(prev => prev.map((f, idx) => 
+          idx === i ? { ...f, status: 'success' as const } : f
+        ));
+        
+        successCount++;
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        
+        // Update status to error
+        setSelectedFiles(prev => prev.map((f, idx) => 
+          idx === i ? { ...f, status: 'error' as const, error: error.message } : f
+        ));
+        
+        errorCount++;
+      }
+    }
+
+    setIsUploading(false);
+
+    // Show summary toast
+    if (successCount > 0) {
       toast({
-        title: 'Fișier încărcat',
-        description: 'Fișierul a fost încărcat cu succes.',
+        title: 'Fișiere încărcate',
+        description: `${successCount} ${successCount === 1 ? 'fișier încărcat' : 'fișiere încărcate'} cu succes.${errorCount > 0 ? ` ${errorCount} erori.` : ''}`,
       });
-    } catch (error: any) {
-      console.error('Upload error:', error);
+    } else if (errorCount > 0) {
       toast({
         title: 'Eroare la încărcare',
-        description: error.message || 'A apărut o eroare la încărcarea fișierului.',
+        description: 'Nu s-au putut încărca fișierele.',
         variant: 'destructive',
       });
-    } finally {
-      setIsUploading(false);
     }
+
+    // Clear successful uploads after a short delay
+    setTimeout(() => {
+      setSelectedFiles(prev => prev.filter(f => f.status !== 'success'));
+    }, 1500);
   };
+
+  const pendingCount = selectedFiles.filter(f => f.status === 'pending' || f.status === 'error').length;
 
   return (
     <div className="space-y-4">
@@ -196,35 +272,80 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
           className="hidden"
           accept={ALLOWED_EXTENSIONS.join(',')}
           onChange={handleFileSelect}
+          multiple={multiple}
         />
         
-        {selectedFile ? (
-          <div className="flex items-center justify-center gap-3">
-            {getFileIcon(MIME_TYPES[selectedFile.name.split('.').pop()?.toLowerCase() || ''] || '')}
-            <span className="text-foreground font-medium">{selectedFile.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => setSelectedFile(null)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        ) : (
-          <div>
-            <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-foreground mb-1">Trage și plasează fișierul aici</p>
-            <p className="text-sm text-muted-foreground mb-3">sau</p>
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Selectează fișier
-            </Button>
-          </div>
-        )}
+        <div>
+          <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+          <p className="text-foreground mb-1">
+            Trage și plasează {multiple ? 'fișierele' : 'fișierul'} aici
+          </p>
+          <p className="text-sm text-muted-foreground mb-3">sau</p>
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Selectează {multiple ? 'fișiere' : 'fișier'}
+          </Button>
+          {multiple && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Poți selecta mai multe fișiere simultan
+            </p>
+          )}
+        </div>
       </div>
+
+      {/* Selected files list */}
+      {selectedFiles.length > 0 && (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {selectedFiles.map((uploadedFile, index) => {
+            const fileExt = uploadedFile.file.name.split('.').pop()?.toLowerCase() || '';
+            const mimeType = MIME_TYPES[fileExt] || '';
+            
+            return (
+              <div 
+                key={`${uploadedFile.file.name}-${index}`}
+                className={`flex items-center gap-3 p-3 rounded-lg border ${
+                  uploadedFile.status === 'success' 
+                    ? 'bg-emerald-500/10 border-emerald-500/30' 
+                    : uploadedFile.status === 'error'
+                    ? 'bg-destructive/10 border-destructive/30'
+                    : uploadedFile.status === 'uploading'
+                    ? 'bg-gold/10 border-gold/30'
+                    : 'bg-muted/50 border-border'
+                }`}
+              >
+                {getFileIcon(mimeType)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {uploadedFile.file.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {(uploadedFile.file.size / 1024).toFixed(1)} KB
+                    {uploadedFile.status === 'error' && uploadedFile.error && (
+                      <span className="text-destructive ml-2">• {uploadedFile.error}</span>
+                    )}
+                  </p>
+                </div>
+                {uploadedFile.status === 'uploading' ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-gold" />
+                ) : uploadedFile.status === 'success' ? (
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => removeFile(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="text-xs text-muted-foreground">
         <p className="font-medium mb-1">Formate acceptate:</p>
@@ -233,14 +354,21 @@ const FileUpload = ({ onUploadComplete, category, subject }: FileUploadProps) =>
         <p className="mt-1">Dimensiune maximă: 10MB (documente) / 100MB (video)</p>
       </div>
 
-      {selectedFile && (
+      {pendingCount > 0 && (
         <Button
           variant="gold"
           className="w-full"
-          onClick={uploadFile}
+          onClick={uploadFiles}
           disabled={isUploading}
         >
-          {isUploading ? 'Se încarcă...' : 'Încarcă fișierul'}
+          {isUploading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Se încarcă...
+            </>
+          ) : (
+            `Încarcă ${pendingCount} ${pendingCount === 1 ? 'fișier' : 'fișiere'}`
+          )}
         </Button>
       )}
     </div>
