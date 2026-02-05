@@ -66,7 +66,7 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<{ url: string; name: string; type: string; size: number }[]>([]);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
@@ -122,33 +122,35 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
 
   const handleUploadImage = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setIsModalOpen(true);
   };
 
   const handleSaveFormula = async () => {
-    if (!uploadedFile || !selectedCategoryId) return;
+    if (uploadedFiles.length === 0 || !selectedCategoryId) return;
 
     const categoryName = categories.find(c => c.id === selectedCategoryId)?.name || '';
 
     try {
-      await addMaterial({
-        title: `Formule ${categoryName}`,
-        description: categoryName,
-        file_name: uploadedFile.name,
-        file_type: uploadedFile.type,
-        file_url: uploadedFile.url,
-        file_size: uploadedFile.size,
-        subject,
-        category: 'formula',
-        lesson_number: null,
-        author: null,
-        genre: selectedCategoryId,
-        year: null,
-      });
-      toast({ title: 'Formule salvate', description: 'Formulele au fost salvate cu succes.' });
+      for (const file of uploadedFiles) {
+        await addMaterial({
+          title: uploadedFiles.length > 1 ? `Formule ${categoryName} - ${file.name}` : `Formule ${categoryName}`,
+          description: categoryName,
+          file_name: file.name,
+          file_type: file.type,
+          file_url: file.url,
+          file_size: file.size,
+          subject,
+          category: 'formula',
+          lesson_number: null,
+          author: null,
+          genre: selectedCategoryId,
+          year: null,
+        });
+      }
+      toast({ title: 'Formule salvate', description: `${uploadedFiles.length} ${uploadedFiles.length === 1 ? 'fișier salvat' : 'fișiere salvate'} cu succes.` });
       setIsModalOpen(false);
-      setUploadedFile(null);
+      setUploadedFiles([]);
       setSelectedCategoryId(null);
     } catch (error) {
       console.error('Error saving formula:', error);
@@ -178,7 +180,7 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
   };
 
   const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
-    setUploadedFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+    setUploadedFiles(prev => [...prev, { url: fileUrl, name: fileName, type: fileType, size: fileSize }]);
   };
 
   const handleAddCategory = async () => {
@@ -418,34 +420,37 @@ const FormulaPortfolio = ({ subject, isProfessor }: FormulaPortfolioProps) => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {uploadedFile ? (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  {getFileIcon(uploadedFile.type)}
-                  <div>
-                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{uploadedFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
-                    </p>
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {getFileIcon(file.type)}
+                      <div>
+                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getFileTypeLabel(file.type)} • {(file.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}>
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
+                ))}
               </div>
-            ) : (
-              <FileUpload
-                onUploadComplete={handleUploadComplete}
-                category="formula"
-                subject={subject}
-              />
             )}
+            <FileUpload
+              onUploadComplete={handleUploadComplete}
+              category="formula"
+              subject={subject}
+            />
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
                 Anulează
               </Button>
-              <Button variant="gold" className="flex-1" onClick={handleSaveFormula} disabled={!uploadedFile}>
+              <Button variant="gold" className="flex-1" onClick={handleSaveFormula} disabled={uploadedFiles.length === 0}>
                 Salvează
               </Button>
             </div>

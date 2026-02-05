@@ -60,7 +60,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
   const [publishTime, setPublishTime] = useState('');
   const [uploadTab, setUploadTab] = useState<'file' | 'link'>('file');
   const [linkUrl, setLinkUrl] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<{ url: string; name: string; type: string; size: number }[]>([]);
   const [subjectConfig, setSubjectConfig] = useState<Record<string, SubjectConfig>>(defaultSubjectConfig());
   const [activeSubjectTab, setActiveSubjectTab] = useState('matematica');
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +93,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
     setPublishTime('');
     setUploadTab('file');
     setLinkUrl('');
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setSubjectConfig(defaultSubjectConfig());
     setActiveSubjectTab('matematica');
   };
@@ -106,9 +106,8 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const hasFile = !!uploadedFile;
     const hasLink = uploadTab === 'link' && linkUrl.trim();
-    if (!title.trim() || (!hasFile && !hasLink)) return;
+    if (!title.trim() || (uploadedFiles.length === 0 && !hasLink)) return;
 
     setIsSaving(true);
     try {
@@ -119,24 +118,37 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
         publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
       }
 
-      const fileUrl = hasLink ? linkUrl.trim() : uploadedFile!.url;
-      const fileName = hasLink ? linkUrl.trim() : uploadedFile!.name;
-      const fileType = hasLink ? 'link' : uploadedFile!.type;
-      const fileSize = hasLink ? 0 : uploadedFile!.size;
-
-      await onSave({
-        title: title.trim(),
-        description: description.trim(),
-        year,
-        fileUrl,
-        fileName,
-        fileType,
-        fileSize,
-        timerMinutes,
-        subject: 'tvc_complet', // special subject for combined tests
-        publishAt,
-        subjectConfig,
-      });
+      if (hasLink) {
+        await onSave({
+          title: title.trim(),
+          description: description.trim(),
+          year,
+          fileUrl: linkUrl.trim(),
+          fileName: linkUrl.trim(),
+          fileType: 'link',
+          fileSize: 0,
+          timerMinutes,
+          subject: 'tvc_complet',
+          publishAt,
+          subjectConfig,
+        });
+      } else {
+        for (const file of uploadedFiles) {
+          await onSave({
+            title: uploadedFiles.length > 1 ? `${title.trim()} - ${file.name}` : title.trim(),
+            description: description.trim(),
+            year,
+            fileUrl: file.url,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            timerMinutes,
+            subject: 'tvc_complet',
+            publishAt,
+            subjectConfig,
+          });
+        }
+      }
       resetForm();
       onClose();
     } catch (error) {
@@ -155,7 +167,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
     return labels[type.toLowerCase()] || type.toUpperCase();
   };
 
-  const hasFile = !!uploadedFile;
+  const hasFile = uploadedFiles.length > 0;
   const hasLink = uploadTab === 'link' && linkUrl.trim();
   const isValid = title.trim() && (hasFile || hasLink);
 
@@ -239,30 +251,33 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
               </TabsList>
               
               <TabsContent value="file" className="mt-0">
-                {uploadedFile ? (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gold" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                          {uploadedFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
-                        </p>
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {uploadedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-gold" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {getFileTypeLabel(file.type)} • {(file.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}>
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
-                      <X className="w-4 h-4" />
-                    </Button>
+                    ))}
                   </div>
-                ) : (
-                  <FileUpload
-                    onUploadComplete={(url, name, type, size) => setUploadedFile({ url, name, type, size })}
-                    category="tvc_complet"
-                    subject="complet"
-                  />
                 )}
+                <FileUpload
+                  onUploadComplete={(url, name, type, size) => setUploadedFiles(prev => [...prev, { url, name, type, size }])}
+                  category="tvc_complet"
+                  subject="complet"
+                />
               </TabsContent>
               
               <TabsContent value="link" className="mt-0">
