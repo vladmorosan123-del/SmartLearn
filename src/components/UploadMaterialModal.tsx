@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { X, FileText, Clock, Calendar } from 'lucide-react';
+import { X, FileText, Clock, Calendar, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
@@ -66,6 +67,8 @@ const UploadMaterialModal = ({
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
   const [publishTime, setPublishTime] = useState<string>('');
+  const [uploadTab, setUploadTab] = useState<'file' | 'link'>('file');
+  const [linkUrl, setLinkUrl] = useState('');
   const [uploadedFile, setUploadedFile] = useState<{
     url: string;
     name: string;
@@ -98,6 +101,8 @@ const UploadMaterialModal = ({
     setTimerMinutes(180);
     setPublishDate(undefined);
     setPublishTime('');
+    setUploadTab('file');
+    setLinkUrl('');
     setUploadedFile(null);
   };
 
@@ -108,11 +113,12 @@ const UploadMaterialModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !uploadedFile) return;
-
-    // Validate answer key if required
-    const hasValidAnswerKey = !showAnswerKey || answerKey.every(a => a !== '');
-    if (showAnswerKey && !hasValidAnswerKey) return;
+    
+    // Check if we have either a file or a link
+    const hasFile = !!uploadedFile;
+    const hasLink = uploadTab === 'link' && linkUrl.trim();
+    
+    if (!title.trim() || (!hasFile && !hasLink)) return;
 
     // Build publish_at timestamp if date is set
     let publishAt: string | undefined;
@@ -122,14 +128,20 @@ const UploadMaterialModal = ({
       publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
     }
 
+    // If link is provided, use it as the file URL
+    const fileUrl = hasLink ? linkUrl.trim() : uploadedFile!.url;
+    const fileName = hasLink ? linkUrl.trim() : uploadedFile!.name;
+    const fileType = hasLink ? 'link' : uploadedFile!.type;
+    const fileSize = hasLink ? 0 : uploadedFile!.size;
+
     onSave({
       title: title.trim(),
       description: description.trim(),
       year: showYear ? year : undefined,
-      fileUrl: uploadedFile.url,
-      fileName: uploadedFile.name,
-      fileType: uploadedFile.type,
-      fileSize: uploadedFile.size,
+      fileUrl,
+      fileName,
+      fileType,
+      fileSize,
       answerKey: showAnswerKey ? answerKey : undefined,
       oficiu: showAnswerKey ? oficiu : undefined,
       timerMinutes: showTimer ? timerMinutes : undefined,
@@ -228,33 +240,63 @@ const UploadMaterialModal = ({
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gold" />
-              Încarcă fișier *
+              Încarcă fișier sau link *
             </Label>
             
-            {uploadedFile ? (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-gold" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                      {uploadedFile.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
-                    </p>
+            <Tabs value={uploadTab} onValueChange={(v) => setUploadTab(v as 'file' | 'link')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-2">
+                <TabsTrigger value="file" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Fișier
+                </TabsTrigger>
+                <TabsTrigger value="link" className="flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4" />
+                  Link
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="file" className="mt-0">
+                {uploadedFile ? (
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-gold" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                          {uploadedFile.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {getFileTypeLabel(uploadedFile.type)} • {(uploadedFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
+                ) : (
+                  <FileUpload
+                    onUploadComplete={handleUploadComplete}
+                    category={category}
+                    subject={showSubjectSelector ? selectedSubject : subject}
+                  />
+                )}
+              </TabsContent>
+              
+              <TabsContent value="link" className="mt-0">
+                <div className="space-y-2">
+                  <Input
+                    type="url"
+                    placeholder="https://..."
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    className="bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Adaugă un link extern (YouTube, Google Drive, etc.)
+                  </p>
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <FileUpload
-                onUploadComplete={handleUploadComplete}
-                category={category}
-                subject={showSubjectSelector ? selectedSubject : subject}
-              />
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Answer Key Input for TVC */}
@@ -394,7 +436,7 @@ const UploadMaterialModal = ({
               type="submit" 
               variant="gold"
               className="flex-1"
-              disabled={!title.trim() || !uploadedFile || (showAnswerKey && !answerKey.every(a => a !== ''))}
+              disabled={!title.trim() || (!uploadedFile && !(uploadTab === 'link' && linkUrl.trim()))}
             >
               Salvează
             </Button>
