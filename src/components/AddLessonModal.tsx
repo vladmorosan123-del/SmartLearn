@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Video, Presentation, Save } from 'lucide-react';
+import { X, FileText, Video, Presentation, Save, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,6 +48,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     size: number;
   } | null>(null);
   const [activeTab, setActiveTab] = useState('document');
+  const [linkUrl, setLinkUrl] = useState('');
 
   const isEditing = !!editData;
 
@@ -58,6 +59,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     setDescription('');
     setUploadedFile(null);
     setActiveTab('document');
+    setLinkUrl('');
   };
 
   // Populate form with existing data when editing
@@ -83,14 +85,17 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && duration.trim()) {
+      // Check if we have a link
+      const hasLink = activeTab === 'link' && linkUrl.trim();
+      
       onSave({ 
         title: title.trim(), 
         duration: duration.trim(), 
         description: description.trim(),
-        fileUrl: uploadedFile?.url,
-        fileName: uploadedFile?.name,
-        fileType: uploadedFile?.type,
-        fileSize: uploadedFile?.size,
+        fileUrl: hasLink ? linkUrl.trim() : uploadedFile?.url,
+        fileName: hasLink ? linkUrl.trim() : uploadedFile?.name,
+        fileType: hasLink ? 'link' : uploadedFile?.type,
+        fileSize: hasLink ? 0 : uploadedFile?.size,
       });
       resetForm();
       onClose();
@@ -253,7 +258,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-3">
+                <TabsList className="grid w-full grid-cols-4 mb-3">
                   <TabsTrigger value="document" className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     Document
@@ -264,7 +269,11 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                   </TabsTrigger>
                   <TabsTrigger value="powerpoint" className="flex items-center gap-2">
                     <Presentation className="w-4 h-4" />
-                    PowerPoint
+                    PPT
+                  </TabsTrigger>
+                  <TabsTrigger value="link" className="flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4" />
+                    Link
                   </TabsTrigger>
                 </TabsList>
                 
@@ -305,6 +314,22 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                       onUploadComplete={handleUploadComplete}
                       category="lesson"
                       subject={subject}
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="link" className="mt-0">
+                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <p className="text-xs text-primary mb-3 flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4" />
+                      Adaugă un link extern (YouTube, Google Drive, etc.)
+                    </p>
+                    <Input
+                      type="url"
+                      placeholder="https://..."
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                      className="bg-background"
                     />
                   </div>
                 </TabsContent>

@@ -249,7 +249,7 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
             <Button 
               variant="gold" 
               onClick={handleSubmit} 
-              disabled={isSubmitting || isTimeUp}
+              disabled={isSubmitting}
               className="gap-2 flex-1"
             >
               {isSubmitting ? (

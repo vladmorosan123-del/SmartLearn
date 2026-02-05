@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, X, Clock, FileText, Upload, Download, ClipboardCheck, Loader2 } from 'lucide-react';
+import { Play, Send, X, Clock, FileText, Upload, Download, ClipboardCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizInterfaceSecure from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,19 +11,23 @@ interface TVCTimerProps {
   hasAnswerKey?: boolean;
   questionCount?: number;
   materialId?: string;
+  timerMinutes?: number;
 }
 
-const INITIAL_TIME = 3 * 60 * 60; // 3 hours in seconds
+const INITIAL_TIME_DEFAULT = 3 * 60 * 60; // 3 hours in seconds default
 
 // Helper function to get PDF viewer URL using Google Docs Viewer
 const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 };
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId }: TVCTimerProps) => {
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180 }: TVCTimerProps) => {
+  const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
+  
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [activeTab, setActiveTab] = useState<'timer' | 'quiz'>('timer');
   const [questionCount, setQuestionCount] = useState(initialQuestionCount || 0);
   const [isLoadingQuestionCount, setIsLoadingQuestionCount] = useState(false);
@@ -63,6 +67,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
       }, 1000);
     } else if (timeLeft === 0) {
       setIsRunning(false);
+      setHasSubmitted(true);
     }
 
     return () => {
@@ -82,19 +87,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     setHasStarted(true);
   };
 
-  const handlePause = () => {
+  const handleSubmitTest = () => {
     setIsRunning(false);
-  };
-
-  const handleResume = () => {
-    setIsRunning(true);
-  };
-
-  const handleReset = () => {
-    setTimeLeft(INITIAL_TIME);
-    setIsRunning(false);
-    setHasStarted(false);
-    setActiveTab('timer');
+    setHasSubmitted(true);
   };
 
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
@@ -257,30 +252,23 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                       <Play className="w-5 h-5" />
                       Start Timer
                     </Button>
-                  ) : (
-                    <>
-                      {isRunning ? (
-                        <Button variant="outline" size="lg" onClick={handlePause} className="gap-2 w-full">
-                          <Pause className="w-5 h-5" />
-                          Pauză
-                        </Button>
-                      ) : (
-                        <Button variant="gold" size="lg" onClick={handleResume} className="gap-2 w-full" disabled={isTimeUp}>
-                          <Play className="w-5 h-5" />
-                          Continuă
-                        </Button>
-                      )}
-                      <Button variant="outline" size="lg" onClick={handleReset} className="gap-2 w-full">
-                        <RotateCcw className="w-5 h-5" />
-                        Reset
-                      </Button>
-                    </>
+                  ) : !hasSubmitted && (
+                    <Button 
+                      variant="gold" 
+                      size="lg" 
+                      onClick={handleSubmitTest} 
+                      className="gap-2 w-full"
+                      disabled={isTimeUp}
+                    >
+                      <Send className="w-5 h-5" />
+                      Predă Testul
+                    </Button>
                   )}
                 </div>
 
                 {/* Info */}
                 <p className="text-center text-muted-foreground text-xs mt-6">
-                  Ai la dispoziție 3 ore pentru a rezolva subiectul TVC.
+                  Ai la dispoziție {timerMinutes} minute pentru a rezolva subiectul TVC.
                 </p>
 
                 {/* Quiz CTA */}
