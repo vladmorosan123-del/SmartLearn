@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { CheckCircle, XCircle, Send, RotateCcw, Loader2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -13,13 +13,19 @@ interface QuizResult {
   isCorrect: boolean;
 }
 
+export interface TVCQuizInterfaceRef {
+  submitQuiz: () => Promise<void>;
+}
+
 interface TVCQuizInterfaceSecureProps {
   materialId: string;
   questionCount: number;
   onComplete?: (score: number, total: number) => void;
+  autoSubmit?: boolean;
 }
 
-const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQuizInterfaceSecureProps) => {
+const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceSecureProps>(
+  ({ materialId, questionCount, onComplete, autoSubmit }, ref) => {
   const [userAnswers, setUserAnswers] = useState<string[]>(Array(questionCount).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -27,6 +33,7 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
   const [score, setScore] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startTimeRef = useRef<Date>(new Date());
+  const hasAutoSubmitted = useRef(false);
   const { toast } = useToast();
 
   const options = ['A', 'B', 'C', 'D'];
@@ -57,7 +64,9 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
     setUserAnswers(newAnswers);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (forceSubmit = false) => {
+    if (isSubmitted || isSubmitting) return;
+    
     setIsSubmitting(true);
     
     try {
@@ -83,7 +92,7 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
       onComplete?.(data.score, data.totalQuestions);
       
       toast({
-        title: "Răspunsuri verificate!",
+        title: forceSubmit ? "Timp expirat - Test trimis automat!" : "Răspunsuri verificate!",
         description: `Scor: ${data.score}/${data.totalQuestions} - Timp: ${formatTime(data.timeSpentSeconds)}`,
       });
     } catch (error: any) {
@@ -98,6 +107,19 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
     }
   };
 
+  // Expose submit method via ref
+  useImperativeHandle(ref, () => ({
+    submitQuiz: () => handleSubmit(true),
+  }));
+
+  // Auto-submit when autoSubmit becomes true
+  useEffect(() => {
+    if (autoSubmit && !isSubmitted && !isSubmitting && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      handleSubmit(true);
+    }
+  }, [autoSubmit, isSubmitted, isSubmitting]);
+
   const handleReset = () => {
     setUserAnswers(Array(questionCount).fill(''));
     setIsSubmitted(false);
@@ -105,9 +127,11 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
     setScore(0);
     setElapsedSeconds(0);
     startTimeRef.current = new Date();
+    hasAutoSubmitted.current = false;
   };
 
   const allAnswered = userAnswers.every(answer => answer !== '');
+  const answeredCount = userAnswers.filter(answer => answer !== '').length;
 
   return (
     <div className="space-y-6">
@@ -236,7 +260,7 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
         {!isSubmitted ? (
           <Button 
             variant="gold" 
-            onClick={handleSubmit} 
+            onClick={() => handleSubmit(false)} 
             disabled={!allAnswered || isSubmitting}
             className="gap-2 flex-1"
           >
@@ -266,11 +290,13 @@ const TVCQuizInterfaceSecure = ({ materialId, questionCount, onComplete }: TVCQu
 
       {!isSubmitted && !allAnswered && (
         <p className="text-xs text-muted-foreground text-center">
-          Răspunde la toate întrebările pentru a putea verifica.
+          {answeredCount}/{questionCount} răspunsuri completate. Răspunde la toate pentru a verifica.
         </p>
       )}
     </div>
   );
-};
+});
+
+TVCQuizInterfaceSecure.displayName = 'TVCQuizInterfaceSecure';
 
 export default TVCQuizInterfaceSecure;
