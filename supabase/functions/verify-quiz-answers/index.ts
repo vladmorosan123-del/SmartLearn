@@ -138,7 +138,7 @@ serve(async (req: Request) => {
       // Continue anyway - we still want to return results
     }
 
-    console.log(`Quiz verified for user ${user.id}: ${score}/${totalQuestions} on material ${materialId}`);
+    console.log(`Quiz verified for user ${user.id}: ${score}/${totalQuestions} on material ${materialId}. Base grade: ${baseGrade}, Oficiu: ${oficiu}, Final: ${finalGrade}`);
 
     return new Response(
       JSON.stringify({
