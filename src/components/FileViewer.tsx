@@ -95,7 +95,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
               variant="outline" 
               size="sm"
               className="gap-2"
-              onClick={() => window.open(fileUrl, '_blank')}
+              onClick={() => window.open(safeFileUrl, '_blank')}
             >
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Tab nou</span>
@@ -194,7 +194,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                   <Download className="w-4 h-4 mr-2" />
                   Descarcă fișierul
                 </Button>
-                <Button variant="outline" onClick={() => window.open(fileUrl, '_blank')}>
+                <Button variant="outline" onClick={() => window.open(safeFileUrl, '_blank')}>
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Deschide în tab nou
                 </Button>
