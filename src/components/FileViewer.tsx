@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video } from 'lucide-react';
+import { useMemo, useState, useCallback } from 'react';
+import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface FileViewerProps {
@@ -30,10 +30,29 @@ const canPreviewInBrowser = (fileType: string) => {
 
 const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewerProps) => {
   const [imageError, setImageError] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
+  const [iframeKey, setIframeKey] = useState(0);
+  
   const safeFileUrl = useMemo(() => {
     // Prevent accidental whitespace issues from breaking previews
     return (fileUrl || '').trim();
   }, [fileUrl]);
+
+  const handleRetry = useCallback(() => {
+    setIframeError(false);
+    setIframeLoading(true);
+    setIframeKey(prev => prev + 1);
+  }, []);
+
+  const handleIframeLoad = useCallback(() => {
+    setIframeLoading(false);
+  }, []);
+
+  const handleIframeError = useCallback(() => {
+    setIframeLoading(false);
+    setIframeError(true);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -148,12 +167,49 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
               )}
               
               {isPdf && (
-                <iframe
-                  src={getGoogleViewerUrl(safeFileUrl)}
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title={fileName}
-                  allow="autoplay"
-                />
+                iframeError ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
+                    <AlertCircle className="w-16 h-16 text-orange-500" />
+                    <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Nu s-a putut încărca PDF-ul</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Încearcă să reîncarci sau deschide fișierul într-un tab nou.
+                    </p>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <Button variant="gold" onClick={handleRetry}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Reîncearcă
+                      </Button>
+                      <Button variant="outline" onClick={() => window.open(safeFileUrl, '_blank')}>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Tab nou
+                      </Button>
+                      <Button variant="outline" onClick={handleDownload}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Descarcă
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full relative">
+                    {iframeLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-lg">
+                        <div className="flex flex-col items-center gap-3">
+                          <RefreshCw className="w-8 h-8 text-gold animate-spin" />
+                          <p className="text-sm text-muted-foreground">Se încarcă documentul...</p>
+                        </div>
+                      </div>
+                    )}
+                    <iframe
+                      key={iframeKey}
+                      src={getGoogleViewerUrl(safeFileUrl)}
+                      className="w-full h-full rounded-lg border border-border bg-white"
+                      title={fileName}
+                      allow="autoplay"
+                      onLoad={handleIframeLoad}
+                      onError={handleIframeError}
+                    />
+                  </div>
+                )
               )}
               
               {isTxt && (
@@ -177,12 +233,49 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
               )}
 
               {isOfficeDoc && (
-                <iframe
-                  src={getGoogleViewerUrl(safeFileUrl)}
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title={fileName}
-                  allow="autoplay"
-                />
+                iframeError ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
+                    <AlertCircle className="w-16 h-16 text-orange-500" />
+                    <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Nu s-a putut încărca documentul</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Încearcă să reîncarci sau deschide fișierul într-un tab nou.
+                    </p>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <Button variant="gold" onClick={handleRetry}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Reîncearcă
+                      </Button>
+                      <Button variant="outline" onClick={() => window.open(safeFileUrl, '_blank')}>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Tab nou
+                      </Button>
+                      <Button variant="outline" onClick={handleDownload}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Descarcă
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full relative">
+                    {iframeLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-lg">
+                        <div className="flex flex-col items-center gap-3">
+                          <RefreshCw className="w-8 h-8 text-gold animate-spin" />
+                          <p className="text-sm text-muted-foreground">Se încarcă documentul...</p>
+                        </div>
+                      </div>
+                    )}
+                    <iframe
+                      key={iframeKey}
+                      src={getGoogleViewerUrl(safeFileUrl)}
+                      className="w-full h-full rounded-lg border border-border bg-white"
+                      title={fileName}
+                      allow="autoplay"
+                      onLoad={handleIframeLoad}
+                      onError={handleIframeError}
+                    />
+                  </div>
+                )
               )}
             </div>
           ) : (
