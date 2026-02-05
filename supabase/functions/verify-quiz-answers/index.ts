@@ -119,9 +119,9 @@ serve(async (req: Request) => {
     const totalQuestions = answerKey.length;
     const oficiu = material.oficiu || 0;
     
-    // Calculate final grade (score out of 100 + oficiu)
-    const baseGrade = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
-    const finalGrade = Math.min(100, baseGrade + oficiu);
+    // Calculate final grade: each correct answer = 1 point + oficiu
+    const baseGrade = score; // Direct score (number of correct answers)
+    const finalGrade = baseGrade + oficiu;
 
     // Save submission to database
     const { error: insertError } = await supabaseAdmin.from('tvc_submissions').insert({
