@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RotateCcw, X, Clock, FileText, Download, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { Play, Send, X, Clock, FileText, Download, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +42,7 @@ const TVCTimerComplet = ({
   const [isLoadingQuestionCount, setIsLoadingQuestionCount] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showTimeUpWarning, setShowTimeUpWarning] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   
   const quizRef = useRef<{ forceSubmit: () => void } | null>(null);
 
@@ -114,22 +115,14 @@ const TVCTimerComplet = ({
     setHasStarted(true);
   };
 
-  const handlePause = () => {
+  const handleSubmitTest = () => {
     setIsRunning(false);
-  };
-
-  const handleResume = () => {
-    if (!isTimeUp) {
-      setIsRunning(true);
+    setIsTimeUp(true);
+    setHasSubmitted(true);
+    // Trigger auto-submit for quiz
+    if (quizRef.current) {
+      quizRef.current.forceSubmit();
     }
-  };
-
-  const handleReset = () => {
-    setTimeLeft(INITIAL_TIME);
-    setIsRunning(false);
-    setHasStarted(false);
-    setIsTimeUp(false);
-    setActiveTab('timer');
   };
 
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
@@ -337,30 +330,17 @@ const TVCTimerComplet = ({
                       <Play className="w-5 h-5" />
                       Start Timer
                     </Button>
-                  ) : (
-                    <>
-                      {isRunning ? (
-                        <Button variant="outline" size="lg" onClick={handlePause} className="gap-2 w-full">
-                          <Pause className="w-5 h-5" />
-                          Pauză
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="gold" 
-                          size="lg" 
-                          onClick={handleResume} 
-                          className="gap-2 w-full" 
-                          disabled={isTimeUp}
-                        >
-                          <Play className="w-5 h-5" />
-                          Continuă
-                        </Button>
-                      )}
-                      <Button variant="outline" size="lg" onClick={handleReset} className="gap-2 w-full">
-                        <RotateCcw className="w-5 h-5" />
-                        Reset
-                      </Button>
-                    </>
+                  ) : !hasSubmitted && (
+                    <Button 
+                      variant="gold" 
+                      size="lg" 
+                      onClick={handleSubmitTest} 
+                      className="gap-2 w-full"
+                      disabled={isTimeUp}
+                    >
+                      <Send className="w-5 h-5" />
+                      Predă Testul
+                    </Button>
                   )}
                 </div>
 
