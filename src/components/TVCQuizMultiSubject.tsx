@@ -10,6 +10,10 @@ interface SubjectConfig {
   questionCount: number;
   answerKey: string[];
   oficiu: number;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
 }
 
 interface QuizResult {
@@ -39,6 +43,7 @@ interface TVCQuizMultiSubjectProps {
   isTimeUp: boolean;
   elapsedSeconds: number;
   onComplete?: (weightedAverage: number) => void;
+  onActiveSubjectChange?: (subject: string) => void;
 }
 
 const subjectMeta: Record<string, { label: string; icon: typeof Calculator; color: string; weight: number }> = {
@@ -50,8 +55,7 @@ const subjectMeta: Record<string, { label: string; icon: typeof Calculator; colo
 const options = ['A', 'B', 'C', 'D'];
 
 const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubjectProps>(
-  ({ materialId, subjectConfig, isTimeUp, elapsedSeconds, onComplete }, ref) => {
-    // Initialize answers per subject
+  ({ materialId, subjectConfig, isTimeUp, elapsedSeconds, onComplete, onActiveSubjectChange }, ref) => {
     const subjects = Object.keys(subjectConfig);
     const [answersPerSubject, setAnswersPerSubject] = useState<Record<string, string[]>>(() => {
       const init: Record<string, string[]> = {};
@@ -66,6 +70,11 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
     const [subjectResults, setSubjectResults] = useState<SubjectResult[]>([]);
     const [weightedAverage, setWeightedAverage] = useState(0);
     const { toast } = useToast();
+
+    const handleSubjectChange = (subject: string) => {
+      setActiveSubject(subject);
+      onActiveSubjectChange?.(subject);
+    };
 
     const handleAnswerChange = (subject: string, questionIndex: number, answer: string) => {
       if (isSubmitted) return;
@@ -155,7 +164,7 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
               <button
                 key={subject}
                 type="button"
-                onClick={() => setActiveSubject(subject)}
+                onClick={() => handleSubjectChange(subject)}
                 className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors text-xs ${
                   activeSubject === subject 
                     ? 'bg-gold text-primary-foreground' 
@@ -184,7 +193,6 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
         {/* Weighted Average Result */}
         {isSubmitted && (
           <div className="space-y-3">
-            {/* Per-subject scores */}
             <div className="space-y-2">
               {subjectResults.map((result) => {
                 const meta = subjectMeta[result.subject];
@@ -210,7 +218,6 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
               })}
             </div>
 
-            {/* Weighted Average */}
             <div className={`p-4 rounded-lg text-center ${
               weightedAverage >= 7 
                 ? 'bg-green-500/20 border border-green-500/50' 
