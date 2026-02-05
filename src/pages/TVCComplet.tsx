@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, 
   File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, 
-  FileText, ClipboardCheck, Pencil, Timer, Calendar
+  FileText, ClipboardCheck, Pencil, Timer, Calendar, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
+import { useHasSubmissions } from '@/hooks/useHasSubmission';
 import TVCCompletUploadModal from '@/components/TVCCompletUploadModal';
 import EditTVCCompletModal from '@/components/EditTVCCompletModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimerComplet from '@/components/TVCTimerComplet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const subjectNames: Record<string, string> = {
   informatica: 'Informatică',
@@ -59,6 +61,12 @@ const TVCComplet = () => {
   const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     category: 'tvc_complet',
   });
+
+  // Get material IDs for submission check
+  const materialIds = useMemo(() => materials.map(m => m.id), [materials]);
+  
+  // Check which materials the student has submitted
+  const { submissions: studentSubmissions } = useHasSubmissions(materialIds);
 
   // Filter materials based on search
   const filteredMaterials = useMemo(() => {
@@ -306,13 +314,37 @@ const TVCComplet = () => {
                       </>
                     ) : (
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" size="sm" className="gap-1"
-                          onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
-                        >
-                          <Eye className="w-4 h-4" />
-                          Vezi PDF
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="gap-1"
+                                  disabled={!studentSubmissions[material.id]}
+                                  onClick={() => {
+                                    if (studentSubmissions[material.id]) {
+                                      setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
+                                    }
+                                  }}
+                                >
+                                  {studentSubmissions[material.id] ? (
+                                    <Eye className="w-4 h-4" />
+                                  ) : (
+                                    <Lock className="w-4 h-4" />
+                                  )}
+                                  Vezi PDF
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            {!studentSubmissions[material.id] && (
+                              <TooltipContent>
+                                <p>Trebuie să rezolvi testul o dată pentru a putea vizualiza PDF-ul</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button 
                           variant="gold" size="sm" className="gap-1"
                           onClick={() => setTimerMaterial(material)}
