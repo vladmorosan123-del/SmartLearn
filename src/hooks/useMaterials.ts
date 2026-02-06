@@ -36,7 +36,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { role } = useAuthContext();
+  const { role, isLoading: authLoading } = useAuthContext();
   
   const isPrivilegedUser = role === 'profesor' || role === 'admin';
 
@@ -70,9 +70,11 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   };
 
   const fetchMaterials = useCallback(async () => {
+    // Don't fetch until auth has resolved the user's role
+    if (authLoading) return;
+    
     try {
       setIsLoading(true);
-      console.log('[useMaterials] Fetching materials. role:', role, 'isPrivilegedUser:', isPrivilegedUser, 'category:', category);
       
       if (isPrivilegedUser) {
         let query = supabase
@@ -88,7 +90,6 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
-        console.log('[useMaterials] Raw data sample:', data?.[0] ? { id: data[0].id, answer_key: data[0].answer_key, answer_key_type: typeof data[0].answer_key, is_array: Array.isArray(data[0].answer_key) } : 'no data');
         setMaterials((data || []).map(d => mapToMaterial(d, false)));
       } else {
         // Students use a backend function that returns materials WITHOUT answer_key
@@ -130,7 +131,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [subject, category, toast, isPrivilegedUser]);
+  }, [subject, category, toast, isPrivilegedUser, authLoading]);
 
   useEffect(() => {
     fetchMaterials();
