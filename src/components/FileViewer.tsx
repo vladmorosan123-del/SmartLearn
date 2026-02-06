@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 
 interface FileViewerProps {
   isOpen: boolean;
@@ -33,9 +34,9 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const [iframeError, setIframeError] = useState(false);
   const [loadTimeout, setLoadTimeout] = useState(false);
   
-  const safeFileUrl = useMemo(() => {
-    return (fileUrl || '').trim();
-  }, [fileUrl]);
+  // Resolve signed URL for private bucket
+  const { signedUrl, isLoading: isUrlLoading } = useSignedUrl(isOpen ? fileUrl : null);
+  const safeFileUrl = useMemo(() => (signedUrl || '').trim(), [signedUrl]);
 
   // Reset states when URL changes or modal opens
   useEffect(() => {
@@ -45,7 +46,6 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
       setIframeError(false);
       setLoadTimeout(false);
       
-      // Set a timeout for iframe loading (15 seconds)
       const timer = setTimeout(() => {
         setLoadTimeout(true);
         setIframeLoading(false);
@@ -57,16 +57,25 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
   if (!isOpen) return null;
 
-  // Check if URL is valid
+  // Show loading while resolving signed URL
+  if (isUrlLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative flex flex-col items-center justify-center p-8">
+          <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
+          <p className="text-white">Se pregătește fișierul...</p>
+        </div>
+      </div>
+    );
+  }
+
   const hasValidUrl = safeFileUrl && safeFileUrl.length > 0 && safeFileUrl.startsWith('http');
 
   if (!hasValidUrl) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div 
-          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-          onClick={onClose}
-        />
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
         <div className="relative w-full max-w-md m-4 flex flex-col bg-background rounded-2xl border border-border overflow-hidden animate-scale-in p-8">
           <div className="flex flex-col items-center text-center">
             <AlertCircle className="w-16 h-16 text-destructive mb-4" />
@@ -112,14 +121,8 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
     return mimeTypes[ext] || 'video/mp4';
   };
 
-  const handleIframeLoad = () => {
-    setIframeLoading(false);
-  };
-
-  const handleIframeError = () => {
-    setIframeError(true);
-    setIframeLoading(false);
-  };
+  const handleIframeLoad = () => setIframeLoading(false);
+  const handleIframeError = () => { setIframeError(true); setIframeLoading(false); };
 
   const renderFallbackOptions = () => (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
@@ -151,55 +154,32 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
       
-      {/* Content Container */}
       <div className="relative w-full h-full max-w-6xl max-h-[90vh] m-4 flex flex-col bg-background rounded-2xl border border-border overflow-hidden animate-scale-in">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center gap-3 min-w-0">
             <FileText className="w-5 h-5 text-gold flex-shrink-0" />
             <h2 className="font-display text-lg text-foreground truncate">{fileName}</h2>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="gap-2"
-              onClick={handleDownload}
-            >
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload}>
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Descarcă</span>
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="gap-2"
-              onClick={() => window.open(safeFileUrl, '_blank')}
-            >
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(safeFileUrl, '_blank')}>
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Tab nou</span>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
-            >
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="w-5 h-5" />
             </Button>
           </div>
         </div>
         
-        {/* Content Area */}
         <div className="flex-1 flex items-center justify-center p-4 overflow-auto bg-muted/30">
           {canPreview ? (
             <div className="w-full h-full flex items-center justify-center relative">
-              {/* Loading indicator for iframes */}
               {iframeLoading && (isPdf || isOfficeDoc || isTxt) && !loadTimeout && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
                   <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
@@ -207,15 +187,12 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                 </div>
               )}
 
-              {/* Show fallback if timeout or error */}
               {(loadTimeout || iframeError) && (isPdf || isOfficeDoc) ? (
                 renderFallbackOptions()
               ) : (
                 <>
                   {isImage && (
-                    imageError ? (
-                      renderFallbackOptions()
-                    ) : (
+                    imageError ? renderFallbackOptions() : (
                       <img
                         src={safeFileUrl}
                         alt={fileName}
@@ -295,7 +272,6 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-card">
           <p className="text-sm text-muted-foreground">
             {canPreview ? 'Fișier disponibil pentru vizualizare și descărcare' : 'Descarcă pentru a vizualiza'}
