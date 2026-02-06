@@ -43,14 +43,27 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   // Helper to convert Supabase data to Material type
   // For non-privileged users, we hide the actual answer_key but indicate if it exists
   const mapToMaterial = (data: any, hideAnswerKey: boolean): Material => {
-    const hasAnswerKey = (Array.isArray(data.answer_key) && data.answer_key.length > 0) ||
+    // Robustly parse answer_key from JSONB — handle string, array, or other forms
+    let parsedAnswerKey: string[] | null = null;
+    if (data.answer_key != null) {
+      try {
+        const raw = typeof data.answer_key === 'string' ? JSON.parse(data.answer_key) : data.answer_key;
+        if (Array.isArray(raw) && raw.length > 0) {
+          parsedAnswerKey = raw.map((v: any) => String(v ?? ''));
+        }
+      } catch {
+        parsedAnswerKey = null;
+      }
+    }
+
+    const hasAnswerKey = (parsedAnswerKey !== null && parsedAnswerKey.length > 0) ||
       (data.subject_config && Object.values(data.subject_config as Record<string, any>).some(
         (cfg: any) => Array.isArray(cfg.answerKey) && cfg.answerKey.some((a: string) => a !== '')
       ));
     
     return {
       ...data,
-      answer_key: hideAnswerKey ? null : (Array.isArray(data.answer_key) ? data.answer_key : null),
+      answer_key: hideAnswerKey ? null : parsedAnswerKey,
       subject_config: hideAnswerKey ? null : (data.subject_config || null),
       has_answer_key: hasAnswerKey,
     };

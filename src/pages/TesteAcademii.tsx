@@ -376,10 +376,7 @@ const TesteAcademii = () => {
                             </Button>
                             <Button 
                               variant="outline" size="sm" className="gap-1"
-                              onClick={() => {
-                                console.log('[TesteAcademii] Edit material:', material.id, 'answer_key:', JSON.stringify(material.answer_key), 'oficiu:', material.oficiu);
-                                setEditingMaterial(material);
-                              }}
+                              onClick={() => setEditingMaterial(material)}
                             >
                               <Pencil className="w-4 h-4" />
                               Editează
