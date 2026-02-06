@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Filter, 
-  Calendar, Plus, Trash2, Eye, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck, Pencil, Lock
+  Calendar, Plus, Trash2, Eye, Download, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, FileText, ClipboardCheck, Pencil, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -364,6 +364,20 @@ const TesteAcademii = () => {
                             >
                               <Pencil className="w-4 h-4" />
                               Editează
+                            </Button>
+                            <Button 
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = material.file_url;
+                                link.download = material.file_name;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                            >
+                              <Download className="w-4 h-4" />
+                              Descarcă
                             </Button>
                             <Button 
                               variant="ghost" size="icon" className="text-destructive"
