@@ -154,13 +154,19 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .update(updates)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
-      // When updating, we're a privileged user, so don't hide answer_key
-      setMaterials(prev => prev.map(m => m.id === id ? mapToMaterial(data, false) : m));
-      return mapToMaterial(data, false);
+      if (data) {
+        // When updating, we're a privileged user, so don't hide answer_key
+        setMaterials(prev => prev.map(m => m.id === id ? mapToMaterial(data, false) : m));
+        return mapToMaterial(data, false);
+      }
+      
+      // Refresh materials if no data returned
+      await fetchMaterials();
+      return null;
     } catch (error: any) {
       console.error('Error updating material:', error);
       toast({
