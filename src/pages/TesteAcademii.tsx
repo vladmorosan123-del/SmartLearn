@@ -193,7 +193,6 @@ const TesteAcademii = () => {
 
       await updateMaterial(editingMaterial.id, updates);
       toast({ title: 'Material actualizat', description: 'Modificările au fost salvate cu succes.' });
-      setEditingMaterial(null);
     } catch (error) {
       console.error('Error updating material:', error);
     }

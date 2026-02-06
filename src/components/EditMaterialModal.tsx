@@ -28,7 +28,7 @@ interface EditMaterialModalProps {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
-  }) => void;
+  }) => void | Promise<void>;
   material: Material | null;
   showYear?: boolean;
   showAnswerKey?: boolean;
@@ -89,8 +89,9 @@ const EditMaterialModal = ({
     }
   }, [material]);
 
-  if (!isOpen || !material) return null;
+  const [isSaving, setIsSaving] = useState(false);
 
+  if (!isOpen || !material) return null;
   const handleClose = () => {
     onClose();
   };
@@ -109,35 +110,43 @@ const EditMaterialModal = ({
     setReplacementFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || isSaving) return;
 
-    // Build publish_at timestamp if date is set
-    let publishAt: string | null = null;
-    if (publishDate) {
-      const dateStr = format(publishDate, 'yyyy-MM-dd');
-      const timeStr = publishTime || '00:00';
-      publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+    setIsSaving(true);
+    try {
+      // Build publish_at timestamp if date is set
+      let publishAt: string | null = null;
+      if (publishDate) {
+        const dateStr = format(publishDate, 'yyyy-MM-dd');
+        const timeStr = publishTime || '00:00';
+        publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+      }
+
+      await onSave({
+        title: title.trim(),
+        description: description.trim(),
+        year: showYear ? year : undefined,
+        answerKey: showAnswerKey ? answerKey : undefined,
+        oficiu: showAnswerKey ? oficiu : undefined,
+        timerMinutes: showTimer ? timerMinutes : undefined,
+        publishAt,
+        // Include file replacement data if a new file was uploaded
+        ...(replacementFile ? {
+          fileUrl: replacementFile.url,
+          fileName: replacementFile.name,
+          fileType: replacementFile.type,
+          fileSize: replacementFile.size,
+        } : {}),
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error saving material:', error);
+    } finally {
+      setIsSaving(false);
     }
-
-    onSave({
-      title: title.trim(),
-      description: description.trim(),
-      year: showYear ? year : undefined,
-      answerKey: showAnswerKey ? answerKey : undefined,
-      oficiu: showAnswerKey ? oficiu : undefined,
-      timerMinutes: showTimer ? timerMinutes : undefined,
-      publishAt,
-      // Include file replacement data if a new file was uploaded
-      ...(replacementFile ? {
-        fileUrl: replacementFile.url,
-        fileName: replacementFile.name,
-        fileType: replacementFile.type,
-        fileSize: replacementFile.size,
-      } : {}),
-    });
-    onClose();
   };
 
   return (
@@ -421,10 +430,10 @@ const EditMaterialModal = ({
               type="submit" 
               variant="gold"
               className="flex-1 gap-2"
-              disabled={!title.trim() || (isOriginalFileRemoved && !replacementFile)}
+              disabled={!title.trim() || (isOriginalFileRemoved && !replacementFile) || isSaving}
             >
               <Save className="w-4 h-4" />
-              Salvează Modificările
+              {isSaving ? 'Se salvează...' : 'Salvează Modificările'}
             </Button>
           </div>
         </form>
