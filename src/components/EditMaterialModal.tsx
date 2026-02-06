@@ -139,10 +139,13 @@ const EditMaterialModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onMouseDown={(e) => {
+      // Only close if clicking directly on the backdrop, not on portaled elements
+      if (e.target === e.currentTarget) handleClose();
+    }}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       
-      <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center">

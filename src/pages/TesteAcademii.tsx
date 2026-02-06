@@ -177,10 +177,10 @@ const TesteAcademii = () => {
         title: data.title,
         description: data.description,
         year: data.year || null,
-        answer_key: data.answerKey || null,
+        answer_key: Array.isArray(data.answerKey) ? data.answerKey : null,
         oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
-        publish_at: data.publishAt,
+        publish_at: data.publishAt ?? null,
       };
 
       // If a replacement file was uploaded, update file fields
@@ -384,12 +384,7 @@ const TesteAcademii = () => {
                             <Button 
                               variant="outline" size="sm" className="gap-1"
                               onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = material.file_url;
-                                link.download = material.file_name;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
+                                window.open(material.file_url, '_blank');
                               }}
                             >
                               <Download className="w-4 h-4" />
