@@ -89,6 +89,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
+        console.log('[useMaterials] Raw data sample:', data?.[0] ? { id: data[0].id, answer_key: data[0].answer_key, answer_key_type: typeof data[0].answer_key, is_array: Array.isArray(data[0].answer_key) } : 'no data');
         setMaterials((data || []).map(d => mapToMaterial(d, false)));
       } else {
         // Students use a backend function that returns materials WITHOUT answer_key
