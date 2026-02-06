@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { getSignedFileUrl } from '@/lib/storage';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Filter, 
@@ -382,8 +383,9 @@ const TesteAcademii = () => {
                             </Button>
                             <Button 
                               variant="outline" size="sm" className="gap-1"
-                              onClick={() => {
-                                window.open(material.file_url, '_blank');
+                              onClick={async () => {
+                                const url = await getSignedFileUrl(material.file_url);
+                                window.open(url, '_blank');
                               }}
                             >
                               <Download className="w-4 h-4" />
