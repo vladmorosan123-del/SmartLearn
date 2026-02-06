@@ -10,6 +10,7 @@ interface SubjectConfig {
   questionCount: number;
   answerKey: string[];
   oficiu: number;
+  files?: Array<{ url: string; name: string; type: string; size: number }>;
   fileUrl?: string;
   fileName?: string;
   fileType?: string;
