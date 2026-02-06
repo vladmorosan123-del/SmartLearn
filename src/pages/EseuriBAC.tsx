@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import FileUpload from '@/components/FileUpload';
 import FileViewer from '@/components/FileViewer';
+import MultiFileViewer, { extractSubjectFiles } from '@/components/MultiFileViewer';
 
 interface GenreDefinition {
   id: string;
@@ -63,6 +64,7 @@ const EseuriBAC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedGenreId, setSelectedGenreId] = useState<string | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [viewingMultiFiles, setViewingMultiFiles] = useState<{ title: string; subjectFiles: Record<string, any[]> } | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<{ url: string; name: string; type: string; size: number }[]>([]);
   const [essayTitle, setEssayTitle] = useState('');
   const [essayAuthor, setEssayAuthor] = useState('');
@@ -446,7 +448,13 @@ const EseuriBAC = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7"
-                                  onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                                  onClick={() => {
+                                    if (material.subject_config && Object.keys(material.subject_config).length > 0) {
+                                      setViewingMultiFiles({ title: material.title, subjectFiles: extractSubjectFiles(material.subject_config) });
+                                    } else {
+                                      setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
+                                    }
+                                  }}
                                 >
                                   <Eye className="w-3 h-3" />
                                 </Button>
@@ -676,6 +684,12 @@ const EseuriBAC = () => {
         fileName={viewingFile?.name || ''}
         fileType={viewingFile?.type || ''}
         onClose={() => setViewingFile(null)}
+      />
+      <MultiFileViewer
+        isOpen={!!viewingMultiFiles}
+        onClose={() => setViewingMultiFiles(null)}
+        title={viewingMultiFiles?.title || ''}
+        subjectFiles={viewingMultiFiles?.subjectFiles}
       />
     </div>
   );

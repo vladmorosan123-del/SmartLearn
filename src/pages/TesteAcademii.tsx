@@ -13,6 +13,7 @@ import { useHasSubmissions } from '@/hooks/useHasSubmission';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
 import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
+import MultiFileViewer, { extractSubjectFiles } from '@/components/MultiFileViewer';
 import TVCTimer from '@/components/TVCTimer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 const tvcSubjects: Subject[] = ['informatica', 'matematica', 'fizica'];
@@ -57,6 +58,7 @@ const TesteAcademii = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [viewingMultiFiles, setViewingMultiFiles] = useState<{ title: string; subjectFiles: Record<string, any[]> } | null>(null);
   const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
@@ -345,7 +347,13 @@ const TesteAcademii = () => {
                           <>
                             <Button 
                               variant="outline" size="sm" className="gap-1"
-                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                              onClick={() => {
+                                if (material.subject_config && Object.keys(material.subject_config).length > 0) {
+                                  setViewingMultiFiles({ title: material.title, subjectFiles: extractSubjectFiles(material.subject_config) });
+                                } else {
+                                  setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
+                                }
+                              }}
                             >
                               <Eye className="w-4 h-4" />
                               Vezi
@@ -427,6 +435,12 @@ const TesteAcademii = () => {
             fileType={viewingFile.type}
           />
         )}
+        <MultiFileViewer
+          isOpen={!!viewingMultiFiles}
+          onClose={() => setViewingMultiFiles(null)}
+          title={viewingMultiFiles?.title || ''}
+          subjectFiles={viewingMultiFiles?.subjectFiles}
+        />
 
         {/* Timer Modal */}
         {timerMaterial && (

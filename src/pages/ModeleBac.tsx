@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import UploadMaterialModal from '@/components/UploadMaterialModal';
 import EditMaterialModal from '@/components/EditMaterialModal';
 import FileViewer from '@/components/FileViewer';
+import MultiFileViewer, { extractSubjectFiles } from '@/components/MultiFileViewer';
 
 const subjectNames: Record<Subject, string> = {
   informatica: 'Informatică',
@@ -52,6 +53,7 @@ const ModeleBac = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [viewingMultiFiles, setViewingMultiFiles] = useState<{ title: string; subjectFiles: Record<string, any[]> } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
 
@@ -355,7 +357,13 @@ const ModeleBac = () => {
                           <>
                             <Button 
                               variant="outline" size="sm" className="gap-1"
-                              onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
+                              onClick={() => {
+                                if (model.subject_config && Object.keys(model.subject_config).length > 0) {
+                                  setViewingMultiFiles({ title: model.title, subjectFiles: extractSubjectFiles(model.subject_config) });
+                                } else {
+                                  setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type });
+                                }
+                              }}
                             >
                               <Eye className="w-4 h-4" />
                               Vezi
@@ -424,6 +432,12 @@ const ModeleBac = () => {
             fileType={viewingFile.type}
           />
         )}
+        <MultiFileViewer
+          isOpen={!!viewingMultiFiles}
+          onClose={() => setViewingMultiFiles(null)}
+          title={viewingMultiFiles?.title || ''}
+          subjectFiles={viewingMultiFiles?.subjectFiles}
+        />
       </main>
     </div>
   );
