@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Save, Pencil, Clock, Calendar, Upload } from 'lucide-react';
+import { X, FileText, Save, Pencil, Clock, Calendar, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,6 +56,7 @@ const EditMaterialModal = ({
   
   // File replacement state
   const [replacementFile, setReplacementFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [isOriginalFileRemoved, setIsOriginalFileRemoved] = useState(false);
 
   // Populate form when material changes
   useEffect(() => {
@@ -66,6 +67,7 @@ const EditMaterialModal = ({
       setOficiu(material.oficiu || 0);
       setTimerMinutes(material.timer_minutes || 180);
       setReplacementFile(null);
+      setIsOriginalFileRemoved(false);
       
       // Properly restore answer key with correct question count
       const rawKey = material.answer_key;
@@ -203,37 +205,73 @@ const EditMaterialModal = ({
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gold" />
-              Fișier {replacementFile ? 'Nou' : 'Curent'}
+              {replacementFile ? 'Fișier Nou' : isOriginalFileRemoved ? 'Fișier Șters' : 'Fișier Curent'}
             </Label>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <FileText className="w-5 h-5 text-gold" />
-              <div>
-                <p className="text-sm font-medium text-foreground truncate max-w-[250px]">
-                  {replacementFile ? replacementFile.name : material.file_name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {(replacementFile ? replacementFile.type : material.file_type)?.toUpperCase()} 
-                  {(() => {
-                    const size = replacementFile ? replacementFile.size : material.file_size;
-                    if (!size) return '';
-                    return size >= 1024 * 1024
-                      ? ` • ${(size / (1024 * 1024)).toFixed(1)} MB`
-                      : ` • ${(size / 1024).toFixed(1)} KB`;
-                  })()}
-                </p>
-              </div>
-              {replacementFile && (
+
+            {/* Show current or replacement file */}
+            {replacementFile ? (
+              <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                <FileText className="w-5 h-5 text-emerald-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{replacementFile.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {replacementFile.type?.toUpperCase()}
+                    {replacementFile.size >= 1024 * 1024
+                      ? ` • ${(replacementFile.size / (1024 * 1024)).toFixed(1)} MB`
+                      : ` • ${(replacementFile.size / 1024).toFixed(1)} KB`}
+                  </p>
+                </div>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setReplacementFile(null)} className="ml-auto">
                   <X className="w-4 h-4" />
                 </Button>
-              )}
-            </div>
-            
-            {/* File upload for replacement */}
+              </div>
+            ) : !isOriginalFileRemoved ? (
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <FileText className="w-5 h-5 text-gold" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate max-w-[250px]">{material.file_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {material.file_type?.toUpperCase()}
+                    {(() => {
+                      const size = material.file_size;
+                      if (!size) return '';
+                      return size >= 1024 * 1024
+                        ? ` • ${(size / (1024 * 1024)).toFixed(1)} MB`
+                        : ` • ${(size / 1024).toFixed(1)} KB`;
+                    })()}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsOriginalFileRemoved(true)}
+                  className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                <Trash2 className="w-5 h-5 text-destructive" />
+                <p className="text-sm text-destructive">Fișierul curent va fi înlocuit</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsOriginalFileRemoved(false)}
+                  className="ml-auto text-xs"
+                >
+                  Anulează
+                </Button>
+              </div>
+            )}
+
+            {/* File upload - show when no replacement file yet AND (original removed or wanting to replace) */}
             {!replacementFile && (
               <div className="mt-2">
                 <p className="text-xs text-muted-foreground mb-2">
-                  Încarcă un fișier nou pentru a înlocui cel existent:
+                  {isOriginalFileRemoved ? 'Încarcă un fișier nou:' : 'Încarcă un fișier nou pentru a înlocui cel existent:'}
                 </p>
                 <FileUpload
                   onUploadComplete={handleUploadComplete}
@@ -383,7 +421,7 @@ const EditMaterialModal = ({
               type="submit" 
               variant="gold"
               className="flex-1 gap-2"
-              disabled={!title.trim()}
+              disabled={!title.trim() || (isOriginalFileRemoved && !replacementFile)}
             >
               <Save className="w-4 h-4" />
               Salvează Modificările

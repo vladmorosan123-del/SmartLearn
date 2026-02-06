@@ -157,16 +157,29 @@ const ModeleBac = () => {
     description: string;
     year?: number;
     publishAt?: string | null;
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
   }) => {
     if (!editingMaterial) return;
     
     try {
-      await updateMaterial(editingMaterial.id, {
+      const updates: Record<string, any> = {
         title: data.title,
         description: data.description,
         year: data.year || null,
         publish_at: data.publishAt,
-      });
+      };
+
+      if (data.fileUrl) {
+        updates.file_url = data.fileUrl;
+        updates.file_name = data.fileName;
+        updates.file_type = data.fileType;
+        updates.file_size = data.fileSize;
+      }
+
+      await updateMaterial(editingMaterial.id, updates);
       toast({ title: 'Model actualizat', description: 'Modificările au fost salvate cu succes.' });
       setEditingMaterial(null);
     } catch (error) {
