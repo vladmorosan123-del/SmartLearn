@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, 
   File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, 
-  FileText, ClipboardCheck, Pencil, Timer, Calendar, Lock
+  FileText, ClipboardCheck, Pencil, Timer, Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -15,7 +15,6 @@ import TVCCompletUploadModal from '@/components/TVCCompletUploadModal';
 import EditTVCCompletModal from '@/components/EditTVCCompletModal';
 import FileViewer from '@/components/FileViewer';
 import TVCTimerComplet from '@/components/TVCTimerComplet';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const subjectNames: Record<string, string> = {
   informatica: 'Informatică',
@@ -316,37 +315,15 @@ const TVCComplet = () => {
                       </>
                     ) : (
                       <div className="flex gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="gap-1"
-                                  disabled={!studentSubmissions[material.id]}
-                                  onClick={() => {
-                                    if (studentSubmissions[material.id]) {
-                                      setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
-                                    }
-                                  }}
-                                >
-                                  {studentSubmissions[material.id] ? (
-                                    <Eye className="w-4 h-4" />
-                                  ) : (
-                                    <Lock className="w-4 h-4" />
-                                  )}
-                                  Vezi PDF
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            {!studentSubmissions[material.id] && (
-                              <TooltipContent>
-                                <p>Trebuie să rezolvi testul o dată pentru a putea vizualiza PDF-ul</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                        >
+                          <Eye className="w-4 h-4" />
+                          Vezi PDF
+                        </Button>
                         <Button 
                           variant="gold" size="sm" className="gap-1"
                           onClick={() => setTimerMaterial(material)}
