@@ -162,20 +162,36 @@ const TesteAcademii = () => {
     description: string;
     year?: number;
     answerKey?: string[];
+    oficiu?: number;
     timerMinutes?: number;
     publishAt?: string | null;
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
   }) => {
     if (!editingMaterial) return;
     
     try {
-      await updateMaterial(editingMaterial.id, {
+      const updates: Record<string, any> = {
         title: data.title,
         description: data.description,
         year: data.year || null,
         answer_key: data.answerKey || null,
+        oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
         publish_at: data.publishAt,
-      });
+      };
+
+      // If a replacement file was uploaded, update file fields
+      if (data.fileUrl) {
+        updates.file_url = data.fileUrl;
+        updates.file_name = data.fileName;
+        updates.file_type = data.fileType;
+        updates.file_size = data.fileSize;
+      }
+
+      await updateMaterial(editingMaterial.id, updates);
       toast({ title: 'Material actualizat', description: 'Modificările au fost salvate cu succes.' });
       setEditingMaterial(null);
     } catch (error) {

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Save, Pencil, Clock, Calendar } from 'lucide-react';
+import { X, FileText, Save, Pencil, Clock, Calendar, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
+import FileUpload from '@/components/FileUpload';
 import { Material } from '@/hooks/useMaterials';
 
 interface EditMaterialModalProps {
@@ -19,8 +21,13 @@ interface EditMaterialModalProps {
     description: string;
     year?: number;
     answerKey?: string[];
+    oficiu?: number;
     timerMinutes?: number;
     publishAt?: string | null;
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
   }) => void;
   material: Material | null;
   showYear?: boolean;
@@ -40,10 +47,15 @@ const EditMaterialModal = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
+  const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
+  const [oficiu, setOficiu] = useState<number>(0);
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
   const [publishTime, setPublishTime] = useState<string>('');
+  
+  // File replacement state
+  const [replacementFile, setReplacementFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
 
   // Populate form when material changes
   useEffect(() => {
@@ -51,12 +63,16 @@ const EditMaterialModal = ({
       setTitle(material.title || '');
       setDescription(material.description || '');
       setYear(material.year || new Date().getFullYear());
-      setAnswerKey(
-        Array.isArray(material.answer_key) && material.answer_key.length > 0
-          ? material.answer_key
-          : Array(9).fill('')
-      );
+      setOficiu(material.oficiu || 0);
       setTimerMinutes(material.timer_minutes || 180);
+      setReplacementFile(null);
+      
+      // Properly restore answer key with correct question count
+      const existingKey = Array.isArray(material.answer_key) && material.answer_key.length > 0
+        ? material.answer_key
+        : Array(9).fill('');
+      setQuestionCount(existingKey.length);
+      setAnswerKey(existingKey);
       
       // Parse existing publish_at
       if (material.publish_at) {
@@ -76,6 +92,20 @@ const EditMaterialModal = ({
     onClose();
   };
 
+  const handleQuestionCountChange = (value: string) => {
+    const newCount = parseInt(value, 10);
+    const newKey = Array(newCount).fill('');
+    for (let i = 0; i < Math.min(answerKey.length, newCount); i++) {
+      newKey[i] = answerKey[i];
+    }
+    setQuestionCount(newCount);
+    setAnswerKey(newKey);
+  };
+
+  const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
+    setReplacementFile({ url: fileUrl, name: fileName, type: fileType, size: fileSize });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -93,13 +123,19 @@ const EditMaterialModal = ({
       description: description.trim(),
       year: showYear ? year : undefined,
       answerKey: showAnswerKey ? answerKey : undefined,
+      oficiu: showAnswerKey ? oficiu : undefined,
       timerMinutes: showTimer ? timerMinutes : undefined,
       publishAt,
+      // Include file replacement data if a new file was uploaded
+      ...(replacementFile ? {
+        fileUrl: replacementFile.url,
+        fileName: replacementFile.name,
+        fileType: replacementFile.type,
+        fileSize: replacementFile.size,
+      } : {}),
     });
     onClose();
   };
-
-  const hasValidAnswerKey = answerKey.every(a => a !== '');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -159,41 +195,97 @@ const EditMaterialModal = ({
             />
           </div>
 
-          {/* Current File Info */}
+          {/* Current File Info + Replace */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gold" />
-              Fișier Curent
+              Fișier {replacementFile ? 'Nou' : 'Curent'}
             </Label>
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <FileText className="w-5 h-5 text-gold" />
               <div>
                 <p className="text-sm font-medium text-foreground truncate max-w-[250px]">
-                  {material.file_name}
+                  {replacementFile ? replacementFile.name : material.file_name}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {material.file_type?.toUpperCase()} 
-                  {material.file_size && ` • ${(material.file_size / 1024).toFixed(1)} KB`}
+                  {(replacementFile ? replacementFile.type : material.file_type)?.toUpperCase()} 
+                  {(() => {
+                    const size = replacementFile ? replacementFile.size : material.file_size;
+                    if (!size) return '';
+                    return size >= 1024 * 1024
+                      ? ` • ${(size / (1024 * 1024)).toFixed(1)} MB`
+                      : ` • ${(size / 1024).toFixed(1)} KB`;
+                  })()}
                 </p>
               </div>
+              {replacementFile && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setReplacementFile(null)} className="ml-auto">
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Pentru a schimba fișierul, șterge acest material și încarcă unul nou.
-            </p>
+            
+            {/* File upload for replacement */}
+            {!replacementFile && (
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Încarcă un fișier nou pentru a înlocui cel existent:
+                </p>
+                <FileUpload
+                  onUploadComplete={handleUploadComplete}
+                  category={material.category}
+                  subject={material.subject}
+                  multiple={false}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Answer Key Input for TVC */}
+          {/* Answer Key Section with question count selector */}
           {showAnswerKey && (
-            <div className="pt-2">
+            <div className="pt-2 border-t border-border space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Număr de întrebări</Label>
+                  <Select
+                    value={questionCount.toString()}
+                    onValueChange={handleQuestionCountChange}
+                  >
+                    <SelectTrigger className="w-full bg-background">
+                      <SelectValue placeholder="Selectează" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 60 }, (_, i) => i + 1).map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num} {num === 1 ? 'întrebare' : 'întrebări'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Oficiu (puncte bonus)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={oficiu}
+                    onChange={(e) => setOficiu(Math.max(0, parseInt(e.target.value) || 0))}
+                    placeholder="0"
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
               <TVCAnswerKeyInput
                 value={answerKey}
                 onChange={setAnswerKey}
-                questionCount={answerKey.length}
+                questionCount={questionCount}
               />
             </div>
           )}
 
-          {/* Custom Timer for TVC Complet */}
+          {/* Custom Timer */}
           {showTimer && (
             <div className="space-y-2">
               <Label htmlFor="edit-timerMinutes" className="flex items-center gap-2">
@@ -211,7 +303,7 @@ const EditMaterialModal = ({
                 className="bg-background"
               />
               <p className="text-xs text-muted-foreground">
-                Setează durata testului în minute (ex: 180 = 3 ore). La expirare, testul se trimite automat.
+                Setează durata testului în minute (ex: 180 = 3 ore).
               </p>
             </div>
           )}
