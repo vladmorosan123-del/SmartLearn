@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, PenTool, Plus, Trash2, Edit, Eye, BookOpen, FolderPlus, X, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon } from 'lucide-react';
+import { ArrowLeft, Shield, PenTool, Plus, Trash2, Edit, Eye, Download, BookOpen, FolderPlus, X, FileText, Image as ImageIcon, File, FileSpreadsheet, Presentation, FileType as FileTypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -460,6 +460,21 @@ const EseuriBAC = () => {
                                 </Button>
                                 {isProfessor && (
                                   <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = material.file_url;
+                                        link.download = material.file_name;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                      }}
+                                    >
+                                      <Download className="w-3 h-3" />
+                                    </Button>
                                     <Button
                                       variant="ghost"
                                       size="icon"

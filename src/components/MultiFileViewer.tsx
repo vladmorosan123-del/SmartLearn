@@ -101,7 +101,10 @@ const MultiFileViewer = ({ isOpen, onClose, title, subjectFiles, files }: MultiF
     <button
       key={idx}
       className="w-full flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border hover:border-gold/50 hover:bg-muted transition-all text-left"
-      onClick={() => setViewingFile(file)}
+      onClick={(e) => {
+        e.stopPropagation();
+        setViewingFile(file);
+      }}
     >
       {getFileIcon(file.type)}
       <div className="flex-1 min-w-0">
@@ -116,9 +119,9 @@ const MultiFileViewer = ({ isOpen, onClose, title, subjectFiles, files }: MultiF
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[80vh] overflow-y-auto">
+      <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <div>
             <h2 className="font-display text-xl text-foreground">{title}</h2>

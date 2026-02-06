@@ -188,6 +188,7 @@ const EditMaterialModal = ({
               <TVCAnswerKeyInput
                 value={answerKey}
                 onChange={setAnswerKey}
+                questionCount={answerKey.length}
               />
             </div>
           )}
