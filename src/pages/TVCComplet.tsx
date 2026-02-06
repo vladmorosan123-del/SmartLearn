@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { getSignedFileUrl } from '@/lib/storage';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, Download,
@@ -359,9 +360,10 @@ const TVCComplet = () => {
                           </Button>
                           <Button 
                             variant="outline" size="sm" className="gap-1"
-                            onClick={() => {
+                            onClick={async () => {
+                              const url = await getSignedFileUrl(material.file_url);
                               const link = document.createElement('a');
-                              link.href = material.file_url;
+                              link.href = url;
                               link.download = material.file_name;
                               document.body.appendChild(link);
                               link.click();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Eye, FileText, File, Image as ImageIcon, FileSpreadsheet, Presentation, FileType as FileTypeIcon, Calculator, Code, Atom, Award } from 'lucide-react';
 import FileViewer from '@/components/FileViewer';
 
