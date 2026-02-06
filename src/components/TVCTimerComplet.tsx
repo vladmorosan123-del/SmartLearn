@@ -5,15 +5,29 @@ import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { supabase } from '@/integrations/supabase/client';
 
+interface SubjectFileInfo {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface SubjectConfig {
   questionCount: number;
   answerKey: string[];
   oficiu: number;
+  files?: SubjectFileInfo[];
   fileUrl?: string;
   fileName?: string;
   fileType?: string;
   fileSize?: number;
 }
+
+const getSubjectFiles = (cfg: SubjectConfig): SubjectFileInfo[] => {
+  if (cfg.files && cfg.files.length > 0) return cfg.files;
+  if (cfg.fileUrl) return [{ url: cfg.fileUrl, name: cfg.fileName || '', type: cfg.fileType || '', size: cfg.fileSize || 0 }];
+  return [];
+};
 
 interface TVCTimerCompletProps {
   subjectTitle: string;
@@ -63,6 +77,7 @@ const TVCTimerComplet = ({
   
   // Track active subject for file switching in multi-subject mode
   const [activeViewSubject, setActiveViewSubject] = useState<string>('matematica');
+  const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
   
   const quizRef = useRef<{ forceSubmit: () => void } | null>(null);
   const multiSubjectQuizRef = useRef<{ forceSubmit: () => void } | null>(null);
@@ -70,17 +85,23 @@ const TVCTimerComplet = ({
   const isMultiSubject = !!subjectConfig && Object.keys(subjectConfig).length > 0;
 
   // Get current file URL based on active subject (for multi-subject) or fallback
-  const getCurrentFileInfo = () => {
+  // Get all files for the active subject
+  const getCurrentSubjectFiles = (): SubjectFileInfo[] => {
     if (isMultiSubject && subjectConfig) {
       const cfg = subjectConfig[activeViewSubject];
-      if (cfg?.fileUrl) {
-        return { url: cfg.fileUrl, type: cfg.fileType || '', name: cfg.fileName || '' };
-      }
+      if (cfg) return getSubjectFiles(cfg);
     }
-    return { url: pdfUrl || '', type: fileType || '', name: fileName || '' };
+    if (pdfUrl) return [{ url: pdfUrl, name: fileName || '', type: fileType || '', size: 0 }];
+    return [];
   };
 
-  const currentFile = getCurrentFileInfo();
+  const currentSubjectFiles = getCurrentSubjectFiles();
+  const currentFile = currentSubjectFiles[activeFileIndex] || currentSubjectFiles[0] || { url: '', type: '', name: '' };
+
+  // Reset file index when subject changes
+  useEffect(() => {
+    setActiveFileIndex(0);
+  }, [activeViewSubject]);
 
   // Fetch question count if not provided (for legacy single-subject tests)
   useEffect(() => {
@@ -224,31 +245,55 @@ const TVCTimerComplet = ({
 
             {/* Subject file tabs for multi-subject */}
             {isMultiSubject && subjectConfig && (
-              <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30">
-                {Object.keys(subjectConfig).map((subject) => {
-                  const meta = subjectMeta[subject];
-                  if (!meta) return null;
-                  const Icon = meta.icon;
-                  const hasFile = !!subjectConfig[subject]?.fileUrl;
-                  return (
-                    <button
-                      key={subject}
-                      type="button"
-                      onClick={() => setActiveViewSubject(subject)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                        activeViewSubject === subject 
-                          ? 'bg-gold text-primary-foreground' 
-                          : hasFile 
-                          ? 'bg-background hover:bg-muted border border-border' 
-                          : 'bg-background/50 text-muted-foreground border border-border/50'
-                      }`}
-                      disabled={!hasFile}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      <span className="font-medium">{meta.label}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col border-b border-border bg-muted/30">
+                <div className="flex items-center gap-1 px-4 py-2">
+                  {Object.keys(subjectConfig).map((subject) => {
+                    const meta = subjectMeta[subject];
+                    if (!meta) return null;
+                    const Icon = meta.icon;
+                    const files = getSubjectFiles(subjectConfig[subject]);
+                    const hasFiles = files.length > 0;
+                    return (
+                      <button
+                        key={subject}
+                        type="button"
+                        onClick={() => setActiveViewSubject(subject)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                          activeViewSubject === subject 
+                            ? 'bg-gold text-primary-foreground' 
+                            : hasFiles 
+                            ? 'bg-background hover:bg-muted border border-border' 
+                            : 'bg-background/50 text-muted-foreground border border-border/50'
+                        }`}
+                        disabled={!hasFiles}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="font-medium">{meta.label}</span>
+                        {hasFiles && <span className="text-[10px] opacity-70">({files.length})</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* File switcher within subject */}
+                {currentSubjectFiles.length > 1 && (
+                  <div className="flex items-center gap-1 px-4 py-1.5 border-t border-border/50">
+                    <span className="text-[10px] text-muted-foreground mr-1">Fișiere:</span>
+                    {currentSubjectFiles.map((file, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveFileIndex(idx)}
+                        className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                          activeFileIndex === idx
+                            ? 'bg-gold/80 text-primary-foreground'
+                            : 'bg-background hover:bg-muted border border-border'
+                        }`}
+                      >
+                        {file.name || `Fișier ${idx + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             
