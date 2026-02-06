@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, FileText, Eye, Plus, 
+  ArrowLeft, Shield, FileText, Eye, Plus, Download,
   Search, Filter, Calendar, Trash2, Pencil, File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -368,14 +368,28 @@ const ModeleBac = () => {
                               <Eye className="w-4 h-4" />
                               Vezi
                             </Button>
-                            <Button 
+                            <Button
                               variant="outline" size="sm" className="gap-1"
                               onClick={() => setEditingMaterial(model)}
                             >
                               <Pencil className="w-4 h-4" />
                               Editează
                             </Button>
-                            <Button 
+                            <Button
+                              variant="outline" size="sm" className="gap-1"
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = model.file_url;
+                                link.download = model.file_name;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                            >
+                              <Download className="w-4 h-4" />
+                              Descarcă
+                            </Button>
+                            <Button
                               variant="ghost" size="icon" className="text-destructive"
                               onClick={() => handleDeleteMaterial(model)}
                             >
