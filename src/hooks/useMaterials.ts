@@ -72,9 +72,8 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   const fetchMaterials = useCallback(async () => {
     try {
       setIsLoading(true);
+      console.log('[useMaterials] Fetching materials. role:', role, 'isPrivilegedUser:', isPrivilegedUser, 'category:', category);
       
-      // Use materials_public view for non-privileged users to hide answer_key at database level
-      // Privileged users (professors/admins) can access the full materials table
       if (isPrivilegedUser) {
         let query = supabase
           .from('materials')
