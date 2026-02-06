@@ -68,12 +68,10 @@ const EditMaterialModal = ({
       setReplacementFile(null);
       
       // Properly restore answer key with correct question count
-      // answer_key comes from JSONB, ensure it's a proper string array
       const rawKey = material.answer_key;
       const existingKey = Array.isArray(rawKey) && rawKey.length > 0
         ? rawKey.map(v => String(v ?? ''))
         : Array(9).fill('');
-      console.log('[EditMaterialModal] material.answer_key:', JSON.stringify(rawKey), 'existingKey:', JSON.stringify(existingKey));
       setQuestionCount(existingKey.length);
       setAnswerKey([...existingKey]);
       
