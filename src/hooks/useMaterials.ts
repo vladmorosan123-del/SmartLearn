@@ -93,9 +93,13 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
           filtered.map(async (material: any) => {
             const { data: questionCount } = await supabase
               .rpc('get_material_question_count', { _material_id: material.id });
+            
+            // subject_config is returned from RPC (with answerKey stripped for security)
+            // but we need to keep it so TVCTimerComplet knows about multi-subject structure
             return {
               ...material,
               answer_key: null,
+              subject_config: material.subject_config || null,
               has_answer_key: (questionCount || 0) > 0,
             };
           })

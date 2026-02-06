@@ -352,6 +352,7 @@ export type Database = {
           oficiu: number
           publish_at: string
           subject: string
+          subject_config: Json
           timer_minutes: number
           title: string
           updated_at: string
