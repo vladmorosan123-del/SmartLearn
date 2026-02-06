@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, 
   File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, 
-  FileText, ClipboardCheck, Pencil, Timer, Calendar
+  FileText, ClipboardCheck, Pencil, Timer, Calendar, Calculator, Code, Atom
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -90,7 +90,7 @@ const TVCComplet = () => {
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
-    subjectConfig?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number }>;
+    subjectConfig?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number; files?: Array<{ url: string; name: string; type: string; size: number }> }>;
   }) => {
     try {
       await addMaterial({
@@ -250,93 +250,117 @@ const TVCComplet = () => {
               )}
             </div>
           ) : (
-            filteredMaterials.map((material, index) => (
-              <div 
-                key={material.id}
-                className="bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gold/20 text-gold">
-                      <span className="font-bold">{index + 1}</span>
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground">{material.title}</h3>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          {subjectNames[material.subject] || material.subject}
-                        </span>
-                        {material.year && (
-                          <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {material.year}
+            filteredMaterials.map((material, index) => {
+              const hasSubjectConfig = material.subject_config && Object.keys(material.subject_config).length > 0;
+              const subjectIcons: Record<string, typeof Calculator> = { matematica: Calculator, informatica: Code, fizica: Atom };
+              
+              return (
+                <div 
+                  key={material.id}
+                  className="bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gold/20 text-gold">
+                        <span className="font-bold">{index + 1}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-foreground">{material.title}</h3>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {hasSubjectConfig ? (
+                            <>
+                              {Object.keys(material.subject_config!).map((subj) => {
+                                const Icon = subjectIcons[subj] || Award;
+                                const cfg = material.subject_config![subj];
+                                const fileCount = cfg.files?.length || (cfg.fileUrl ? 1 : 0);
+                                return (
+                                  <span key={subj} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded flex items-center gap-1">
+                                    <Icon className="w-3 h-3" />
+                                    {subjectNames[subj] || subj}
+                                    {fileCount > 0 && <span className="opacity-70">({fileCount})</span>}
+                                  </span>
+                                );
+                              })}
+                            </>
+                          ) : (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                              {subjectNames[material.subject] || material.subject}
+                            </span>
+                          )}
+                          {material.year && (
+                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {material.year}
+                            </span>
+                          )}
+                          <span className="text-xs bg-accent/50 text-accent-foreground px-2 py-0.5 rounded flex items-center gap-1">
+                            <Timer className="w-3 h-3" />
+                            {material.timer_minutes || 180} min
                           </span>
-                        )}
-                        <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
-                          {getFileIcon(material.file_type)}
-                          {getFileTypeLabel(material.file_type)}
-                        </span>
-                        <span className="text-xs bg-accent/50 text-accent-foreground px-2 py-0.5 rounded flex items-center gap-1">
-                          <Timer className="w-3 h-3" />
-                          {material.timer_minutes || 180} min
-                        </span>
-                        {(material.has_answer_key || (material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0)) && (
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded flex items-center gap-1">
-                            <ClipboardCheck className="w-3 h-3" />
-                            Grilă ({material.answer_key?.length || '?'} întreb.)
-                          </span>
-                        )}
+                          {(material.has_answer_key || (material.answer_key && Array.isArray(material.answer_key) && material.answer_key.length > 0)) && !hasSubjectConfig && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded flex items-center gap-1">
+                              <ClipboardCheck className="w-3 h-3" />
+                              Grilă ({material.answer_key?.length || '?'} întreb.)
+                            </span>
+                          )}
+                          {hasSubjectConfig && (
+                            <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded flex items-center gap-1">
+                              <ClipboardCheck className="w-3 h-3" />
+                              Multi-disciplinar
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isProfessor ? (
-                      <>
-                        <Button 
-                          variant="outline" size="sm" className="gap-1"
-                          onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
-                        >
-                          <Eye className="w-4 h-4" />
-                          Vezi
-                        </Button>
-                        <Button 
-                          variant="outline" size="sm" className="gap-1"
-                          onClick={() => setEditingMaterial(material)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                          Editează
-                        </Button>
-                        <Button 
-                          variant="ghost" size="icon" className="text-destructive"
-                          onClick={() => handleDeleteMaterial(material)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="gap-1"
-                          onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
-                        >
-                          <Eye className="w-4 h-4" />
-                          Vezi PDF
-                        </Button>
-                        <Button 
-                          variant="gold" size="sm" className="gap-1"
-                          onClick={() => setTimerMaterial(material)}
-                        >
-                          <Timer className="w-4 h-4" />
-                          Începe Testul
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isProfessor ? (
+                        <>
+                          <Button 
+                            variant="outline" size="sm" className="gap-1"
+                            onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                          >
+                            <Eye className="w-4 h-4" />
+                            Vezi
+                          </Button>
+                          <Button 
+                            variant="outline" size="sm" className="gap-1"
+                            onClick={() => setEditingMaterial(material)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                            Editează
+                          </Button>
+                          <Button 
+                            variant="ghost" size="icon" className="text-destructive"
+                            onClick={() => handleDeleteMaterial(material)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1"
+                            onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
+                          >
+                            <Eye className="w-4 h-4" />
+                            Vezi PDF
+                          </Button>
+                          <Button 
+                            variant="gold" size="sm" className="gap-1"
+                            onClick={() => setTimerMaterial(material)}
+                          >
+                            <Timer className="w-4 h-4" />
+                            Începe Testul
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </main>
