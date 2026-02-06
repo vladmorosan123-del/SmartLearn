@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useApp } from '@/contexts/AppContext';
 
 export interface Material {
   id: string;
@@ -36,9 +37,12 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { role, isLoading: authLoading } = useAuthContext();
+  const { role: authRole } = useAuthContext();
+  const { role: appRole } = useApp();
   
-  const isPrivilegedUser = role === 'profesor' || role === 'admin';
+  // Use whichever role source has resolved — authRole from DB, or appRole from localStorage
+  const effectiveRole = authRole || appRole;
+  const isPrivilegedUser = effectiveRole === 'profesor' || effectiveRole === 'admin';
 
   // Helper to convert Supabase data to Material type
   // For non-privileged users, we hide the actual answer_key but indicate if it exists
@@ -70,9 +74,6 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   };
 
   const fetchMaterials = useCallback(async () => {
-    // Don't fetch until auth has resolved the user's role
-    if (authLoading) return;
-    
     try {
       setIsLoading(true);
       
@@ -131,7 +132,7 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [subject, category, toast, isPrivilegedUser, authLoading]);
+  }, [subject, category, toast, isPrivilegedUser]);
 
   useEffect(() => {
     fetchMaterials();
