@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, FileText, Clock, Calculator, Code, Atom, Calendar, Link as LinkIcon, Upload } from 'lucide-react';
+import { X, FileText, Clock, Calculator, Code, Atom, Calendar, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,14 +12,18 @@ import { ro } from 'date-fns/locale';
 import FileUpload from '@/components/FileUpload';
 import TVCAnswerKeyInput from '@/components/TVCAnswerKeyInput';
 
+interface SubjectFileInfo {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface SubjectConfig {
   questionCount: number;
   answerKey: string[];
   oficiu: number;
-  fileUrl?: string;
-  fileName?: string;
-  fileType?: string;
-  fileSize?: number;
+  files: SubjectFileInfo[];
 }
 
 interface TVCCompletUploadModalProps {
@@ -49,10 +53,20 @@ const subjectOptions = [
 ];
 
 const defaultSubjectConfig = (): Record<string, SubjectConfig> => ({
-  matematica: { questionCount: 9, answerKey: Array(9).fill(''), oficiu: 0 },
-  informatica: { questionCount: 9, answerKey: Array(9).fill(''), oficiu: 0 },
-  fizica: { questionCount: 9, answerKey: Array(9).fill(''), oficiu: 0 },
+  matematica: { questionCount: 9, answerKey: Array(9).fill(''), oficiu: 0, files: [] },
+  informatica: { questionCount: 9, answerKey: Array(9).fill(''), oficiu: 0, files: [] },
+  fizica: { questionCount: 9, answerKey: Array(9).fill(''), oficiu: 0, files: [] },
 });
+
+const getFileTypeLabel = (type: string) => {
+  const labels: Record<string, string> = {
+    pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
+    ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
+    jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+    mp4: 'Video', webm: 'Video', mov: 'Video',
+  };
+  return labels[type.toLowerCase()] || type.toUpperCase();
+};
 
 const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModalProps) => {
   const [title, setTitle] = useState('');
@@ -84,6 +98,26 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
     updateSubjectConfig(subject, { questionCount: count, answerKey: newAnswerKey });
   };
 
+  const handleUploadComplete = (subject: string, url: string, name: string, type: string, size: number) => {
+    setSubjectConfig(prev => ({
+      ...prev,
+      [subject]: {
+        ...prev[subject],
+        files: [...prev[subject].files, { url, name, type, size }],
+      },
+    }));
+  };
+
+  const removeFile = (subject: string, index: number) => {
+    setSubjectConfig(prev => ({
+      ...prev,
+      [subject]: {
+        ...prev[subject],
+        files: prev[subject].files.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
   const resetForm = () => {
     setTitle('');
     setDescription('');
@@ -104,8 +138,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
     e.preventDefault();
     if (!title.trim()) return;
 
-    // Need at least one subject with a file
-    const hasAnyFile = Object.values(subjectConfig).some(cfg => cfg.fileUrl);
+    const hasAnyFile = Object.values(subjectConfig).some(cfg => cfg.files.length > 0);
     if (!hasAnyFile) return;
 
     setIsSaving(true);
@@ -117,18 +150,18 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
         publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
       }
 
-      // Use the first available file as main file_url
-      const firstSubjectWithFile = subjectOptions.find(s => subjectConfig[s.value]?.fileUrl);
-      const mainFile = firstSubjectWithFile ? subjectConfig[firstSubjectWithFile.value] : null;
+      // Use the first available file as the main file_url for the material record
+      const firstSubjectWithFile = subjectOptions.find(s => subjectConfig[s.value]?.files.length > 0);
+      const mainFile = firstSubjectWithFile ? subjectConfig[firstSubjectWithFile.value].files[0] : null;
 
       await onSave({
         title: title.trim(),
         description: description.trim(),
         year,
-        fileUrl: mainFile?.fileUrl || '',
-        fileName: mainFile?.fileName || '',
-        fileType: mainFile?.fileType || '',
-        fileSize: mainFile?.fileSize || 0,
+        fileUrl: mainFile?.url || '',
+        fileName: mainFile?.name || '',
+        fileType: mainFile?.type || '',
+        fileSize: mainFile?.size || 0,
         timerMinutes,
         subject: 'tvc_complet',
         publishAt,
@@ -144,16 +177,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
     }
   };
 
-  const getFileTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
-      ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
-      jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
-    };
-    return labels[type.toLowerCase()] || type.toUpperCase();
-  };
-
-  const hasAnyFile = Object.values(subjectConfig).some(cfg => cfg.fileUrl);
+  const hasAnyFile = Object.values(subjectConfig).some(cfg => cfg.files.length > 0);
   const isValid = title.trim() && hasAnyFile;
 
   const currentSubject = subjectConfig[activeSubjectTab];
@@ -169,7 +193,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
           <div>
             <h2 className="font-display text-xl text-foreground">Încarcă Test TVC Complet</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Un singur test cu fișier și grilă separată pentru fiecare materie
+              Un singur test combinat cu fișiere și grile separate per materie
             </p>
           </div>
           <button onClick={handleClose} className="p-2 hover:bg-muted rounded-lg transition-colors">
@@ -237,20 +261,20 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
             </p>
           </div>
 
-          {/* Per-Subject Section: File + Barem */}
+          {/* Per-Subject Section: Files + Barem */}
           <div className="space-y-4 pt-2 border-t border-border">
             <Label className="text-base font-semibold flex items-center gap-2">
               Fișiere și Barem per Materie
             </Label>
             <p className="text-xs text-muted-foreground -mt-2">
-              Încarcă un fișier separat și configurează grila pentru fiecare materie.
+              Încarcă fișiere (și simultan și pe rând) și configurează grila pentru fiecare materie.
             </p>
 
             {/* Subject Tabs */}
             <div className="flex items-center gap-2">
               {subjectOptions.map((opt) => {
                 const cfg = subjectConfig[opt.value];
-                const hasFile = !!cfg?.fileUrl;
+                const hasFiles = cfg?.files.length > 0;
                 const hasAnswers = cfg?.answerKey.some(a => a !== '');
                 return (
                   <button
@@ -265,10 +289,10 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                   >
                     <opt.icon className="w-4 h-4" />
                     <span className="text-sm font-medium">{opt.label}</span>
-                    {hasFile && hasAnswers && (
+                    {hasFiles && hasAnswers && (
                       <span className="w-2 h-2 rounded-full bg-green-500" />
                     )}
-                    {hasFile && !hasAnswers && (
+                    {hasFiles && !hasAnswers && (
                       <span className="w-2 h-2 rounded-full bg-yellow-500" />
                     )}
                   </button>
@@ -285,42 +309,52 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                 </h4>
               </div>
 
-              {/* Per-subject file upload */}
+              {/* Uploaded files list */}
+              {currentSubject.files.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    {currentSubject.files.length} {currentSubject.files.length === 1 ? 'fișier încărcat' : 'fișiere încărcate'}
+                  </Label>
+                  {currentSubject.files.map((file, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-gold" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground truncate max-w-[250px]">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {getFileTypeLabel(file.type)} • {file.size >= 1024 * 1024 
+                              ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                              : `${(file.size / 1024).toFixed(1)} KB`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button" variant="ghost" size="sm" 
+                        onClick={() => removeFile(activeSubjectTab, idx)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* File upload - always visible for adding more */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm">
                   <Upload className="w-4 h-4 text-gold" />
-                  Fișier pentru {subjectOptions.find(s => s.value === activeSubjectTab)?.label}
+                  Încarcă fișiere pentru {subjectOptions.find(s => s.value === activeSubjectTab)?.label}
                 </Label>
-                
-                {currentSubject.fileUrl ? (
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gold" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground truncate max-w-[250px]">
-                          {currentSubject.fileName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getFileTypeLabel(currentSubject.fileType || '')} • {((currentSubject.fileSize || 0) / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      type="button" variant="ghost" size="sm" 
-                      onClick={() => updateSubjectConfig(activeSubjectTab, { fileUrl: undefined, fileName: undefined, fileType: undefined, fileSize: undefined })}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <FileUpload
-                    key={`upload-${activeSubjectTab}`}
-                    onUploadComplete={(url, name, type, size) => updateSubjectConfig(activeSubjectTab, { fileUrl: url, fileName: name, fileType: type, fileSize: size })}
-                    category="tvc_complet"
-                    subject={activeSubjectTab}
-                    multiple={false}
-                  />
-                )}
+                <FileUpload
+                  key={`upload-${activeSubjectTab}`}
+                  onUploadComplete={(url, name, type, size) => handleUploadComplete(activeSubjectTab, url, name, type, size)}
+                  category="tvc_complet"
+                  subject={activeSubjectTab}
+                  multiple={true}
+                />
               </div>
 
               {/* Answer key config */}
@@ -371,7 +405,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
               {subjectOptions.map((opt) => {
                 const cfg = subjectConfig[opt.value];
                 const filled = cfg.answerKey.filter(a => a !== '').length;
-                const hasFile = !!cfg.fileUrl;
+                const fileCount = cfg.files.length;
                 return (
                   <div key={opt.value} className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5">
@@ -379,7 +413,7 @@ const TVCCompletUploadModal = ({ isOpen, onClose, onSave }: TVCCompletUploadModa
                       {opt.label}
                     </span>
                     <span className="text-muted-foreground">
-                      {hasFile ? '✓ Fișier' : '✗ Fișier'} • {filled}/{cfg.questionCount} răspunsuri • Oficiu: {cfg.oficiu}
+                      {fileCount > 0 ? `✓ ${fileCount} fișiere` : '✗ Fișier'} • {filled}/{cfg.questionCount} răspunsuri • Oficiu: {cfg.oficiu}
                     </span>
                   </div>
                 );
