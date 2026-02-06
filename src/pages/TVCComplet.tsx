@@ -129,18 +129,37 @@ const TVCComplet = () => {
     answerKey?: string[];
     timerMinutes?: number;
     publishAt?: string | null;
+    subjectConfig?: Record<string, any>;
   }) => {
     if (!editingMaterial) return;
     
     try {
-      await updateMaterial(editingMaterial.id, {
+      const updates: any = {
         title: data.title,
         description: data.description,
         year: data.year || null,
-        answer_key: data.answerKey || null,
         timer_minutes: data.timerMinutes ?? 180,
         publish_at: data.publishAt,
-      });
+      };
+
+      if (data.subjectConfig) {
+        updates.subject_config = data.subjectConfig;
+        // Update main file_url from first available file
+        const firstSubject = ['matematica', 'informatica', 'fizica'].find(
+          s => data.subjectConfig![s]?.files?.length > 0
+        );
+        if (firstSubject) {
+          const mainFile = data.subjectConfig[firstSubject].files[0];
+          updates.file_url = mainFile.url;
+          updates.file_name = mainFile.name;
+          updates.file_type = mainFile.type;
+          updates.file_size = mainFile.size;
+        }
+      } else {
+        updates.answer_key = data.answerKey || null;
+      }
+
+      await updateMaterial(editingMaterial.id, updates);
       toast({ title: 'Material actualizat', description: 'Modificările au fost salvate cu succes.' });
       setEditingMaterial(null);
     } catch (error) {
@@ -377,7 +396,6 @@ const TVCComplet = () => {
         isOpen={!!editingMaterial}
         onClose={() => setEditingMaterial(null)}
         onSave={handleEditMaterial}
-        onAddTest={handleSaveMaterial}
         material={editingMaterial}
       />
 
