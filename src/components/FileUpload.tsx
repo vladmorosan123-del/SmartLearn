@@ -304,6 +304,7 @@ const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: Fi
           </p>
           <p className="text-sm text-muted-foreground mb-3">sau</p>
           <Button
+            type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
           >
@@ -378,6 +379,7 @@ const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: Fi
 
       {pendingCount > 0 && (
         <Button
+          type="button"
           variant="gold"
           className="w-full"
           onClick={uploadFiles}
