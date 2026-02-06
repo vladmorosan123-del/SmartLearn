@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, X,
+  ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye,
   File, Image, FileSpreadsheet, Presentation, FileType as FileTypeIcon, 
   FileText, ClipboardCheck, Pencil, Timer, Calendar, Calculator, Code, Atom
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { useHasSubmissions } from '@/hooks/useHasSubmission';
 import TVCCompletUploadModal from '@/components/TVCCompletUploadModal';
 import EditTVCCompletModal from '@/components/EditTVCCompletModal';
 import FileViewer from '@/components/FileViewer';
+import MultiFileViewer, { extractSubjectFiles } from '@/components/MultiFileViewer';
 import TVCTimerComplet from '@/components/TVCTimerComplet';
 
 const subjectNames: Record<string, string> = {
@@ -54,7 +55,7 @@ const TVCComplet = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
-  const [viewingAllFiles, setViewingAllFiles] = useState<Material | null>(null);
+  const [viewingMultiFiles, setViewingMultiFiles] = useState<{ title: string; subjectFiles: Record<string, any[]> } | null>(null);
   const [timerMaterial, setTimerMaterial] = useState<Material | null>(null);
 
   const isProfessor = authRole === 'profesor' || authRole === 'admin' || role === 'profesor' || role === 'admin';
@@ -340,7 +341,7 @@ const TVCComplet = () => {
                             variant="outline" size="sm" className="gap-1"
                             onClick={() => {
                               if (hasSubjectConfig) {
-                                setViewingAllFiles(material);
+                                setViewingMultiFiles({ title: material.title, subjectFiles: extractSubjectFiles(material.subject_config!) });
                               } else {
                                 setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
                               }
@@ -371,7 +372,7 @@ const TVCComplet = () => {
                             className="gap-1"
                             onClick={() => {
                               if (hasSubjectConfig) {
-                                setViewingAllFiles(material);
+                                setViewingMultiFiles({ title: material.title, subjectFiles: extractSubjectFiles(material.subject_config!) });
                               } else {
                                 setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
                               }
@@ -424,64 +425,13 @@ const TVCComplet = () => {
         />
       )}
 
-      {/* Multi-file viewer for subject_config materials */}
-      {viewingAllFiles && viewingAllFiles.subject_config && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewingAllFiles(null)} />
-          <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
-              <div>
-                <h2 className="font-display text-xl text-foreground">{viewingAllFiles.title}</h2>
-                <p className="text-sm text-muted-foreground mt-1">Toate documentele disponibile</p>
-              </div>
-              <button onClick={() => setViewingAllFiles(null)} className="p-2 hover:bg-muted rounded-lg transition-colors">
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              {Object.entries(viewingAllFiles.subject_config!).map(([subj, cfg]) => {
-                const Icon = subjectIcons[subj] || Award;
-                const files = cfg.files && cfg.files.length > 0
-                  ? cfg.files
-                  : (cfg as any).fileUrl
-                    ? [{ url: (cfg as any).fileUrl, name: (cfg as any).fileName || subj, type: (cfg as any).fileType || 'pdf', size: (cfg as any).fileSize || 0 }]
-                    : [];
-                if (files.length === 0) return null;
-                return (
-                  <div key={subj} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-5 h-5 text-gold" />
-                      <h3 className="font-medium text-foreground">{subjectNames[subj] || subj}</h3>
-                    </div>
-                    {files.map((file: any, idx: number) => (
-                      <button
-                        key={idx}
-                        className="w-full flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border hover:border-gold/50 hover:bg-muted transition-all text-left"
-                        onClick={() => {
-                          setViewingAllFiles(null);
-                          setViewingFile({ url: file.url, name: file.name, type: file.type });
-                        }}
-                      >
-                        {getFileIcon(file.type)}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {getFileTypeLabel(file.type)}
-                            {file.size > 0 && ` • ${file.size >= 1024 * 1024 
-                              ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
-                              : `${(file.size / 1024).toFixed(1)} KB`}`}
-                          </p>
-                        </div>
-                        <Eye className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Multi-file viewer */}
+      <MultiFileViewer
+        isOpen={!!viewingMultiFiles}
+        onClose={() => setViewingMultiFiles(null)}
+        title={viewingMultiFiles?.title || ''}
+        subjectFiles={viewingMultiFiles?.subjectFiles}
+      />
 
       {/* Timer Modal with auto-submit */}
       {timerMaterial && (
