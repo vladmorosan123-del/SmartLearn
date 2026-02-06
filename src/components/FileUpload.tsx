@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useApp } from '@/contexts/AppContext';
 
 const ALLOWED_EXTENSIONS = [
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', 
@@ -83,7 +84,9 @@ const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: Fi
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { isAuthenticated, role } = useAuthContext();
+  const { isAuthenticated, role: authRole } = useAuthContext();
+  const { role: appRole } = useApp();
+  const effectiveRole = authRole || appRole;
 
   const validateFile = (file: File): boolean => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -188,7 +191,7 @@ const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: Fi
       return;
     }
 
-    const canUpload = role === 'profesor' || role === 'admin';
+    const canUpload = effectiveRole === 'profesor' || effectiveRole === 'admin';
     if (!canUpload) {
       toast({
         title: 'Fără permisiuni',
