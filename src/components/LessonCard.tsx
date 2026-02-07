@@ -85,7 +85,7 @@ const LessonCard = ({ lesson, index, isProfessor, onAdd, onEdit, onDelete, onVie
         lesson.status === 'not-uploaded' ? 'opacity-60' : ''
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-4">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getStatusColor()}`}>
             {getStatusIcon()}
@@ -118,7 +118,7 @@ const LessonCard = ({ lesson, index, isProfessor, onAdd, onEdit, onDelete, onVie
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           {isProfessor ? (
             lesson.status === 'not-uploaded' ? (
               <Button 

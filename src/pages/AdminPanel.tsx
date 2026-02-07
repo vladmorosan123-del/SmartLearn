@@ -237,25 +237,26 @@ const AdminPanel = () => {
       </header>
 
       {/* Tab Navigation */}
-      <div className="container mx-auto px-4 py-4 border-b border-border">
-        <div className="flex flex-wrap gap-2">
+      <div className="container mx-auto px-4 py-4 border-b border-border overflow-x-auto">
+        <div className="flex gap-2 min-w-max">
           {[
-            { id: 'overview', label: 'Privire de ansamblu', icon: BarChart3 },
-            { id: 'content', label: 'Gestionare Conținut', icon: Layers },
-            { id: 'students', label: 'Elevi', icon: GraduationCap },
-            { id: 'submissions', label: 'Răspunsuri TVC', icon: ClipboardCheck },
-            { id: 'activity', label: 'Activitate Recentă', icon: Activity },
-            ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: UserCog }] : []),
+            { id: 'overview', label: 'Privire de ansamblu', shortLabel: 'Ansamblu', icon: BarChart3 },
+            { id: 'content', label: 'Gestionare Conținut', shortLabel: 'Conținut', icon: Layers },
+            { id: 'students', label: 'Elevi', shortLabel: 'Elevi', icon: GraduationCap },
+            { id: 'submissions', label: 'Răspunsuri TVC', shortLabel: 'TVC', icon: ClipboardCheck },
+            { id: 'activity', label: 'Activitate Recentă', shortLabel: 'Activitate', icon: Activity },
+            ...(isAdmin ? [{ id: 'admin', label: 'Admin', shortLabel: 'Admin', icon: UserCog }] : []),
           ].map((tab) => (
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'gold' : 'outline'}
               size="sm"
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className="gap-2"
+              className="gap-2 whitespace-nowrap"
             >
               <tab.icon className="w-4 h-4" />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.shortLabel}</span>
             </Button>
           ))}
         </div>

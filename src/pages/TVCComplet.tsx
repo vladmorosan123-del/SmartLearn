@@ -282,7 +282,7 @@ const TVCComplet = () => {
                   key={material.id}
                   className="bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-300"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gold/20 text-gold">
                         <span className="font-bold">{index + 1}</span>
@@ -335,7 +335,7 @@ const TVCComplet = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {isProfessor ? (
                         <>
                           <Button 
