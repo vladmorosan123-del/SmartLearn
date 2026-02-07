@@ -7,11 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const extractStoragePath = (fileUrl: string): string | null => {
   if (!fileUrl) return null;
-  // Match the path after the bucket name in Supabase storage URLs
-  const regex = /\/storage\/v1\/object\/(?:public|sign)\/materials\/(.+)/;
-  const match = fileUrl.match(regex);
-  if (match) return decodeURIComponent(match[1]);
-  return null;
+  const marker = '/materials/';
+  const idx = fileUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(fileUrl.substring(idx + marker.length));
 };
 
 /**

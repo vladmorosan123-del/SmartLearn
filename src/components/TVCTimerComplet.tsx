@@ -224,7 +224,14 @@ const TVCTimerComplet = ({
                 </div>
                 {currentFile.url && (
                   <Button variant="gold" size="sm" className="gap-2"
-                    onClick={() => { window.open(currentFile.url, '_blank'); }}
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = currentFile.url;
+                      link.download = currentFile.name || `${subjectTitle}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
                   >
                     <Download className="w-4 h-4" />
                     Descarcă
@@ -297,7 +304,7 @@ const TVCTimerComplet = ({
                 ) : isPdf ? (
                   <iframe 
                     key={currentFile.url}
-                    src={currentFile.url}
+                    src={getPdfViewerUrl(currentFile.url)} 
                     className="w-full h-full rounded-lg border border-border bg-white" 
                     title="TVC Subject PDF" 
                     allow="autoplay" 
