@@ -87,13 +87,29 @@ const Auth = () => {
             : error.message,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Autentificare reușită",
-          description: "Bine ai venit!",
-        });
-        navigate('/materii');
+        return;
       }
+
+      // Check role - only students allowed here
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: role } = await supabase.rpc('get_user_role', { _user_id: session.user.id });
+        if (role === 'profesor' || role === 'admin') {
+          await supabase.auth.signOut();
+          toast({
+            title: "Secțiune greșită",
+            description: "Contul tău este de profesor. Te rugăm să te autentifici din secțiunea Profesor.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      toast({
+        title: "Autentificare reușită",
+        description: "Bine ai venit!",
+      });
+      navigate('/materii');
     } catch (err) {
       toast({
         title: "Eroare",
