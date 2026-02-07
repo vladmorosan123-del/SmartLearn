@@ -76,16 +76,16 @@ const SubjectSelection = () => {
 
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Navigation */}
-        <nav className="flex items-center justify-between mb-12">
-          <Button variant="ghost" onClick={handleBack} className="gap-2">
+        <nav className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
+          <Button variant="ghost" onClick={handleBack} className="gap-2 self-start sm:self-auto">
             <ArrowLeft className="w-4 h-4" />
             Înapoi
           </Button>
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-gold" />
-            <span className="font-display text-lg text-foreground">CNM Ștefan cel Mare</span>
+            <span className="font-display text-lg text-foreground hidden sm:inline">CNM Ștefan cel Mare</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-center">
             {isAuthenticated && profile && (
               <span className="text-sm text-muted-foreground">
                 {profile.full_name || profile.username}

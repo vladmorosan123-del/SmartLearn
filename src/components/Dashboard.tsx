@@ -410,7 +410,7 @@ const Dashboard = () => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 p-6 lg:p-8">
+      <main className="flex-1 lg:ml-64 p-4 pt-16 sm:p-6 lg:p-8 lg:pt-8">
         {/* Header */}
         <header className="mb-8 animate-fade-up">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
