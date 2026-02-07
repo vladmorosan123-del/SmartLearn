@@ -157,28 +157,16 @@ const LessonCard = ({ lesson, index, isProfessor, onAdd, onEdit, onDelete, onVie
               </>
             )
           ) : (
-            lesson.status !== 'not-uploaded' && (
-              <div className="flex items-center gap-2">
-                {lesson.fileUrl && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-1"
-                    onClick={() => onViewFile(lesson)}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Vezi fișier
-                  </Button>
-                )}
-                <Button 
-                  variant={lesson.status === 'locked' ? 'outline' : 'gold'} 
-                  size="sm"
-                  disabled={lesson.status === 'locked'}
-                >
-                  {lesson.status === 'completed' ? 'Revizuiește' : 
-                   lesson.status === 'in-progress' ? 'Continuă' : 'Blocat'}
-                </Button>
-              </div>
+            lesson.status !== 'not-uploaded' && lesson.fileUrl && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1"
+                onClick={() => onViewFile(lesson)}
+              >
+                <Eye className="w-4 h-4" />
+                Vezi fișier
+              </Button>
             )
           )}
         </div>
