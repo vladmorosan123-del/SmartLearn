@@ -28,28 +28,8 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // Auto-logout on tab/browser close AND on re-entry
+  // Auto-logout on browser/tab close
   useEffect(() => {
-    const wasActive = sessionStorage.getItem('lm_tab_active');
-
-    // If sessionStorage flag is missing, this is a NEW tab/window (not a refresh).
-    // Clear any leftover auth tokens and force sign out.
-    if (!wasActive) {
-      const keysToRemove = Object.keys(localStorage).filter(
-        key => key.startsWith('sb-') || key.startsWith('supabase.')
-      );
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      localStorage.removeItem('lm_user_role');
-      localStorage.removeItem('lm_subject');
-      localStorage.removeItem('lm_user_name');
-      
-      // Force clear the in-memory session too (Supabase reads localStorage at init)
-      supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-    }
-
-    // Mark this tab as active (persists across refresh, cleared on tab close)
-    sessionStorage.setItem('lm_tab_active', 'true');
-
     const handleBeforeUnload = () => {
       const keysToRemove = Object.keys(localStorage).filter(
         key => key.startsWith('sb-') || key.startsWith('supabase.')
