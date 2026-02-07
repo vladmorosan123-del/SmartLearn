@@ -95,17 +95,17 @@ const AuthProfesor = () => {
         return;
       }
 
-      // Check role - only professors/admins allowed here
+      // Check role and redirect accordingly
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: role } = await supabase.rpc('get_user_role', { _user_id: session.user.id });
         if (role === 'student') {
-          await supabase.auth.signOut();
+          // Redirect students to the correct section instead of blocking
           toast({
-            title: "Secțiune greșită",
-            description: "Contul tău este de elev. Te rugăm să te autentifici din secțiunea Elev.",
-            variant: "destructive",
+            title: "Autentificare reușită",
+            description: "Redirecționare către secțiunea Elev...",
           });
+          navigate('/materii');
           return;
         }
       }
