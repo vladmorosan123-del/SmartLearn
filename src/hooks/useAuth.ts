@@ -28,12 +28,16 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // Clean up old localStorage auth tokens and app-specific keys on tab close
+  // Clean up old auth tokens and app keys on mount and tab close
   useEffect(() => {
-    const oldKeys = Object.keys(localStorage).filter(
-      key => key.startsWith('sb-') || key.startsWith('supabase.')
-    );
-    oldKeys.forEach(key => localStorage.removeItem(key));
+    // Clear any old persisted auth tokens
+    ['localStorage', 'sessionStorage'].forEach(storageType => {
+      const storage = storageType === 'localStorage' ? localStorage : sessionStorage;
+      const keys = Object.keys(storage).filter(
+        key => key.startsWith('sb-') || key.startsWith('supabase.')
+      );
+      keys.forEach(key => storage.removeItem(key));
+    });
 
     const handleBeforeUnload = () => {
       localStorage.removeItem('lm_user_role');
@@ -42,10 +46,7 @@ export const useAuth = () => {
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   useEffect(() => {
