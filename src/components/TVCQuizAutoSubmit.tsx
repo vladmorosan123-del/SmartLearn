@@ -181,7 +181,7 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
                 <RadioGroup
                   value={userAnswer}
                   onValueChange={(answer) => handleAnswerChange(index, answer)}
-                  className="flex gap-4 flex-1"
+                  className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
                   disabled={isSubmitted || isTimeUp}
                 >
                   {options.map((option) => {

@@ -29,7 +29,7 @@ const TVCAnswerKeyInput = ({ value, onChange, questionCount = 9 }: TVCAnswerKeyI
             <RadioGroup
               value={value[index] || ''}
               onValueChange={(answer) => handleAnswerChange(index, answer)}
-              className="flex gap-4"
+              className="grid grid-cols-4 gap-2 sm:flex sm:gap-4"
             >
               {options.map((option) => (
                 <div key={option} className="flex items-center space-x-1">
