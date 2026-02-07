@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { downloadFile } from '@/lib/downloadFile';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface FileViewerProps {
@@ -102,12 +103,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const isOfficeDoc = ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = safeFileUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadFile(safeFileUrl, fileName);
   };
 
   const getGoogleViewerUrl = (url: string) => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X, Calculator, Code, Atom } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { supabase } from '@/integrations/supabase/client';
@@ -224,14 +225,7 @@ const TVCTimerComplet = ({
                 </div>
                 {currentFile.url && (
                   <Button variant="gold" size="sm" className="gap-2"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = currentFile.url;
-                      link.download = currentFile.name || `${subjectTitle}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
+                    onClick={() => downloadFile(currentFile.url, currentFile.name || `${subjectTitle}.pdf`)}
                   >
                     <Download className="w-4 h-4" />
                     Descarcă
