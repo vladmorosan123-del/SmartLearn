@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { extractStoragePath } from '@/lib/storage';
 
 /**
- * Downloads a file from Supabase storage as a blob and returns an object URL.
+ * Fetches a URL as a blob and returns an object URL.
  * This bypasses X-Frame-Options restrictions for iframe rendering.
- * Falls back to fetch for non-Supabase URLs.
  */
 export const useBlobUrl = (sourceUrl: string | null) => {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -24,40 +21,25 @@ export const useBlobUrl = (sourceUrl: string | null) => {
     setIsLoading(true);
     setError(false);
 
-    const loadBlob = async () => {
-      try {
-        let blob: Blob;
-
-        // Try Supabase storage download first (handles auth automatically)
-        const storagePath = extractStoragePath(sourceUrl);
-        if (storagePath) {
-          const { data, error: dlError } = await supabase.storage
-            .from('materials')
-            .download(storagePath);
-          if (dlError || !data) throw new Error(dlError?.message || 'Download failed');
-          blob = data;
-        } else {
-          // Fallback: direct fetch for non-Supabase URLs
-          const res = await fetch(sourceUrl);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          blob = await res.blob();
-        }
-
+    fetch(sourceUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
         if (!cancelled) {
           objectUrl = URL.createObjectURL(blob);
           setBlobUrl(objectUrl);
           setIsLoading(false);
         }
-      } catch (e) {
+      })
+      .catch((e) => {
         console.error('useBlobUrl error:', e);
         if (!cancelled) {
           setError(true);
           setIsLoading(false);
         }
-      }
-    };
-
-    loadBlob();
+      });
 
     return () => {
       cancelled = true;
