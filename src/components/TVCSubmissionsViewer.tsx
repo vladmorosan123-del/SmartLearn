@@ -57,6 +57,7 @@ interface TVCSubmission {
   answers: string[] | Record<string, string[]>;
   score: number;
   total_questions: number;
+  time_spent_seconds: number | null;
   submitted_at: string;
   profile?: {
     username: string;
@@ -396,21 +397,48 @@ const TVCSubmissionsViewer = () => {
           
           {selectedSubmission && (
             <div className="space-y-4">
-              {/* Score Summary */}
-              <div className={`p-4 rounded-lg text-center ${
-                (selectedSubmission.score / selectedSubmission.total_questions) >= 0.7 
+              {/* Score & Grade Summary */}
+              {(() => {
+                const material = selectedSubmission.material;
+                const answers = selectedSubmission.answers;
+                let oficiu = material?.oficiu ?? 0;
+                let baseGrade = selectedSubmission.score;
+                
+                // For multi-subject, compute grade from item points or config
+                if (answers && typeof answers === 'object' && !Array.isArray(answers) && material?.subject_config) {
+                  oficiu = Object.values(material.subject_config).reduce((sum, c) => sum + (c.oficiu || 0), 0);
+                }
+                
+                const finalGrade = Math.min(10, baseGrade + oficiu);
+                const percentage = selectedSubmission.total_questions > 0 
+                  ? Math.round((selectedSubmission.score / selectedSubmission.total_questions) * 100) 
+                  : 0;
+                const gradeColor = finalGrade >= 5 
                   ? 'bg-green-500/20 border border-green-500/50' 
-                  : (selectedSubmission.score / selectedSubmission.total_questions) >= 0.5 
-                  ? 'bg-yellow-500/20 border border-yellow-500/50' 
-                  : 'bg-destructive/20 border border-destructive/50'
-              }`}>
-                <p className="text-lg font-bold">
-                  Scor: {selectedSubmission.score} / {selectedSubmission.total_questions} puncte
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {Math.round((selectedSubmission.score / selectedSubmission.total_questions) * 100)}%
-                </p>
-              </div>
+                  : 'bg-destructive/20 border border-destructive/50';
+
+                // Format time
+                const timeSeconds = selectedSubmission.time_spent_seconds;
+                let timeDisplay = '-';
+                if (timeSeconds && timeSeconds > 0) {
+                  const mins = Math.floor(timeSeconds / 60);
+                  const secs = timeSeconds % 60;
+                  timeDisplay = mins > 0 ? `${mins} min ${secs} sec` : `${secs} sec`;
+                }
+
+                return (
+                  <div className={`p-4 rounded-lg text-center ${gradeColor}`}>
+                    <p className="text-2xl font-bold">Nota: {finalGrade.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedSubmission.score} / {selectedSubmission.total_questions} răspunsuri corecte ({percentage}%)
+                      {oficiu > 0 && ` + ${oficiu} oficiu`}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      ⏱ Timp: {timeDisplay}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Answers Detail */}
               <div className="space-y-4">
@@ -419,7 +447,6 @@ const TVCSubmissionsViewer = () => {
                   const answers = selectedSubmission.answers;
                   const material = selectedSubmission.material;
                   
-                  // Multi-subject format (object with subject keys)
                   if (answers && typeof answers === 'object' && !Array.isArray(answers)) {
                     const subjectConfig = material?.subject_config;
                     return Object.entries(answers as Record<string, string[]>).map(([subjectKey, subjectAnswers]) => {
@@ -449,7 +476,6 @@ const TVCSubmissionsViewer = () => {
                     });
                   }
                   
-                  // Simple array format
                   const flatAnswers = Array.isArray(answers) ? answers : [];
                   const answerKeyArray = material?.answer_key as string[] | null;
                   return flatAnswers.map((answer, index) => {
