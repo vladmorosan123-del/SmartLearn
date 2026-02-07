@@ -464,6 +464,7 @@ const TesteAcademii = () => {
             fileUrl={viewingFile.url}
             fileName={viewingFile.name}
             fileType={viewingFile.type}
+            hideDownload={!isProfessor}
           />
         )}
         <MultiFileViewer
