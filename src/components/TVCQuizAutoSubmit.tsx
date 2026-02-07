@@ -237,28 +237,9 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
           })}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
-          {!isSubmitted ? (
-            <Button 
-              variant="gold" 
-              onClick={handleSubmit} 
-              disabled={isSubmitting}
-              className="gap-2 flex-1"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Se verifică...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Trimite Răspunsurile
-                </>
-              )}
-            </Button>
-          ) : (
+        {/* Submit is handled by the parent TVCTimerComplet "Predă Testul" button */}
+        {isSubmitted && (
+          <div className="flex gap-3">
             <Button 
               variant="outline" 
               onClick={handleReset}
@@ -268,13 +249,7 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
               <RotateCcw className="w-4 h-4" />
               Încearcă Din Nou
             </Button>
-          )}
-        </div>
-
-        {!isSubmitted && !isTimeUp && (
-          <p className="text-xs text-muted-foreground text-center">
-            Poți trimite răspunsurile oricând. La expirarea timpului, testul se trimite automat.
-          </p>
+          </div>
         )}
       </div>
     );

@@ -312,16 +312,7 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
           </div>
         )}
 
-        {/* Submit button */}
-        {!isSubmitted && !isTimeUp && (
-          <Button variant="gold" onClick={() => submitQuiz(false)} disabled={isSubmitting} className="gap-2 w-full">
-            {isSubmitting ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Se verifică...</>
-            ) : (
-              <><Send className="w-4 h-4" /> Trimite Răspunsurile</>
-            )}
-          </Button>
-        )}
+        {/* Note: Submit is handled by the parent TVCTimerComplet "Predă Testul" button */}
 
         {!isSubmitted && !isTimeUp && (
           <p className="text-xs text-muted-foreground text-center">
