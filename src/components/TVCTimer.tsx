@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X } from 'lucide-react';
+import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { extractStoragePath } from '@/lib/storage';
 
 interface TVCTimerProps {
   subjectTitle: string;
@@ -14,14 +16,12 @@ interface TVCTimerProps {
   timerMinutes?: number;
 }
 
-// Helper function to get PDF viewer URL using Google Docs Viewer
-const getPdfViewerUrl = (url: string) => {
-  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-};
-
 const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180 }: TVCTimerProps) => {
   const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
   
+  // Get blob URL for PDF rendering (bypasses CORS & X-Frame-Options)
+  const { blobUrl: pdfBlobUrl, isLoading: isPdfLoading } = useBlobUrl(pdfUrl || null);
+
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -171,13 +171,29 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                     variant="gold" 
                     size="sm"
                     className="gap-2"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = pdfUrl;
-                      link.download = `${subjectTitle}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                    onClick={async () => {
+                      try {
+                        let blob: Blob;
+                        const storagePath = extractStoragePath(pdfUrl);
+                        if (storagePath) {
+                          const { data, error } = await supabase.storage.from('materials').download(storagePath);
+                          if (error || !data) throw error || new Error('Download failed');
+                          blob = data;
+                        } else {
+                          const res = await fetch(pdfUrl);
+                          blob = await res.blob();
+                        }
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `${subjectTitle}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        window.open(pdfUrl, '_blank');
+                      }
                     }}
                   >
                     <Download className="w-4 h-4" />
@@ -197,13 +213,24 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             
             {/* PDF Content Area */}
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-              {pdfUrl ? (
+              {isPdfLoading ? (
+                <div className="flex flex-col items-center justify-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
+                  <p className="text-muted-foreground">Se încarcă documentul...</p>
+                </div>
+              ) : pdfBlobUrl ? (
                 <iframe 
-                  src={getPdfViewerUrl(pdfUrl)} 
+                  src={pdfBlobUrl} 
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title="TVC Subject PDF"
                   allow="autoplay"
                 />
+              ) : pdfUrl ? (
+                <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
+                  <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-display text-lg text-foreground mb-2">Nu s-a putut încărca PDF-ul</h3>
+                  <p className="text-muted-foreground text-sm mb-4">Încearcă să descarci fișierul.</p>
+                </div>
               ) : (
                 <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
