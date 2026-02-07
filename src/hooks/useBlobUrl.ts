@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { extractStoragePath } from '@/lib/storage';
 
 /**
- * Fetches a URL as a blob and returns an object URL.
- * This bypasses X-Frame-Options restrictions for iframe rendering.
+ * Downloads a file as a blob and returns an object URL.
+ * Uses Supabase SDK for storage files (bypasses CORS & X-Frame-Options).
+ * Falls back to fetch for external URLs.
  */
-export const useBlobUrl = (sourceUrl: string | null) => {
+export const useBlobUrl = (originalUrl: string | null) => {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!sourceUrl) {
+    if (!originalUrl) {
       setBlobUrl(null);
       setError(false);
       return;
@@ -21,31 +24,46 @@ export const useBlobUrl = (sourceUrl: string | null) => {
     setIsLoading(true);
     setError(false);
 
-    fetch(sourceUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
+    const load = async () => {
+      try {
+        let blob: Blob;
+        const storagePath = extractStoragePath(originalUrl);
+
+        if (storagePath) {
+          // Use Supabase SDK — handles auth & bypasses CORS
+          const { data, error: dlErr } = await supabase.storage
+            .from('materials')
+            .download(storagePath);
+          if (dlErr || !data) throw dlErr || new Error('Download failed');
+          blob = data;
+        } else {
+          // External URL — plain fetch
+          const res = await fetch(originalUrl);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          blob = await res.blob();
+        }
+
         if (!cancelled) {
           objectUrl = URL.createObjectURL(blob);
           setBlobUrl(objectUrl);
           setIsLoading(false);
         }
-      })
-      .catch((e) => {
+      } catch (e) {
         console.error('useBlobUrl error:', e);
         if (!cancelled) {
           setError(true);
           setIsLoading(false);
         }
-      });
+      }
+    };
+
+    load();
 
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [sourceUrl]);
+  }, [originalUrl]);
 
   return { blobUrl, isLoading, error };
 };
