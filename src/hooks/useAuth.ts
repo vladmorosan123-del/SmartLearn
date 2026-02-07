@@ -28,13 +28,9 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // Auto-logout on browser/tab close
+  // Clean up app-specific localStorage keys on tab close
   useEffect(() => {
     const handleBeforeUnload = () => {
-      const keysToRemove = Object.keys(localStorage).filter(
-        key => key.startsWith('sb-') || key.startsWith('supabase.')
-      );
-      keysToRemove.forEach(key => localStorage.removeItem(key));
       localStorage.removeItem('lm_user_role');
       localStorage.removeItem('lm_subject');
       localStorage.removeItem('lm_user_name');
@@ -210,11 +206,11 @@ export const useAuth = () => {
       isLoading: false,
     });
 
-    // Clear all Supabase auth tokens from localStorage
-    const keysToRemove = Object.keys(localStorage).filter(
+    // Clear all Supabase auth tokens from sessionStorage
+    const keysToRemove = Object.keys(sessionStorage).filter(
       key => key.startsWith('sb-') || key.startsWith('supabase.')
     );
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    keysToRemove.forEach(key => sessionStorage.removeItem(key));
 
     try {
       // Use global scope to invalidate the session on the server too
