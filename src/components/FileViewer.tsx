@@ -2,9 +2,6 @@ import { useMemo, useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
-import { useBlobUrl } from '@/hooks/useBlobUrl';
-import { supabase } from '@/integrations/supabase/client';
-import { extractStoragePath } from '@/lib/storage';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface FileViewerProps {
@@ -41,16 +38,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   // Resolve signed URL for private bucket
   const { signedUrl, isLoading: isUrlLoading } = useSignedUrl(isOpen ? fileUrl : null);
   const safeFileUrl = useMemo(() => (signedUrl || '').trim(), [signedUrl]);
-
-  // For PDFs/txt: fetch as blob to bypass X-Frame-Options
   const type = fileType.toLowerCase();
-  const needsBlob = ['pdf', 'txt'].includes(type);
-  const { blobUrl, isLoading: isBlobLoading, error: blobError } = useBlobUrl(
-    needsBlob && isOpen ? fileUrl : null
-  );
-
-  // The URL to use for rendering in iframe
-  const renderUrl = needsBlob ? blobUrl : safeFileUrl;
 
   // Reset states when URL changes or modal opens
   useEffect(() => {
@@ -71,8 +59,8 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
   if (!isOpen) return null;
 
-  // Show loading while resolving signed URL or blob
-  if (isUrlLoading || (needsBlob && isBlobLoading)) {
+  // Show loading while resolving signed URL
+  if (isUrlLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
@@ -113,32 +101,8 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const isVideo = ['mp4', 'webm'].includes(type);
   const isOfficeDoc = ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 
-  const handleDownload = async () => {
-    try {
-      let blob: Blob;
-      const storagePath = extractStoragePath(fileUrl);
-      if (storagePath) {
-        const { data, error } = await supabase.storage
-          .from('materials')
-          .download(storagePath);
-        if (error || !data) throw new Error(error?.message || 'Download failed');
-        blob = data;
-      } else {
-        const response = await fetch(safeFileUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        blob = await response.blob();
-      }
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
-    } catch {
-      window.open(safeFileUrl, '_blank');
-    }
+  const handleDownload = () => {
+    window.open(safeFileUrl, '_blank');
   };
 
   const getGoogleViewerUrl = (url: string) => {
@@ -219,7 +183,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                 </div>
               )}
 
-              {(loadTimeout || iframeError || blobError) && (isPdf || isOfficeDoc) ? (
+              {(loadTimeout || iframeError) && (isPdf || isOfficeDoc) ? (
                 renderFallbackOptions()
               ) : (
                 <>
@@ -233,9 +197,9 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                     )
                   )}
                   
-                  {isPdf && !loadTimeout && !iframeError && renderUrl && (
+                  {isPdf && !loadTimeout && !iframeError && safeFileUrl && (
                     <iframe
-                      src={renderUrl}
+                      src={safeFileUrl}
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title={fileName}
                       allow="autoplay"
@@ -244,9 +208,9 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                     />
                   )}
                   
-                  {isTxt && renderUrl && (
+                  {isTxt && safeFileUrl && (
                     <iframe
-                      src={renderUrl}
+                      src={safeFileUrl}
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title={fileName}
                       onLoad={handleIframeLoad}
