@@ -319,12 +319,18 @@ const EditMaterialModal = ({
                   <Input
                     type="number"
                     min={0}
-                    max={100}
+                    max={9}
                     value={oficiu}
-                    onChange={(e) => setOficiu(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => setOficiu(Math.max(0, Math.min(9, parseInt(e.target.value) || 0)))}
                     placeholder="0"
                     className="bg-background"
                   />
+                  {questionCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Punctaj/item: <strong>{((10 - oficiu) / questionCount).toFixed(2)}</strong> pct • 
+                      Nota max: {oficiu} + {questionCount} × {((10 - oficiu) / questionCount).toFixed(2)} = <strong>10</strong>
+                    </p>
+                  )}
                 </div>
               </div>
 

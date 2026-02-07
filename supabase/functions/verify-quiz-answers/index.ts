@@ -188,17 +188,20 @@ serve(async (req: Request) => {
       isCorrect: answer === answerKey[index],
     }));
 
-    const score = results.filter((r: any) => r.isCorrect).length;
+    const correctCount = results.filter((r: any) => r.isCorrect).length;
     const totalQuestions = answerKey.length;
     const oficiu = material.oficiu || 0;
-    const baseGrade = score;
-    const finalGrade = baseGrade + oficiu;
+    
+    // Formula: punctaj/item = (10 - oficiu) / nr_itemi
+    const pointsPerItem = totalQuestions > 0 ? (10 - oficiu) / totalQuestions : 0;
+    const baseGrade = parseFloat((correctCount * pointsPerItem).toFixed(2));
+    const finalGrade = parseFloat((baseGrade + oficiu).toFixed(2));
 
     const { error: insertError } = await supabaseAdmin.from('tvc_submissions').insert({
       user_id: user.id,
       material_id: materialId,
       answers: answers,
-      score,
+      score: correctCount,
       total_questions: totalQuestions,
       time_spent_seconds: timeSpentSeconds,
     });
@@ -207,16 +210,17 @@ serve(async (req: Request) => {
       console.error('Error saving submission:', insertError);
     }
 
-    console.log(`Quiz verified for user ${user.id}: ${score}/${totalQuestions} on material ${materialId}. Base grade: ${baseGrade}, Oficiu: ${oficiu}, Final: ${finalGrade}`);
+    console.log(`Quiz verified for user ${user.id}: ${correctCount}/${totalQuestions} on material ${materialId}. Points/item: ${pointsPerItem.toFixed(2)}, Base grade: ${baseGrade}, Oficiu: ${oficiu}, Final: ${finalGrade}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        score,
+        score: correctCount,
         totalQuestions,
         results,
         timeSpentSeconds,
         oficiu,
+        pointsPerItem: parseFloat(pointsPerItem.toFixed(2)),
         baseGrade,
         finalGrade,
       }),
