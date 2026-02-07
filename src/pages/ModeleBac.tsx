@@ -72,7 +72,10 @@ const ModeleBac = () => {
     [materials]
   );
 
-  const years = Array.from({ length: 10 }, (_, i) => 2025 - i);
+  const maxYear = availableYears.length > 0 ? Math.max(...availableYears) : new Date().getFullYear();
+  const years = isProfessor 
+    ? Array.from({ length: 10 }, (_, i) => maxYear - i)
+    : availableYears;
   const getYearCount = (year: number) => materials.filter(m => m.year === year).length;
 
   // Filter models based on search and year filter
