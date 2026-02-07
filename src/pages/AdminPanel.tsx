@@ -109,13 +109,13 @@ const AdminPanel = () => {
           fizica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
         };
 
-        materials.forEach((m) => {
-          const subject = m.subject as Subject;
-          if (stats[subject]) {
-            if (m.category === 'lectie') stats[subject].lessons++;
-            else if (m.category === 'bac') stats[subject].bacModels++;
-            else if (m.category === 'tvc') stats[subject].tvcMaterials++;
-          }
+          materials.forEach((m) => {
+            const subject = m.subject as Subject;
+            if (stats[subject]) {
+              if (m.category === 'lesson') stats[subject].lessons++;
+              else if (m.category === 'bac_model') stats[subject].bacModels++;
+              else if (m.category === 'tvc' || m.category === 'tvc_complet') stats[subject].tvcMaterials++;
+            }
         });
 
         setMaterialStats(stats);
