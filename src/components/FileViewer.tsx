@@ -101,13 +101,21 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const isVideo = ['mp4', 'webm'].includes(type);
   const isOfficeDoc = ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = safeFileUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(safeFileUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(safeFileUrl, '_blank');
+    }
   };
 
   const getGoogleViewerUrl = (url: string) => {
