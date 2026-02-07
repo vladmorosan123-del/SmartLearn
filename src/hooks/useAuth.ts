@@ -28,22 +28,33 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // Auto-logout on tab/browser close
+  // Auto-logout on tab/browser close AND on re-entry
   useEffect(() => {
-    // Mark that session is active in this tab
-    sessionStorage.setItem('lm_tab_active', 'true');
+    const wasActive = sessionStorage.getItem('lm_tab_active');
 
-    const handleBeforeUnload = () => {
-      // sessionStorage is cleared when tab closes but persists on refresh
-      // We use a sync approach: send a signOut beacon on unload
-      // Check if this is a tab close (sessionStorage will be gone) vs refresh
-      // We sign out on every unload and restore on load if sessionStorage flag exists
+    // If sessionStorage flag is missing, this is a NEW tab/window (not a refresh).
+    // Clear any leftover auth tokens so the user must log in again.
+    if (!wasActive) {
       const keysToRemove = Object.keys(localStorage).filter(
         key => key.startsWith('sb-') || key.startsWith('supabase.')
       );
       keysToRemove.forEach(key => localStorage.removeItem(key));
-      
-      // Also clear app context
+      localStorage.removeItem('lm_user_role');
+      localStorage.removeItem('lm_subject');
+      localStorage.removeItem('lm_user_name');
+    }
+
+    // Mark this tab as active (persists across refresh, cleared on tab close)
+    sessionStorage.setItem('lm_tab_active', 'true');
+
+    const handleBeforeUnload = () => {
+      // Remove auth tokens on every unload (tab close or navigation away).
+      // On refresh, sessionStorage survives so the flag check above won't clear again.
+      // But we still clear localStorage tokens so closing the tab = logout.
+      const keysToRemove = Object.keys(localStorage).filter(
+        key => key.startsWith('sb-') || key.startsWith('supabase.')
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
       localStorage.removeItem('lm_user_role');
       localStorage.removeItem('lm_subject');
       localStorage.removeItem('lm_user_name');
