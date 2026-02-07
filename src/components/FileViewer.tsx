@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
@@ -36,6 +36,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const [iframeLoading, setIframeLoading] = useState(true);
   const [iframeError, setIframeError] = useState(false);
   const [loadTimeout, setLoadTimeout] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Resolve signed URL for private bucket
   const { signedUrl, isLoading: isUrlLoading } = useSignedUrl(isOpen ? fileUrl : null);
@@ -49,12 +50,15 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
       setIframeError(false);
       setLoadTimeout(false);
       
-      const timer = setTimeout(() => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
         setLoadTimeout(true);
         setIframeLoading(false);
-      }, 120000);
+      }, 15000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      };
     }
   }, [isOpen, safeFileUrl]);
 
@@ -119,8 +123,16 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
     return mimeTypes[ext] || 'video/mp4';
   };
 
-  const handleIframeLoad = () => setIframeLoading(false);
-  const handleIframeError = () => { setIframeError(true); setIframeLoading(false); };
+  const handleIframeLoad = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIframeLoading(false);
+    setLoadTimeout(false);
+  };
+  const handleIframeError = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIframeError(true);
+    setIframeLoading(false);
+  };
 
   const renderFallbackOptions = () => (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card rounded-xl border border-dashed border-border max-w-md">
