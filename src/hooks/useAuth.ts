@@ -28,16 +28,14 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // On mount: clear any old localStorage auth tokens (migrated to sessionStorage)
+  // On mount: clear old localStorage auth tokens (migrated to sessionStorage)
+  // Also clean up app-specific keys on tab close
   useEffect(() => {
     const oldKeys = Object.keys(localStorage).filter(
       key => key.startsWith('sb-') || key.startsWith('supabase.')
     );
     oldKeys.forEach(key => localStorage.removeItem(key));
-  }, []);
 
-  // Clean up app-specific localStorage keys on tab close
-  useEffect(() => {
     const handleBeforeUnload = () => {
       localStorage.removeItem('lm_user_role');
       localStorage.removeItem('lm_subject');
