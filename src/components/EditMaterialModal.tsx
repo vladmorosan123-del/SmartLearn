@@ -22,6 +22,7 @@ interface EditMaterialModalProps {
     year?: number;
     answerKey?: string[];
     oficiu?: number;
+    itemPoints?: number[];
     timerMinutes?: number;
     publishAt?: string | null;
     fileUrl?: string;
@@ -49,6 +50,7 @@ const EditMaterialModal = ({
   const [year, setYear] = useState(new Date().getFullYear());
   const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
+  const [itemPoints, setItemPoints] = useState<number[]>(Array(9).fill(1));
   const [oficiu, setOficiu] = useState<number>(0);
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
@@ -77,6 +79,13 @@ const EditMaterialModal = ({
       setQuestionCount(existingKey.length);
       setAnswerKey([...existingKey]);
       
+      // Restore item points
+      const rawPoints = (material as any).item_points;
+      const existingPoints = Array.isArray(rawPoints) && rawPoints.length > 0
+        ? rawPoints.map((v: any) => Number(v) || 1)
+        : Array(existingKey.length).fill(1);
+      setItemPoints(existingPoints);
+      
       // Parse existing publish_at
       if (material.publish_at) {
         const parsed = parseISO(material.publish_at);
@@ -104,6 +113,11 @@ const EditMaterialModal = ({
     }
     setQuestionCount(newCount);
     setAnswerKey(newKey);
+    const newPoints = Array(newCount).fill(1);
+    for (let i = 0; i < Math.min(itemPoints.length, newCount); i++) {
+      newPoints[i] = itemPoints[i];
+    }
+    setItemPoints(newPoints);
   };
 
   const handleUploadComplete = (fileUrl: string, fileName: string, fileType: string, fileSize: number) => {
@@ -131,6 +145,7 @@ const EditMaterialModal = ({
         year: showYear ? year : undefined,
         answerKey: showAnswerKey ? answerKey : undefined,
         oficiu: showAnswerKey ? oficiu : undefined,
+        itemPoints: showAnswerKey ? itemPoints : undefined,
         timerMinutes: showTimer ? timerMinutes : undefined,
         publishAt,
         // Include file replacement data if a new file was uploaded
@@ -319,18 +334,12 @@ const EditMaterialModal = ({
                   <Input
                     type="number"
                     min={0}
-                    max={9}
+                    max={100}
                     value={oficiu}
-                    onChange={(e) => setOficiu(Math.max(0, Math.min(9, parseInt(e.target.value) || 0)))}
+                    onChange={(e) => setOficiu(Math.max(0, parseInt(e.target.value) || 0))}
                     placeholder="0"
                     className="bg-background"
                   />
-                  {questionCount > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Punctaj/item: <strong>{((10 - oficiu) / questionCount).toFixed(2)}</strong> pct • 
-                      Nota max: {oficiu} + {questionCount} × {((10 - oficiu) / questionCount).toFixed(2)} = <strong>10</strong>
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -338,6 +347,9 @@ const EditMaterialModal = ({
                 value={answerKey}
                 onChange={setAnswerKey}
                 questionCount={questionCount}
+                itemPoints={itemPoints}
+                onItemPointsChange={setItemPoints}
+                showItemPoints={true}
               />
             </div>
           )}
