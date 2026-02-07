@@ -33,7 +33,7 @@ export const useAuth = () => {
     const wasActive = sessionStorage.getItem('lm_tab_active');
 
     // If sessionStorage flag is missing, this is a NEW tab/window (not a refresh).
-    // Clear any leftover auth tokens so the user must log in again.
+    // Clear any leftover auth tokens and force sign out.
     if (!wasActive) {
       const keysToRemove = Object.keys(localStorage).filter(
         key => key.startsWith('sb-') || key.startsWith('supabase.')
@@ -42,15 +42,15 @@ export const useAuth = () => {
       localStorage.removeItem('lm_user_role');
       localStorage.removeItem('lm_subject');
       localStorage.removeItem('lm_user_name');
+      
+      // Force clear the in-memory session too (Supabase reads localStorage at init)
+      supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     }
 
     // Mark this tab as active (persists across refresh, cleared on tab close)
     sessionStorage.setItem('lm_tab_active', 'true');
 
     const handleBeforeUnload = () => {
-      // Remove auth tokens on every unload (tab close or navigation away).
-      // On refresh, sessionStorage survives so the flag check above won't clear again.
-      // But we still clear localStorage tokens so closing the tab = logout.
       const keysToRemove = Object.keys(localStorage).filter(
         key => key.startsWith('sb-') || key.startsWith('supabase.')
       );
