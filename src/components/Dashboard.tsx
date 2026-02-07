@@ -373,11 +373,13 @@ const Dashboard = () => {
             <div className="flex items-center gap-3 p-2 mb-2">
               <div className="w-10 h-10 bg-gold rounded-full flex items-center justify-center">
                 <span className="text-navy-dark font-semibold">
-                  {isProfessor ? 'P' : 'E'}
+                  {authRole === 'admin' ? 'A' : isProfessor ? 'P' : 'E'}
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-primary-foreground text-sm font-medium capitalize">{role}</p>
+                <p className="text-primary-foreground text-sm font-medium capitalize">
+                  {authRole === 'admin' ? 'Admin' : role}
+                </p>
                 <p className="text-primary-foreground/60 text-xs">Online</p>
               </div>
             </div>
