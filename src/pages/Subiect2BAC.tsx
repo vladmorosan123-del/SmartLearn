@@ -157,7 +157,7 @@ const Subiect2BAC = () => {
                 template.status === 'not-uploaded' ? 'opacity-60' : ''
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                     template.status === 'uploaded' ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'
@@ -183,7 +183,7 @@ const Subiect2BAC = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
                   {isProfessor ? (
                     template.status === 'not-uploaded' ? (
                       <Button variant="gold" size="sm" className="gap-2" onClick={() => handleAddTemplate(template.id)}>
