@@ -52,7 +52,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
       const timer = setTimeout(() => {
         setLoadTimeout(true);
         setIframeLoading(false);
-      }, 15000);
+      }, 120000);
       
       return () => clearTimeout(timer);
     }
