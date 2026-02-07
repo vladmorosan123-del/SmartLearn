@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface FileViewerProps {
@@ -39,6 +40,16 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const { signedUrl, isLoading: isUrlLoading } = useSignedUrl(isOpen ? fileUrl : null);
   const safeFileUrl = useMemo(() => (signedUrl || '').trim(), [signedUrl]);
 
+  // For PDFs/txt: fetch as blob to bypass X-Frame-Options
+  const type = fileType.toLowerCase();
+  const needsBlob = ['pdf', 'txt'].includes(type);
+  const { blobUrl, isLoading: isBlobLoading, error: blobError } = useBlobUrl(
+    needsBlob && safeFileUrl ? safeFileUrl : null
+  );
+
+  // The URL to use for rendering in iframe
+  const renderUrl = needsBlob ? blobUrl : safeFileUrl;
+
   // Reset states when URL changes or modal opens
   useEffect(() => {
     if (isOpen && safeFileUrl) {
@@ -58,8 +69,8 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
   if (!isOpen) return null;
 
-  // Show loading while resolving signed URL
-  if (isUrlLoading) {
+  // Show loading while resolving signed URL or blob
+  if (isUrlLoading || (needsBlob && isBlobLoading)) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
@@ -93,7 +104,6 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
     );
   }
 
-  const type = fileType.toLowerCase();
   const canPreview = canPreviewInBrowser(fileType);
   const isImage = ['jpg', 'jpeg', 'png'].includes(type);
   const isPdf = type === 'pdf';
@@ -196,7 +206,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                 </div>
               )}
 
-              {(loadTimeout || iframeError) && (isPdf || isOfficeDoc) ? (
+              {(loadTimeout || iframeError || blobError) && (isPdf || isOfficeDoc) ? (
                 renderFallbackOptions()
               ) : (
                 <>
@@ -210,9 +220,9 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                     )
                   )}
                   
-                  {isPdf && !loadTimeout && !iframeError && (
+                  {isPdf && !loadTimeout && !iframeError && renderUrl && (
                     <iframe
-                      src={safeFileUrl}
+                      src={renderUrl}
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title={fileName}
                       allow="autoplay"
@@ -221,9 +231,9 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                     />
                   )}
                   
-                  {isTxt && (
+                  {isTxt && renderUrl && (
                     <iframe
-                      src={safeFileUrl}
+                      src={renderUrl}
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title={fileName}
                       onLoad={handleIframeLoad}
