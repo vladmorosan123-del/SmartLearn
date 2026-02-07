@@ -3,6 +3,8 @@ import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, 
 import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { supabase } from '@/integrations/supabase/client';
+import { extractStoragePath } from '@/lib/storage';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface FileViewerProps {
@@ -44,7 +46,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const type = fileType.toLowerCase();
   const needsBlob = ['pdf', 'txt'].includes(type);
   const { blobUrl, isLoading: isBlobLoading, error: blobError } = useBlobUrl(
-    needsBlob && safeFileUrl ? safeFileUrl : null
+    needsBlob && isOpen ? fileUrl : null
   );
 
   // The URL to use for rendering in iframe
@@ -113,16 +115,27 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(safeFileUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      let blob: Blob;
+      const storagePath = extractStoragePath(fileUrl);
+      if (storagePath) {
+        const { data, error } = await supabase.storage
+          .from('materials')
+          .download(storagePath);
+        if (error || !data) throw new Error(error?.message || 'Download failed');
+        blob = data;
+      } else {
+        const response = await fetch(safeFileUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        blob = await response.blob();
+      }
+      const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = downloadUrl;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
+      URL.revokeObjectURL(downloadUrl);
     } catch {
       window.open(safeFileUrl, '_blank');
     }
