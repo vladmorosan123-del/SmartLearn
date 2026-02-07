@@ -377,30 +377,13 @@ const TVCComplet = () => {
                           </Button>
                         </>
                       ) : (
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="gap-1"
-                            onClick={() => {
-                              if (hasSubjectConfig) {
-                                setViewingMultiFiles({ title: material.title, subjectFiles: extractSubjectFiles(material.subject_config!) });
-                              } else {
-                                setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type });
-                              }
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Vezi PDF
-                          </Button>
-                          <Button 
-                            variant="gold" size="sm" className="gap-1"
-                            onClick={() => setTimerMaterial(material)}
-                          >
-                            <Timer className="w-4 h-4" />
-                            Începe Testul
-                          </Button>
-                        </div>
+                        <Button 
+                          variant="gold" size="sm" className="gap-1"
+                          onClick={() => setTimerMaterial(material)}
+                        >
+                          <Timer className="w-4 h-4" />
+                          Începe Testul
+                        </Button>
                       )}
                     </div>
                   </div>
