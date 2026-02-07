@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X, Loader2 } from 'lucide-react';
+import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
-import { useBlobUrl } from '@/hooks/useBlobUrl';
-import { extractStoragePath } from '@/lib/storage';
 
 interface TVCTimerProps {
   subjectTitle: string;
@@ -16,12 +14,13 @@ interface TVCTimerProps {
   timerMinutes?: number;
 }
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180 }: TVCTimerProps) => {
-  const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
-  
-  // Get blob URL for PDF rendering (bypasses CORS & X-Frame-Options)
-  const { blobUrl: pdfBlobUrl, isLoading: isPdfLoading } = useBlobUrl(pdfUrl || null);
+const getPdfViewerUrl = (url: string) => {
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+};
 
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180 }: TVCTimerProps) => {
+  const INITIAL_TIME = timerMinutes * 60;
+  
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -34,19 +33,13 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   
   const quizRef = useRef<TVCQuizInterfaceRef>(null);
 
-  // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
     const fetchQuestionCount = async () => {
       if (hasAnswerKey && materialId && !initialQuestionCount) {
         setIsLoadingQuestionCount(true);
         try {
-          const { data, error } = await supabase.rpc('get_material_question_count', {
-            _material_id: materialId
-          });
-          
-          if (!error && typeof data === 'number') {
-            setQuestionCount(data);
-          }
+          const { data, error } = await supabase.rpc('get_material_question_count', { _material_id: materialId });
+          if (!error && typeof data === 'number') setQuestionCount(data);
         } catch (err) {
           console.error('Error fetching question count:', err);
         } finally {
@@ -56,13 +49,11 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
         setQuestionCount(initialQuestionCount);
       }
     };
-    
     fetchQuestionCount();
   }, [hasAnswerKey, materialId, initialQuestionCount]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
@@ -70,11 +61,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             setIsRunning(false);
             setIsTimeUp(true);
             setHasSubmitted(true);
-            // Trigger auto-submit when time runs out
             setAutoSubmitQuiz(true);
             return 0;
           }
-          // Show warning at 5 minutes remaining
           if (prev === 300) {
             setShowTimeUpWarning(true);
             setTimeout(() => setShowTimeUpWarning(false), 5000);
@@ -83,10 +72,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
         });
       }, 1000);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => { if (interval) clearInterval(interval); };
   }, [isRunning, timeLeft]);
 
   const formatTime = useCallback((seconds: number) => {
@@ -96,37 +82,14 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  const handleStart = () => {
-    setIsRunning(true);
-    setHasStarted(true);
-  };
-
-  const handleSubmitTest = () => {
-    setIsRunning(false);
-    setIsTimeUp(true);
-    setHasSubmitted(true);
-    // Also trigger auto-submit on manual submit
-    setAutoSubmitQuiz(true);
-  };
-
-  const handleQuizReset = () => {
-    // Reset the timer and quiz state to start fresh
-    setTimeLeft(INITIAL_TIME);
-    setIsRunning(true);
-    setHasSubmitted(false);
-    setIsTimeUp(false);
-    setAutoSubmitQuiz(false);
-  };
-
-  const handleClose = () => {
-    onClose();
-  };
+  const handleStart = () => { setIsRunning(true); setHasStarted(true); };
+  const handleSubmitTest = () => { setIsRunning(false); setIsTimeUp(true); setHasSubmitted(true); setAutoSubmitQuiz(true); };
+  const handleQuizReset = () => { setTimeLeft(INITIAL_TIME); setIsRunning(true); setHasSubmitted(false); setIsTimeUp(false); setAutoSubmitQuiz(false); };
+  const handleClose = () => { onClose(); };
 
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
-
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
 
-  // Time-based color
   const getTimerColor = () => {
     if (isTimeUp) return 'text-destructive';
     if (timeLeft <= 300) return 'text-orange-500';
@@ -136,10 +99,8 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/90" />
       
-      {/* Time-up Warning Toast */}
       {showTimeUpWarning && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] animate-fade-up">
           <div className="bg-orange-500 text-white px-6 py-3 rounded-lg flex items-center gap-3 shadow-lg">
@@ -149,88 +110,41 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
         </div>
       )}
       
-      {/* Content Container */}
       <div className="relative flex flex-col md:flex-row w-full h-full overflow-y-auto md:overflow-hidden">
-        {/* Left Side - PDF Viewer */}
         {hasStarted ? (
           <div className="min-h-[60vh] md:min-h-0 md:flex-1 flex flex-col bg-background/95 md:border-r border-b md:border-b-0 border-border">
-            {/* PDF Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-gold" />
                 <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
               </div>
               <div className="flex items-center gap-3">
-                {/* Always visible timer in header */}
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted ${getTimerColor()}`}>
                   <Clock className="w-4 h-4" />
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
                 {pdfUrl && (
-                  <Button 
-                    variant="gold" 
-                    size="sm"
-                    className="gap-2"
-                    onClick={async () => {
-                      try {
-                        let blob: Blob;
-                        const storagePath = extractStoragePath(pdfUrl);
-                        if (storagePath) {
-                          const { data, error } = await supabase.storage.from('materials').download(storagePath);
-                          if (error || !data) throw error || new Error('Download failed');
-                          blob = data;
-                        } else {
-                          const res = await fetch(pdfUrl);
-                          blob = await res.blob();
-                        }
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `${subjectTitle}.pdf`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                      } catch {
-                        window.open(pdfUrl, '_blank');
-                      }
-                    }}
+                  <Button variant="gold" size="sm" className="gap-2"
+                    onClick={() => { window.open(pdfUrl, '_blank'); }}
                   >
                     <Download className="w-4 h-4" />
                     Descarcă PDF
                   </Button>
                 )}
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={handleClose}
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground">
                   <X className="w-5 h-5" />
                 </Button>
               </div>
             </div>
             
-            {/* PDF Content Area */}
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-              {isPdfLoading ? (
-                <div className="flex flex-col items-center justify-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
-                  <p className="text-muted-foreground">Se încarcă documentul...</p>
-                </div>
-              ) : pdfBlobUrl ? (
+              {pdfUrl ? (
                 <iframe 
-                  src={pdfBlobUrl} 
+                  src={pdfUrl} 
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title="TVC Subject PDF"
                   allow="autoplay"
                 />
-              ) : pdfUrl ? (
-                <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
-                  <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-display text-lg text-foreground mb-2">Nu s-a putut încărca PDF-ul</h3>
-                  <p className="text-muted-foreground text-sm mb-4">Încearcă să descarci fișierul.</p>
-                </div>
               ) : (
                 <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
