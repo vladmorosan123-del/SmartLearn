@@ -26,6 +26,7 @@ interface UploadMaterialModalProps {
     fileSize: number;
     answerKey?: string[];
     oficiu?: number;
+    itemPoints?: number[];
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
@@ -63,6 +64,7 @@ const UploadMaterialModal = ({
   const [selectedSubject, setSelectedSubject] = useState(subject);
   const [questionCount, setQuestionCount] = useState<number>(9);
   const [answerKey, setAnswerKey] = useState<string[]>(Array(9).fill(''));
+  const [itemPoints, setItemPoints] = useState<number[]>(Array(9).fill(1));
   const [oficiu, setOficiu] = useState<number>(0);
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
@@ -83,11 +85,16 @@ const UploadMaterialModal = ({
     setQuestionCount(count);
     // Resize answer key array
     const newAnswerKey = Array(count).fill('');
-    // Preserve existing answers
     for (let i = 0; i < Math.min(answerKey.length, count); i++) {
       newAnswerKey[i] = answerKey[i];
     }
     setAnswerKey(newAnswerKey);
+    // Resize item points array
+    const newPoints = Array(count).fill(1);
+    for (let i = 0; i < Math.min(itemPoints.length, count); i++) {
+      newPoints[i] = itemPoints[i];
+    }
+    setItemPoints(newPoints);
   };
 
   const resetForm = () => {
@@ -97,6 +104,7 @@ const UploadMaterialModal = ({
     setSelectedSubject(subject);
     setQuestionCount(9);
     setAnswerKey(Array(9).fill(''));
+    setItemPoints(Array(9).fill(1));
     setOficiu(0);
     setTimerMinutes(180);
     setPublishDate(undefined);
@@ -136,6 +144,7 @@ const UploadMaterialModal = ({
         fileSize: 0,
         answerKey: showAnswerKey ? answerKey : undefined,
         oficiu: showAnswerKey ? oficiu : undefined,
+        itemPoints: showAnswerKey ? itemPoints : undefined,
         timerMinutes: showTimer ? timerMinutes : undefined,
         subject: showSubjectSelector ? selectedSubject : undefined,
         publishAt,
@@ -152,6 +161,7 @@ const UploadMaterialModal = ({
           fileSize: file.size,
           answerKey: showAnswerKey ? answerKey : undefined,
           oficiu: showAnswerKey ? oficiu : undefined,
+          itemPoints: showAnswerKey ? itemPoints : undefined,
           timerMinutes: showTimer ? timerMinutes : undefined,
           subject: showSubjectSelector ? selectedSubject : undefined,
           publishAt,
@@ -340,18 +350,12 @@ const UploadMaterialModal = ({
                     id="oficiu"
                     type="number"
                     min={0}
-                    max={9}
+                    max={100}
                     value={oficiu}
-                    onChange={(e) => setOficiu(Math.max(0, Math.min(9, parseInt(e.target.value) || 0)))}
+                    onChange={(e) => setOficiu(Math.max(0, parseInt(e.target.value) || 0))}
                     placeholder="0"
                     className="bg-background"
                   />
-                  {questionCount > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Punctaj/item: <strong>{((10 - oficiu) / questionCount).toFixed(2)}</strong> pct • 
-                      Nota max: {oficiu} + {questionCount} × {((10 - oficiu) / questionCount).toFixed(2)} = <strong>10</strong>
-                    </p>
-                  )}
                 </div>
               </div>
               
@@ -359,6 +363,9 @@ const UploadMaterialModal = ({
                 value={answerKey}
                 onChange={setAnswerKey}
                 questionCount={questionCount}
+                itemPoints={itemPoints}
+                onItemPointsChange={setItemPoints}
+                showItemPoints={true}
               />
             </div>
           )}
