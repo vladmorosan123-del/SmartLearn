@@ -70,12 +70,15 @@ const AdminUserManagement = () => {
   
   // Dialog states
   const [editPasswordDialog, setEditPasswordDialog] = useState<{ open: boolean; user: UserWithRole | null }>({ open: false, user: null });
-  const [editUsernameDialog, setEditUsernameDialog] = useState<{ open: boolean; user: UserWithRole | null }>({ open: false, user: null });
+  const [editProfileDialog, setEditProfileDialog] = useState<{ open: boolean; user: UserWithRole | null }>({ open: false, user: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: UserWithRole | null }>({ open: false, user: null });
   
   // Form states
   const [newPassword, setNewPassword] = useState('');
-  const [newUsername, setNewUsername] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editFullName, setEditFullName] = useState('');
+  const [editStudyYear, setEditStudyYear] = useState<number | null>(null);
+  const [editStudyClass, setEditStudyClass] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchUsers = async () => {
@@ -175,32 +178,45 @@ const AdminUserManagement = () => {
     }
   };
 
-  const handleUpdateUsername = async () => {
-    if (!editUsernameDialog.user || !newUsername) return;
+  const handleUpdateProfile = async () => {
+    if (!editProfileDialog.user) return;
     
     setActionLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-management', {
+      // Update username if changed
+      if (editUsername !== editProfileDialog.user.username) {
+        const { data, error } = await supabase.functions.invoke('admin-management', {
+          body: { 
+            action: 'update-username',
+            targetUserId: editProfileDialog.user.user_id,
+            newUsername: editUsername,
+          },
+        });
+        if (error || data.error) throw new Error(data?.error || error?.message);
+      }
+
+      // Update profile fields
+      const { data: profileData, error: profileError } = await supabase.functions.invoke('admin-management', {
         body: { 
-          action: 'update-username',
-          targetUserId: editUsernameDialog.user.user_id,
-          newUsername,
+          action: 'update-profile',
+          targetUserId: editProfileDialog.user.user_id,
+          fullName: editFullName,
+          studyYear: editStudyYear,
+          studyClass: editStudyClass,
         },
       });
-
-      if (error || data.error) throw new Error(data?.error || error?.message);
+      if (profileError || profileData.error) throw new Error(profileData?.error || profileError?.message);
       
       toast({
         title: "Succes",
-        description: `Numele de utilizator a fost schimbat în ${newUsername}`,
+        description: `Profilul pentru ${editUsername} a fost actualizat`,
       });
-      setEditUsernameDialog({ open: false, user: null });
-      setNewUsername('');
+      setEditProfileDialog({ open: false, user: null });
       fetchUsers();
     } catch (err: any) {
       toast({
         title: "Eroare",
-        description: err.message || "Nu s-a putut schimba numele",
+        description: err.message || "Nu s-a putut actualiza profilul",
         variant: "destructive",
       });
     } finally {
@@ -480,10 +496,13 @@ const AdminUserManagement = () => {
                         variant="ghost" 
                         size="sm"
                         onClick={() => {
-                          setNewUsername(user.username);
-                          setEditUsernameDialog({ open: true, user });
+                          setEditUsername(user.username);
+                          setEditFullName(user.full_name || '');
+                          setEditStudyYear(user.study_year);
+                          setEditStudyClass(user.study_class);
+                          setEditProfileDialog({ open: true, user });
                         }}
-                        title="Schimbă utilizator"
+                        title="Editează profil"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -575,39 +594,88 @@ const AdminUserManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Username Dialog */}
-      <Dialog open={editUsernameDialog.open} onOpenChange={(open) => {
+      {/* Edit Profile Dialog */}
+      <Dialog open={editProfileDialog.open} onOpenChange={(open) => {
         if (!open) {
-          setEditUsernameDialog({ open: false, user: null });
-          setNewUsername('');
+          setEditProfileDialog({ open: false, user: null });
         }
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Schimbă Numele de Utilizator</DialogTitle>
+            <DialogTitle>Editează Profil</DialogTitle>
             <DialogDescription>
-              Introdu noul nume pentru {editUsernameDialog.user?.username}
+              Modifică datele pentru {editProfileDialog.user?.username}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="new-username">Noul nume de utilizator</Label>
+              <Label htmlFor="edit-username">Nume de utilizator</Label>
               <Input
-                id="new-username"
+                id="edit-username"
                 type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
                 placeholder="Minim 3 caractere"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-fullname">Nume complet</Label>
+              <Input
+                id="edit-fullname"
+                type="text"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+                placeholder="Numele complet"
+              />
+            </div>
+            {editProfileDialog.user?.role === 'student' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Anul</Label>
+                  <Select
+                    value={editStudyYear?.toString() || ''}
+                    onValueChange={(val) => setEditStudyYear(parseInt(val))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="An" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STUDY_YEARS.map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          Clasa a {year}-a
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Clasa</Label>
+                  <Select
+                    value={editStudyClass || ''}
+                    onValueChange={(val) => setEditStudyClass(val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Clasă" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STUDY_CLASSES.map((cls) => (
+                        <SelectItem key={cls} value={cls}>
+                          {cls}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditUsernameDialog({ open: false, user: null })}>
+              <Button variant="outline" onClick={() => setEditProfileDialog({ open: false, user: null })}>
                 Anulează
               </Button>
               <Button 
                 variant="gold" 
-                onClick={handleUpdateUsername}
-                disabled={actionLoading || newUsername.length < 3}
+                onClick={handleUpdateProfile}
+                disabled={actionLoading || editUsername.length < 3}
               >
                 {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvează'}
               </Button>
