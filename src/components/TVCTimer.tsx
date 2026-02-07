@@ -168,17 +168,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                   <Clock className="w-4 h-4" />
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
-                {pdfUrl && (
-                  <Button 
-                    variant="gold" 
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => downloadFile(pdfUrl, `${subjectTitle}.pdf`)}
-                  >
-                    <Download className="w-4 h-4" />
-                    Descarcă PDF
-                  </Button>
-                )}
+                {/* Download removed for students */}
                 <Button 
                   variant="ghost" 
                   size="icon"
