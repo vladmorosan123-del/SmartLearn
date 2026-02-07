@@ -27,6 +27,14 @@ interface UpdateUsernameRequest {
   newUsername: string;
 }
 
+interface UpdateProfileRequest {
+  action: 'update-profile';
+  targetUserId: string;
+  fullName?: string;
+  studyYear?: number | null;
+  studyClass?: string | null;
+}
+
 interface DeleteUserRequest {
   action: 'delete-user';
   targetUserId: string;
@@ -55,6 +63,7 @@ type AdminRequest =
   | VerifyCodeRequest 
   | UpdatePasswordRequest 
   | UpdateUsernameRequest
+  | UpdateProfileRequest
   | DeleteUserRequest 
   | BlockUserRequest
   | GetAllUsersRequest
@@ -400,6 +409,42 @@ serve(async (req: Request) => {
         }
 
         console.log(`Username updated for user ${targetUserId} by admin ${user.id}`);
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'update-profile': {
+        const { targetUserId, fullName, studyYear, studyClass } = request as UpdateProfileRequest;
+
+        const updateData: Record<string, any> = {};
+        if (fullName !== undefined) updateData.full_name = fullName;
+        if (studyYear !== undefined) updateData.study_year = studyYear;
+        if (studyClass !== undefined) updateData.study_class = studyClass;
+
+        if (Object.keys(updateData).length === 0) {
+          return new Response(
+            JSON.stringify({ error: 'Niciun câmp de actualizat' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { error: profileUpdateError } = await supabaseAdmin
+          .from('profiles')
+          .update(updateData)
+          .eq('user_id', targetUserId);
+
+        if (profileUpdateError) {
+          console.error('Error updating profile:', profileUpdateError);
+          return new Response(
+            JSON.stringify({ error: profileUpdateError.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`Profile updated for user ${targetUserId} by admin ${user.id}`);
 
         return new Response(
           JSON.stringify({ success: true }),
