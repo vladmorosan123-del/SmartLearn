@@ -235,7 +235,7 @@ const Auth = () => {
                     <Input
                       id="password"
                       type="password"
-                      autoComplete="new-password"
+                      autoComplete="off"
                       placeholder="Introdu parola"
                       value={password}
                       onChange={(e) => {
