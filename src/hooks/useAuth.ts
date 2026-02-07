@@ -182,8 +182,20 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    // Force clear local state immediately regardless of API result
+    setAuthState({
+      user: null,
+      session: null,
+      profile: null,
+      role: null,
+      isLoading: false,
+    });
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.error('Sign out API error:', e);
+    }
+    return { error: null };
   };
 
   return {
