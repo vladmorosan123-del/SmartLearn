@@ -12,6 +12,7 @@ interface FileViewerProps {
   fileUrl: string;
   fileName: string;
   fileType: string;
+  hideDownload?: boolean;
 }
 
 const getFileIcon = (fileType: string) => {
@@ -31,7 +32,7 @@ const canPreviewInBrowser = (fileType: string) => {
   return ['pdf', 'jpg', 'jpeg', 'png', 'txt', 'mp4', 'webm', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 };
 
-const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewerProps) => {
+const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload = false }: FileViewerProps) => {
   const [imageError, setImageError] = useState(false);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [iframeError, setIframeError] = useState(false);
@@ -173,10 +174,12 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
             <h2 className="font-display text-lg text-foreground truncate">{fileName}</h2>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload}>
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Descarcă</span>
-            </Button>
+            {!hideDownload && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload}>
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Descarcă</span>
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(safeFileUrl, '_blank')}>
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Tab nou</span>
