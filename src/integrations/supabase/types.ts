@@ -83,13 +83,6 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "lesson_views_material_id_fkey"
-            columns: ["material_id"]
-            isOneToOne: false
-            referencedRelation: "materials_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       materials: {
@@ -239,13 +232,6 @@ export type Database = {
             referencedRelation: "materials"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tvc_submissions_material_id_fkey"
-            columns: ["material_id"]
-            isOneToOne: false
-            referencedRelation: "materials_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -271,63 +257,7 @@ export type Database = {
       }
     }
     Views: {
-      materials_public: {
-        Row: {
-          author: string | null
-          category: string | null
-          created_at: string | null
-          description: string | null
-          file_name: string | null
-          file_size: number | null
-          file_type: string | null
-          file_url: string | null
-          genre: string | null
-          id: string | null
-          lesson_number: number | null
-          publish_at: string | null
-          subject: string | null
-          title: string | null
-          updated_at: string | null
-          year: number | null
-        }
-        Insert: {
-          author?: string | null
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          file_name?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string | null
-          genre?: string | null
-          id?: string | null
-          lesson_number?: number | null
-          publish_at?: string | null
-          subject?: string | null
-          title?: string | null
-          updated_at?: string | null
-          year?: number | null
-        }
-        Update: {
-          author?: string | null
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          file_name?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string | null
-          genre?: string | null
-          id?: string | null
-          lesson_number?: number | null
-          publish_at?: string | null
-          subject?: string | null
-          title?: string | null
-          updated_at?: string | null
-          year?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       get_material_answer_key: { Args: { _material_id: string }; Returns: Json }
