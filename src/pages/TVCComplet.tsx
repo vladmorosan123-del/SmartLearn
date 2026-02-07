@@ -434,6 +434,7 @@ const TVCComplet = () => {
           fileUrl={viewingFile.url}
           fileName={viewingFile.name}
           fileType={viewingFile.type}
+          hideDownload={!isProfessor}
         />
       )}
 
