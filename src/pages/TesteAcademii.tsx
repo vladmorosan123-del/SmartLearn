@@ -406,23 +406,12 @@ const TesteAcademii = () => {
                         )
                       ) : (
                         !isEmpty && (
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="gap-1"
-                              onClick={() => setViewingFile({ url: material.file_url, name: material.file_name, type: material.file_type })}
-                            >
-                              <Eye className="w-4 h-4" />
-                              Vezi
-                            </Button>
-                            <Button 
-                              variant="gold" size="sm"
-                              onClick={() => setTimerMaterial(material)}
-                            >
-                              Începe cu Timer
-                            </Button>
-                          </div>
+                          <Button 
+                            variant="gold" size="sm"
+                            onClick={() => setTimerMaterial(material)}
+                          >
+                            Începe cu Timer
+                          </Button>
                         )
                       )}
                     </div>
