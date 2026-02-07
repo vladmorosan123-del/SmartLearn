@@ -254,7 +254,7 @@ const AuthProfesor = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
                 <div className="space-y-2">
                   <Label htmlFor="username">Nume de utilizator</Label>
                   <div className="relative">
@@ -262,6 +262,7 @@ const AuthProfesor = () => {
                     <Input
                       id="username"
                       type="text"
+                      autoComplete="off"
                       placeholder="Introdu numele de utilizator"
                       value={username}
                       onChange={(e) => {
@@ -284,6 +285,7 @@ const AuthProfesor = () => {
                     <Input
                       id="password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Introdu parola"
                       value={password}
                       onChange={(e) => {

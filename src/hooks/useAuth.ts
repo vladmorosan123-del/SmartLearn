@@ -28,13 +28,34 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // On mount: clear old localStorage auth tokens (migrated to sessionStorage)
-  // Also clean up app-specific keys on tab close
+  // Strict per-tab session isolation:
+  // Each tab gets a unique ID. Only the tab that performed login has a valid session.
+  // New tabs (even those that inherit sessionStorage) will be forced to re-authenticate.
   useEffect(() => {
+    // Clear old localStorage auth tokens
     const oldKeys = Object.keys(localStorage).filter(
       key => key.startsWith('sb-') || key.startsWith('supabase.')
     );
     oldKeys.forEach(key => localStorage.removeItem(key));
+
+    // Generate a unique tab ID for this tab instance
+    const tabId = crypto.randomUUID();
+    const existingTabId = sessionStorage.getItem('lm_tab_id');
+    const authenticatedTabId = sessionStorage.getItem('lm_authenticated_tab_id');
+
+    // If this tab inherited sessionStorage from another tab (e.g. "Open in new tab"),
+    // the tab IDs won't match, so we clear the session
+    if (existingTabId && existingTabId !== tabId) {
+      // This is a new tab that inherited sessionStorage — clear auth
+      const authKeys = Object.keys(sessionStorage).filter(
+        key => key.startsWith('sb-') || key.startsWith('supabase.')
+      );
+      authKeys.forEach(key => sessionStorage.removeItem(key));
+      sessionStorage.removeItem('lm_authenticated_tab_id');
+    }
+
+    // Set the new tab ID
+    sessionStorage.setItem('lm_tab_id', tabId);
 
     const handleBeforeUnload = () => {
       localStorage.removeItem('lm_user_role');
@@ -137,6 +158,11 @@ export const useAuth = () => {
       email,
       password,
     });
+    if (!error) {
+      // Mark this tab as the authenticated tab
+      const tabId = sessionStorage.getItem('lm_tab_id');
+      if (tabId) sessionStorage.setItem('lm_authenticated_tab_id', tabId);
+    }
     return { error };
   };
 
@@ -157,6 +183,10 @@ export const useAuth = () => {
       }
       return { error };
     }
+
+    // Mark this tab as the authenticated tab
+    const tabId = sessionStorage.getItem('lm_tab_id');
+    if (tabId) sessionStorage.setItem('lm_authenticated_tab_id', tabId);
 
     return { error: null };
   };
