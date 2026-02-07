@@ -54,7 +54,7 @@ interface TVCSubmission {
   id: string;
   user_id: string;
   material_id: string;
-  answers: string[];
+  answers: string[] | Record<string, string[]>;
   score: number;
   total_questions: number;
   submitted_at: string;
@@ -68,6 +68,9 @@ interface TVCSubmission {
     title: string;
     answer_key: unknown;
     subject: string;
+    subject_config: Record<string, { answerKey?: string[]; questionCount?: number; oficiu?: number }> | null;
+    item_points: unknown;
+    oficiu: number | null;
   };
 }
 
@@ -115,15 +118,17 @@ const TVCSubmissionsViewer = () => {
       const materialIds = [...new Set(submissionsData.map(s => s.material_id))];
       const { data: materials } = await supabase
         .from('materials')
-        .select('id, title, answer_key, subject')
+        .select('id, title, answer_key, subject, subject_config, item_points, oficiu')
         .in('id', materialIds);
 
       // Combine data
-      const enrichedSubmissions = submissionsData.map(submission => ({
+      const enrichedSubmissions: TVCSubmission[] = submissionsData.map(submission => ({
         ...submission,
-        answers: Array.isArray(submission.answers) ? submission.answers as string[] : [],
+        answers: Array.isArray(submission.answers) 
+          ? submission.answers as string[] 
+          : (submission.answers as Record<string, string[]>) || [],
         profile: profiles?.find(p => p.user_id === submission.user_id),
-        material: materials?.find(m => m.id === submission.material_id),
+        material: materials?.find(m => m.id === submission.material_id) as TVCSubmission['material'],
       }));
 
       setSubmissions(enrichedSubmissions);
@@ -408,39 +413,60 @@ const TVCSubmissionsViewer = () => {
               </div>
 
               {/* Answers Detail */}
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h4 className="font-medium">Răspunsuri:</h4>
-                {selectedSubmission.answers.map((answer, index) => {
-                  const answerKeyArray = selectedSubmission.material?.answer_key as string[] | null;
-                  const correctAnswer = answerKeyArray?.[index];
-                  const isCorrect = answer === correctAnswer;
+                {(() => {
+                  const answers = selectedSubmission.answers;
+                  const material = selectedSubmission.material;
                   
-                  return (
-                    <div 
-                      key={index}
-                      className={`flex items-center justify-between p-2 rounded ${
-                        isCorrect ? 'bg-green-500/10' : 'bg-destructive/10'
-                      }`}
-                    >
-                      <span className="font-medium">Întrebarea {index + 1}:</span>
-                      <div className="flex items-center gap-2">
-                        <span className={isCorrect ? 'text-green-500' : 'text-destructive'}>
-                          {answer || '-'}
-                        </span>
-                        {!isCorrect && correctAnswer && (
-                          <span className="text-muted-foreground text-sm">
-                            (corect: {correctAnswer})
-                          </span>
-                        )}
-                        {isCorrect ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-destructive" />
-                        )}
+                  // Multi-subject format (object with subject keys)
+                  if (answers && typeof answers === 'object' && !Array.isArray(answers)) {
+                    const subjectConfig = material?.subject_config;
+                    return Object.entries(answers as Record<string, string[]>).map(([subjectKey, subjectAnswers]) => {
+                      const config = subjectConfig?.[subjectKey];
+                      const correctAnswers = config?.answerKey || [];
+                      return (
+                        <div key={subjectKey} className="space-y-2">
+                          <h5 className="font-medium text-sm text-primary">
+                            {subjectNames[subjectKey as Subject] || subjectKey}
+                          </h5>
+                          {(subjectAnswers || []).map((answer, index) => {
+                            const correctAnswer = correctAnswers[index];
+                            const isCorrect = answer && answer.trim() !== '' && answer === correctAnswer;
+                            return (
+                              <div key={`${subjectKey}-${index}`} className={`flex items-center justify-between p-2 rounded ${isCorrect ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
+                                <span className="font-medium text-sm">Î{index + 1}:</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={isCorrect ? 'text-green-500' : 'text-destructive'}>{answer?.trim() || '-'}</span>
+                                  {!isCorrect && correctAnswer && <span className="text-muted-foreground text-xs">(corect: {correctAnswer})</span>}
+                                  {isCorrect ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-destructive" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    });
+                  }
+                  
+                  // Simple array format
+                  const flatAnswers = Array.isArray(answers) ? answers : [];
+                  const answerKeyArray = material?.answer_key as string[] | null;
+                  return flatAnswers.map((answer, index) => {
+                    const correctAnswer = answerKeyArray?.[index];
+                    const isCorrect = answer === correctAnswer;
+                    return (
+                      <div key={index} className={`flex items-center justify-between p-2 rounded ${isCorrect ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
+                        <span className="font-medium">Întrebarea {index + 1}:</span>
+                        <div className="flex items-center gap-2">
+                          <span className={isCorrect ? 'text-green-500' : 'text-destructive'}>{answer || '-'}</span>
+                          {!isCorrect && correctAnswer && <span className="text-muted-foreground text-sm">(corect: {correctAnswer})</span>}
+                          {isCorrect ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-destructive" />}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
 
               {/* Submission Time */}
