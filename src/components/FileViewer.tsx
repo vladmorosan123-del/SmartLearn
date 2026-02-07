@@ -46,7 +46,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const type = fileType.toLowerCase();
   const needsBlob = ['pdf', 'txt'].includes(type);
   const { blobUrl, isLoading: isBlobLoading, error: blobError } = useBlobUrl(
-    needsBlob && safeFileUrl ? safeFileUrl : null
+    needsBlob && isOpen ? fileUrl : null
   );
 
   // The URL to use for rendering in iframe
