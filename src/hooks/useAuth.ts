@@ -28,6 +28,34 @@ export const useAuth = () => {
     isLoading: true,
   });
 
+  // Auto-logout on tab/browser close
+  useEffect(() => {
+    // Mark that session is active in this tab
+    sessionStorage.setItem('lm_tab_active', 'true');
+
+    const handleBeforeUnload = () => {
+      // sessionStorage is cleared when tab closes but persists on refresh
+      // We use a sync approach: send a signOut beacon on unload
+      // Check if this is a tab close (sessionStorage will be gone) vs refresh
+      // We sign out on every unload and restore on load if sessionStorage flag exists
+      const keysToRemove = Object.keys(localStorage).filter(
+        key => key.startsWith('sb-') || key.startsWith('supabase.')
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Also clear app context
+      localStorage.removeItem('lm_user_role');
+      localStorage.removeItem('lm_subject');
+      localStorage.removeItem('lm_user_name');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
