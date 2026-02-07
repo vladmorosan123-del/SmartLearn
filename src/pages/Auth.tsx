@@ -22,14 +22,15 @@ const Auth = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingRole, setIsCheckingRole] = useState(false);
   const [errors, setErrors] = useState<{ username?: string; password?: string; newPassword?: string; confirmPassword?: string }>({});
 
-  // Redirect if already authenticated (only for login view)
+  // Redirect if already authenticated (only for login view, and not while checking role)
   useEffect(() => {
-    if (isAuthenticated && !authLoading && view === 'login') {
+    if (isAuthenticated && !authLoading && !isCheckingRole && view === 'login') {
       navigate('/materii');
     }
-  }, [isAuthenticated, authLoading, navigate, view]);
+  }, [isAuthenticated, authLoading, isCheckingRole, navigate, view]);
 
   const validateLoginForm = () => {
     const newErrors: { username?: string; password?: string } = {};
@@ -75,11 +76,13 @@ const Auth = () => {
     if (!validateLoginForm()) return;
     
     setIsLoading(true);
+    setIsCheckingRole(true);
     
     try {
       const { error } = await signInWithUsername(username.trim(), password);
       
       if (error) {
+        setIsCheckingRole(false);
         toast({
           title: "Eroare de autentificare",
           description: error.message === 'Invalid login credentials' 
@@ -96,6 +99,7 @@ const Auth = () => {
         const { data: role } = await supabase.rpc('get_user_role', { _user_id: session.user.id });
         if (role === 'profesor' || role === 'admin') {
           await supabase.auth.signOut();
+          setIsCheckingRole(false);
           toast({
             title: "Secțiune greșită",
             description: "Acesta este un cont de Profesor, autentifică-te la secțiunea Profesor.",
@@ -105,12 +109,14 @@ const Auth = () => {
         }
       }
 
+      setIsCheckingRole(false);
       toast({
         title: "Autentificare reușită",
         description: "Bine ai venit!",
       });
       navigate('/materii');
     } catch (err) {
+      setIsCheckingRole(false);
       toast({
         title: "Eroare",
         description: "A apărut o eroare. Încearcă din nou.",
