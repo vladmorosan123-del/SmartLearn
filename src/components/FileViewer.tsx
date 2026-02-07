@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { downloadFile } from '@/lib/downloadFile';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
+import ZoomableWrapper from '@/components/ZoomableWrapper';
 
 interface FileViewerProps {
   isOpen: boolean;
@@ -199,47 +200,55 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                   )}
                   
                   {isPdf && !loadTimeout && !iframeError && (
-                    <iframe
-                      src={getGoogleViewerUrl(safeFileUrl)}
-                      className="w-full h-full rounded-lg border border-border bg-white"
-                      title={fileName}
-                      allow="autoplay"
-                      onLoad={handleIframeLoad}
-                      onError={handleIframeError}
-                    />
+                    <ZoomableWrapper>
+                      <iframe
+                        src={getGoogleViewerUrl(safeFileUrl)}
+                        className="w-full h-full rounded-lg border border-border bg-white"
+                        title={fileName}
+                        allow="autoplay"
+                        onLoad={handleIframeLoad}
+                        onError={handleIframeError}
+                      />
+                    </ZoomableWrapper>
                   )}
                   
                   {isTxt && (
-                    <iframe
-                      src={safeFileUrl}
-                      className="w-full h-full rounded-lg border border-border bg-white"
-                      title={fileName}
-                      onLoad={handleIframeLoad}
-                      onError={handleIframeError}
-                    />
+                    <ZoomableWrapper>
+                      <iframe
+                        src={safeFileUrl}
+                        className="w-full h-full rounded-lg border border-border bg-white"
+                        title={fileName}
+                        onLoad={handleIframeLoad}
+                        onError={handleIframeError}
+                      />
+                    </ZoomableWrapper>
                   )}
 
                   {isVideo && (
-                    <video
-                      src={safeFileUrl}
-                      controls
-                      className="max-w-full max-h-full rounded-lg shadow-lg"
-                      controlsList="nodownload"
-                    >
-                      <source src={safeFileUrl} type={getVideoMimeType(type)} />
-                      Browser-ul tău nu suportă redarea video.
-                    </video>
+                    <ZoomableWrapper>
+                      <video
+                        src={safeFileUrl}
+                        controls
+                        className="max-w-full max-h-full rounded-lg shadow-lg"
+                        controlsList="nodownload"
+                      >
+                        <source src={safeFileUrl} type={getVideoMimeType(type)} />
+                        Browser-ul tău nu suportă redarea video.
+                      </video>
+                    </ZoomableWrapper>
                   )}
 
                   {isOfficeDoc && !loadTimeout && !iframeError && (
-                    <iframe
-                      src={getGoogleViewerUrl(safeFileUrl)}
-                      className="w-full h-full rounded-lg border border-border bg-white"
-                      title={fileName}
-                      allow="autoplay"
-                      onLoad={handleIframeLoad}
-                      onError={handleIframeError}
-                    />
+                    <ZoomableWrapper>
+                      <iframe
+                        src={getGoogleViewerUrl(safeFileUrl)}
+                        className="w-full h-full rounded-lg border border-border bg-white"
+                        title={fileName}
+                        allow="autoplay"
+                        onLoad={handleIframeLoad}
+                        onError={handleIframeError}
+                      />
+                    </ZoomableWrapper>
                   )}
                 </>
               )}

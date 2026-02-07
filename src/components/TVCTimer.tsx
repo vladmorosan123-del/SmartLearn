@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
+import ZoomableWrapper from '@/components/ZoomableWrapper';
 
 interface TVCTimerProps {
   subjectTitle: string;
@@ -192,12 +193,14 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             {/* PDF Content Area */}
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
               {pdfUrl ? (
-                <iframe 
-                  src={getPdfViewerUrl(pdfUrl)} 
-                  className="w-full h-full rounded-lg border border-border bg-white"
-                  title="TVC Subject PDF"
-                  allow="autoplay"
-                />
+                <ZoomableWrapper>
+                  <iframe 
+                    src={getPdfViewerUrl(pdfUrl)} 
+                    className="w-full h-full rounded-lg border border-border bg-white"
+                    title="TVC Subject PDF"
+                    allow="autoplay"
+                  />
+                </ZoomableWrapper>
               ) : (
                 <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
