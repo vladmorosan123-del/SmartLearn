@@ -5,6 +5,8 @@ import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { supabase } from '@/integrations/supabase/client';
+import ZoomableWrapper from '@/components/ZoomableWrapper';
+import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface SubjectFileInfo {
   url: string;
@@ -294,15 +296,17 @@ const TVCTimerComplet = ({
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
               {currentFile.url ? (
                 isImage ? (
-                  <img src={currentFile.url} alt={currentFile.name || subjectTitle} className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background" />
+                  <ImageZoomViewer src={currentFile.url} alt={currentFile.name || subjectTitle} />
                 ) : isPdf ? (
-                  <iframe 
-                    key={currentFile.url}
-                    src={getPdfViewerUrl(currentFile.url)} 
-                    className="w-full h-full rounded-lg border border-border bg-white" 
-                    title="TVC Subject PDF" 
-                    allow="autoplay" 
-                  />
+                  <ZoomableWrapper>
+                    <iframe 
+                      key={currentFile.url}
+                      src={getPdfViewerUrl(currentFile.url)} 
+                      className="w-full h-full rounded-lg border border-border bg-white" 
+                      title="TVC Subject PDF" 
+                      allow="autoplay" 
+                    />
+                  </ZoomableWrapper>
                 ) : (
                   <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                     <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-4" />
