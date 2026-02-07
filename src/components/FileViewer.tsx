@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
+import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface FileViewerProps {
   isOpen: boolean;
@@ -193,10 +194,9 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                 <>
                   {isImage && (
                     imageError ? renderFallbackOptions() : (
-                      <img
+                      <ImageZoomViewer
                         src={safeFileUrl}
                         alt={fileName}
-                        className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                         onError={() => setImageError(true)}
                       />
                     )
