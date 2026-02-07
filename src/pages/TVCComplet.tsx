@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { getSignedFileUrl } from '@/lib/storage';
+import { downloadFile } from '@/lib/downloadFile';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, Award, Search, Plus, Trash2, Eye, Download,
@@ -362,12 +363,7 @@ const TVCComplet = () => {
                             variant="outline" size="sm" className="gap-1"
                             onClick={async () => {
                               const url = await getSignedFileUrl(material.file_url);
-                              const link = document.createElement('a');
-                              link.href = url;
-                              link.download = material.file_name;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
+                              downloadFile(url, material.file_name);
                             }}
                           >
                             <Download className="w-4 h-4" />
