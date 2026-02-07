@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -171,14 +172,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                     variant="gold" 
                     size="sm"
                     className="gap-2"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = pdfUrl;
-                      link.download = `${subjectTitle}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
+                    onClick={() => downloadFile(pdfUrl, `${subjectTitle}.pdf`)}
                   >
                     <Download className="w-4 h-4" />
                     Descarcă PDF
