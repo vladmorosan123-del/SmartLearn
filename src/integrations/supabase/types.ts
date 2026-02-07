@@ -98,6 +98,7 @@ export type Database = {
           file_url: string
           genre: string | null
           id: string
+          item_points: Json | null
           lesson_number: number | null
           oficiu: number | null
           publish_at: string | null
@@ -120,6 +121,7 @@ export type Database = {
           file_url: string
           genre?: string | null
           id?: string
+          item_points?: Json | null
           lesson_number?: number | null
           oficiu?: number | null
           publish_at?: string | null
@@ -142,6 +144,7 @@ export type Database = {
           file_url?: string
           genre?: string | null
           id?: string
+          item_points?: Json | null
           lesson_number?: number | null
           oficiu?: number | null
           publish_at?: string | null

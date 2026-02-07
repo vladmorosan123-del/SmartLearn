@@ -99,7 +99,7 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
       onComplete?.(data.score, data.totalQuestions);
       
       const gradeMessage = data.oficiu > 0 
-        ? `Nota: ${data.finalGrade} (${data.baseGrade} + ${data.oficiu} oficiu) • ${data.pointsPerItem || '-'} pct/item`
+        ? `Nota: ${data.finalGrade} (${data.baseGrade} + ${data.oficiu} oficiu)`
         : `Nota: ${data.finalGrade}`;
       
       toast({
@@ -186,11 +186,6 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
           <div className="pt-2 border-t border-border/50">
             <p className="text-sm text-muted-foreground">
               Răspunsuri corecte: {score} / {questionCount}
-              {oficiu > 0 && questionCount > 0 && (
-                <span className="ml-2">
-                  • {((10 - oficiu) / questionCount).toFixed(2)} pct/item
-                </span>
-              )}
             </p>
           </div>
           
