@@ -204,7 +204,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
                   
                   {isPdf && !loadTimeout && !iframeError && (
                     <iframe
-                      src={getGoogleViewerUrl(safeFileUrl)}
+                      src={safeFileUrl}
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title={fileName}
                       allow="autoplay"
