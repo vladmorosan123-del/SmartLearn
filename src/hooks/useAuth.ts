@@ -190,9 +190,18 @@ export const useAuth = () => {
       role: null,
       isLoading: false,
     });
+
+    // Clear all Supabase auth tokens from localStorage
+    const keysToRemove = Object.keys(localStorage).filter(
+      key => key.startsWith('sb-') || key.startsWith('supabase.')
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      // Use global scope to invalidate the session on the server too
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (e) {
+      // Even if API fails, local state and storage are already cleared
       console.error('Sign out API error:', e);
     }
     return { error: null };
