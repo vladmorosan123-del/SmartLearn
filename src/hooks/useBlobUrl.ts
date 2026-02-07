@@ -28,16 +28,19 @@ export const useBlobUrl = (originalUrl: string | null) => {
       try {
         let blob: Blob;
         const storagePath = extractStoragePath(originalUrl);
+        console.log('[useBlobUrl] Loading:', { originalUrl, storagePath });
 
         if (storagePath) {
           // Use Supabase SDK — handles auth & bypasses CORS
           const { data, error: dlErr } = await supabase.storage
             .from('materials')
             .download(storagePath);
+          console.log('[useBlobUrl] Supabase download result:', { hasData: !!data, error: dlErr?.message });
           if (dlErr || !data) throw dlErr || new Error('Download failed');
           blob = data;
         } else {
           // External URL — plain fetch
+          console.log('[useBlobUrl] Fetching external URL');
           const res = await fetch(originalUrl);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           blob = await res.blob();
@@ -45,11 +48,12 @@ export const useBlobUrl = (originalUrl: string | null) => {
 
         if (!cancelled) {
           objectUrl = URL.createObjectURL(blob);
+          console.log('[useBlobUrl] Created blob URL:', objectUrl);
           setBlobUrl(objectUrl);
           setIsLoading(false);
         }
       } catch (e) {
-        console.error('useBlobUrl error:', e);
+        console.error('[useBlobUrl] Error:', e);
         if (!cancelled) {
           setError(true);
           setIsLoading(false);
