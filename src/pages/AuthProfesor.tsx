@@ -92,13 +92,29 @@ const AuthProfesor = () => {
           description: error.message,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Autentificare reușită",
-          description: "Bine ai venit!",
-        });
-        // Role will be set by the useEffect when authRole changes
+        return;
       }
+
+      // Check role - only professors/admins allowed here
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: role } = await supabase.rpc('get_user_role', { _user_id: session.user.id });
+        if (role === 'student') {
+          await supabase.auth.signOut();
+          toast({
+            title: "Secțiune greșită",
+            description: "Contul tău este de elev. Te rugăm să te autentifici din secțiunea Elev.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      toast({
+        title: "Autentificare reușită",
+        description: "Bine ai venit!",
+      });
+      // Role will be set by the useEffect when authRole changes
     } catch (err) {
       toast({
         title: "Eroare",
