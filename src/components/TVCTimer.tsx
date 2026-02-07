@@ -14,12 +14,13 @@ interface TVCTimerProps {
   timerMinutes?: number;
 }
 
+// Helper function to get PDF viewer URL using Google Docs Viewer
 const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 };
 
 const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180 }: TVCTimerProps) => {
-  const INITIAL_TIME = timerMinutes * 60;
+  const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
   
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
@@ -33,13 +34,19 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   
   const quizRef = useRef<TVCQuizInterfaceRef>(null);
 
+  // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
     const fetchQuestionCount = async () => {
       if (hasAnswerKey && materialId && !initialQuestionCount) {
         setIsLoadingQuestionCount(true);
         try {
-          const { data, error } = await supabase.rpc('get_material_question_count', { _material_id: materialId });
-          if (!error && typeof data === 'number') setQuestionCount(data);
+          const { data, error } = await supabase.rpc('get_material_question_count', {
+            _material_id: materialId
+          });
+          
+          if (!error && typeof data === 'number') {
+            setQuestionCount(data);
+          }
         } catch (err) {
           console.error('Error fetching question count:', err);
         } finally {
@@ -49,11 +56,13 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
         setQuestionCount(initialQuestionCount);
       }
     };
+    
     fetchQuestionCount();
   }, [hasAnswerKey, materialId, initialQuestionCount]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
+
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
@@ -61,9 +70,11 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             setIsRunning(false);
             setIsTimeUp(true);
             setHasSubmitted(true);
+            // Trigger auto-submit when time runs out
             setAutoSubmitQuiz(true);
             return 0;
           }
+          // Show warning at 5 minutes remaining
           if (prev === 300) {
             setShowTimeUpWarning(true);
             setTimeout(() => setShowTimeUpWarning(false), 5000);
@@ -72,7 +83,10 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
         });
       }, 1000);
     }
-    return () => { if (interval) clearInterval(interval); };
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isRunning, timeLeft]);
 
   const formatTime = useCallback((seconds: number) => {
@@ -82,14 +96,37 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  const handleStart = () => { setIsRunning(true); setHasStarted(true); };
-  const handleSubmitTest = () => { setIsRunning(false); setIsTimeUp(true); setHasSubmitted(true); setAutoSubmitQuiz(true); };
-  const handleQuizReset = () => { setTimeLeft(INITIAL_TIME); setIsRunning(true); setHasSubmitted(false); setIsTimeUp(false); setAutoSubmitQuiz(false); };
-  const handleClose = () => { onClose(); };
+  const handleStart = () => {
+    setIsRunning(true);
+    setHasStarted(true);
+  };
+
+  const handleSubmitTest = () => {
+    setIsRunning(false);
+    setIsTimeUp(true);
+    setHasSubmitted(true);
+    // Also trigger auto-submit on manual submit
+    setAutoSubmitQuiz(true);
+  };
+
+  const handleQuizReset = () => {
+    // Reset the timer and quiz state to start fresh
+    setTimeLeft(INITIAL_TIME);
+    setIsRunning(true);
+    setHasSubmitted(false);
+    setIsTimeUp(false);
+    setAutoSubmitQuiz(false);
+  };
+
+  const handleClose = () => {
+    onClose();
+  };
 
   const quizAvailable = hasAnswerKey && questionCount > 0 && materialId;
+
   const progress = ((INITIAL_TIME - timeLeft) / INITIAL_TIME) * 100;
 
+  // Time-based color
   const getTimerColor = () => {
     if (isTimeUp) return 'text-destructive';
     if (timeLeft <= 300) return 'text-orange-500';
@@ -99,8 +136,10 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
 
   return (
     <div className="fixed inset-0 z-50 flex">
+      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/90" />
       
+      {/* Time-up Warning Toast */}
       {showTimeUpWarning && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] animate-fade-up">
           <div className="bg-orange-500 text-white px-6 py-3 rounded-lg flex items-center gap-3 shadow-lg">
@@ -110,37 +149,57 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
         </div>
       )}
       
+      {/* Content Container */}
       <div className="relative flex flex-col md:flex-row w-full h-full overflow-y-auto md:overflow-hidden">
+        {/* Left Side - PDF Viewer */}
         {hasStarted ? (
           <div className="min-h-[60vh] md:min-h-0 md:flex-1 flex flex-col bg-background/95 md:border-r border-b md:border-b-0 border-border">
+            {/* PDF Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-gold" />
                 <h2 className="font-display text-lg text-foreground">{subjectTitle}</h2>
               </div>
               <div className="flex items-center gap-3">
+                {/* Always visible timer in header */}
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted ${getTimerColor()}`}>
                   <Clock className="w-4 h-4" />
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
                 {pdfUrl && (
-                  <Button variant="gold" size="sm" className="gap-2"
-                    onClick={() => { window.open(pdfUrl, '_blank'); }}
+                  <Button 
+                    variant="gold" 
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = pdfUrl;
+                      link.download = `${subjectTitle}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
                   >
                     <Download className="w-4 h-4" />
                     Descarcă PDF
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleClose}
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   <X className="w-5 h-5" />
                 </Button>
               </div>
             </div>
             
+            {/* PDF Content Area */}
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
               {pdfUrl ? (
                 <iframe 
-                  src={pdfUrl} 
+                  src={getPdfViewerUrl(pdfUrl)} 
                   className="w-full h-full rounded-lg border border-border bg-white"
                   title="TVC Subject PDF"
                   allow="autoplay"
