@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { downloadFile } from '@/lib/downloadFile';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Shield, FileText, Eye, Plus, Download,
@@ -390,14 +391,7 @@ const ModeleBac = () => {
                             </Button>
                             <Button
                               variant="outline" size="sm" className="gap-1"
-                              onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = model.file_url;
-                                link.download = model.file_name;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                              }}
+                              onClick={() => downloadFile(model.file_url, model.file_name)}
                             >
                               <Download className="w-4 h-4" />
                               Descarcă

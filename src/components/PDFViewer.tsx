@@ -1,5 +1,6 @@
 import { X, FileText, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { downloadFile } from '@/lib/downloadFile';
 
 interface PDFViewerProps {
   title: string;
@@ -10,12 +11,7 @@ interface PDFViewerProps {
 const PDFViewer = ({ title, onClose, pdfUrl }: PDFViewerProps) => {
   const handleDownload = () => {
     if (pdfUrl) {
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = `${title}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadFile(pdfUrl, `${title}.pdf`);
     }
   };
   return (
