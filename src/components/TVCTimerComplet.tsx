@@ -225,14 +225,7 @@ const TVCTimerComplet = ({
                   <Clock className="w-4 h-4" />
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
-                {currentFile.url && (
-                  <Button variant="gold" size="sm" className="gap-2"
-                    onClick={() => downloadFile(currentFile.url, currentFile.name || `${subjectTitle}.pdf`)}
-                  >
-                    <Download className="w-4 h-4" />
-                    Descarcă
-                  </Button>
-                )}
+                {/* Download removed for students */}
                 <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground">
                   <X className="w-5 h-5" />
                 </Button>
