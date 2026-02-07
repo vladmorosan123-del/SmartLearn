@@ -69,70 +69,83 @@ const AdminPanel = () => {
   const { students: progressStudents, stats: progressStats, isLoading: isProgressLoading, refetch: refetchProgress, formatTime } = useStudentProgress();
 
   // Fetch real data from database
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // First, get all user IDs with the 'student' role
-        const { data: studentRoles } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'student');
+  const fetchData = async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
+    try {
+      // First, get all user IDs with the 'student' role
+      const { data: studentRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'student');
 
-        const studentUserIds = studentRoles?.map(r => r.user_id) || [];
+      const studentUserIds = studentRoles?.map(r => r.user_id) || [];
 
-        // Fetch only student profiles (exclude professors and admins)
-        if (studentUserIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('user_id', studentUserIds)
-            .order('created_at', { ascending: false });
+      // Fetch only student profiles (exclude professors and admins)
+      if (studentUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('user_id', studentUserIds)
+          .order('created_at', { ascending: false });
 
-          if (profiles) {
-            setStudents(profiles as StudentProfile[]);
-          }
-        } else {
-          setStudents([]);
+        if (profiles) {
+          setStudents(profiles as StudentProfile[]);
         }
-
-        // Fetch materials count by category and subject + recent materials
-        const { data: materials } = await supabase
-          .from('materials')
-          .select('id, title, category, subject, created_at, updated_at')
-          .order('updated_at', { ascending: false });
-
-        if (materials) {
-          const stats: MaterialStats = {
-            informatica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
-            romana: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
-            matematica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
-            fizica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
-          };
-
-          materials.forEach((m) => {
-            const subject = m.subject as Subject;
-            if (stats[subject]) {
-              if (m.category === 'lectie') stats[subject].lessons++;
-              else if (m.category === 'bac') stats[subject].bacModels++;
-              else if (m.category === 'tvc') stats[subject].tvcMaterials++;
-            }
-          });
-
-          setMaterialStats(stats);
-          
-          // Set recent materials (last 10)
-          setRecentMaterials(materials.slice(0, 10) as RecentMaterial[]);
-        }
-      } catch (error) {
-        console.error('Error fetching admin data:', error);
-      } finally {
-        setIsLoading(false);
+      } else {
+        setStudents([]);
       }
-    };
 
+      // Fetch materials count by category and subject + recent materials
+      const { data: materials } = await supabase
+        .from('materials')
+        .select('id, title, category, subject, created_at, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (materials) {
+        const stats: MaterialStats = {
+          informatica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+          romana: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+          matematica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+          fizica: { lessons: 0, bacModels: 0, tvcMaterials: 0 },
+        };
+
+        materials.forEach((m) => {
+          const subject = m.subject as Subject;
+          if (stats[subject]) {
+            if (m.category === 'lectie') stats[subject].lessons++;
+            else if (m.category === 'bac') stats[subject].bacModels++;
+            else if (m.category === 'tvc') stats[subject].tvcMaterials++;
+          }
+        });
+
+        setMaterialStats(stats);
+        
+        // Set recent materials (last 10)
+        setRecentMaterials(materials.slice(0, 10) as RecentMaterial[]);
+      }
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
     fetchData();
   }, []);
+
+  // Refetch on window focus (handles tab switching, navigation back)
+  useEffect(() => {
+    const handleFocus = () => fetchData(false);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Refetch when switching admin tabs
+  useEffect(() => {
+    fetchData(false);
+  }, [activeTab]);
 
   // Calculate platform stats from real data
   const platformStats = {
