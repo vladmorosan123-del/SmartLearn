@@ -1,1 +1,13 @@
 project_id = "cvbfqexztbfnrvqouqlu"
+
+[functions.verify-quiz-answers]
+verify_jwt = false
+
+[functions.admin-management]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.update-password]
+verify_jwt = false
