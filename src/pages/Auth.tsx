@@ -98,7 +98,7 @@ const Auth = () => {
           await supabase.auth.signOut();
           toast({
             title: "Secțiune greșită",
-            description: "Contul tău este de profesor. Te rugăm să te autentifici din secțiunea Profesor.",
+            description: "Acesta este un cont de Profesor, autentifică-te la secțiunea Profesor.",
             variant: "destructive",
           });
           return;
