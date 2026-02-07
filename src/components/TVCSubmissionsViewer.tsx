@@ -121,7 +121,7 @@ const TVCSubmissionsViewer = () => {
       // Combine data
       const enrichedSubmissions = submissionsData.map(submission => ({
         ...submission,
-        answers: submission.answers as string[],
+        answers: Array.isArray(submission.answers) ? submission.answers as string[] : [],
         profile: profiles?.find(p => p.user_id === submission.user_id),
         material: materials?.find(m => m.id === submission.material_id),
       }));
