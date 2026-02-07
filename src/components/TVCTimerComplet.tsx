@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { supabase } from '@/integrations/supabase/client';
+import { extractStoragePath } from '@/lib/storage';
+import BlobPdfIframe from '@/components/BlobPdfIframe';
 
 interface SubjectFileInfo {
   url: string;
@@ -42,9 +44,7 @@ interface TVCTimerCompletProps {
   subjectConfig?: Record<string, SubjectConfig> | null;
 }
 
-const getPdfViewerUrl = (url: string) => {
-  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-};
+// Removed getPdfViewerUrl — now using BlobPdfIframe for CORS-safe rendering
 
 const subjectMeta: Record<string, { label: string; icon: typeof Calculator; color: string }> = {
   matematica: { label: 'Matematică', icon: Calculator, color: 'text-emerald-500' },
@@ -224,13 +224,29 @@ const TVCTimerComplet = ({
                 </div>
                 {currentFile.url && (
                   <Button variant="gold" size="sm" className="gap-2"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = currentFile.url;
-                      link.download = currentFile.name || `${subjectTitle}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                    onClick={async () => {
+                      try {
+                        let blob: Blob;
+                        const storagePath = extractStoragePath(currentFile.url);
+                        if (storagePath) {
+                          const { data, error } = await supabase.storage.from('materials').download(storagePath);
+                          if (error || !data) throw error || new Error('Download failed');
+                          blob = data;
+                        } else {
+                          const res = await fetch(currentFile.url);
+                          blob = await res.blob();
+                        }
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = currentFile.name || `${subjectTitle}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        window.open(currentFile.url, '_blank');
+                      }
                     }}
                   >
                     <Download className="w-4 h-4" />
@@ -302,12 +318,10 @@ const TVCTimerComplet = ({
                 isImage ? (
                   <img src={currentFile.url} alt={currentFile.name || subjectTitle} className="max-w-full max-h-full object-contain rounded-lg border border-border bg-background" />
                 ) : isPdf ? (
-                  <iframe 
+                  <BlobPdfIframe
                     key={currentFile.url}
-                    src={getPdfViewerUrl(currentFile.url)} 
-                    className="w-full h-full rounded-lg border border-border bg-white" 
-                    title="TVC Subject PDF" 
-                    allow="autoplay" 
+                    fileUrl={currentFile.url}
+                    title="TVC Subject PDF"
                   />
                 ) : (
                   <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
