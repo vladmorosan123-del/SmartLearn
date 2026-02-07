@@ -71,7 +71,7 @@ serve(async (req: Request) => {
     // Get material data
     const { data: material, error: materialError } = await supabaseAdmin
       .from('materials')
-      .select('answer_key, title, oficiu, subject_config')
+      .select('answer_key, title, oficiu, subject_config, item_points')
       .eq('id', materialId)
       .single();
 
@@ -188,13 +188,34 @@ serve(async (req: Request) => {
       isCorrect: answer === answerKey[index],
     }));
 
-    const correctCount = results.filter((r: any) => r.isCorrect).length;
     const totalQuestions = answerKey.length;
     const oficiu = material.oficiu || 0;
     
-    // Formula: punctaj/item = (10 - oficiu) / nr_itemi
-    const pointsPerItem = totalQuestions > 0 ? (10 - oficiu) / totalQuestions : 0;
-    const baseGrade = parseFloat((correctCount * pointsPerItem).toFixed(2));
+    // Use custom item_points if available, otherwise default to 1 point per item
+    const itemPoints = (material as any).item_points as number[] | null;
+    let baseGrade: number;
+    const pointsPerItem: number[] = [];
+    
+    if (itemPoints && Array.isArray(itemPoints) && itemPoints.length === totalQuestions) {
+      // Custom scoring: each item has its own point value
+      baseGrade = 0;
+      for (let i = 0; i < totalQuestions; i++) {
+        const pts = Number(itemPoints[i]) || 0;
+        pointsPerItem.push(pts);
+        if (results[i].isCorrect) {
+          baseGrade += pts;
+        }
+      }
+      baseGrade = parseFloat(baseGrade.toFixed(2));
+    } else {
+      // Default scoring: 1 point per correct answer
+      for (let i = 0; i < totalQuestions; i++) {
+        pointsPerItem.push(1);
+      }
+      baseGrade = results.filter((r: any) => r.isCorrect).length;
+    }
+    
+    const correctCount = results.filter((r: any) => r.isCorrect).length;
     const finalGrade = parseFloat((baseGrade + oficiu).toFixed(2));
 
     const { error: insertError } = await supabaseAdmin.from('tvc_submissions').insert({
@@ -210,7 +231,7 @@ serve(async (req: Request) => {
       console.error('Error saving submission:', insertError);
     }
 
-    console.log(`Quiz verified for user ${user.id}: ${correctCount}/${totalQuestions} on material ${materialId}. Points/item: ${pointsPerItem.toFixed(2)}, Base grade: ${baseGrade}, Oficiu: ${oficiu}, Final: ${finalGrade}`);
+    console.log(`Quiz verified for user ${user.id}: ${correctCount}/${totalQuestions} on material ${materialId}. Base grade: ${baseGrade}, Oficiu: ${oficiu}, Final: ${finalGrade}`);
 
     return new Response(
       JSON.stringify({
@@ -220,7 +241,7 @@ serve(async (req: Request) => {
         results,
         timeSpentSeconds,
         oficiu,
-        pointsPerItem: parseFloat(pointsPerItem.toFixed(2)),
+        pointsPerItem,
         baseGrade,
         finalGrade,
       }),

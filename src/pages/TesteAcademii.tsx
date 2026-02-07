@@ -126,6 +126,7 @@ const TesteAcademii = () => {
     fileSize: number;
     answerKey?: string[];
     oficiu?: number;
+    itemPoints?: number[];
     timerMinutes?: number;
     publishAt?: string;
   }) => {
@@ -147,7 +148,8 @@ const TesteAcademii = () => {
         oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
         publish_at: data.publishAt || null,
-      });
+        item_points: data.itemPoints || null,
+      } as any);
       toast({ title: 'Material salvat', description: 'Materialul TVC a fost salvat cu succes.' });
     } catch (error) {
       console.error('Error saving material:', error);
@@ -164,6 +166,7 @@ const TesteAcademii = () => {
     year?: number;
     answerKey?: string[];
     oficiu?: number;
+    itemPoints?: number[];
     timerMinutes?: number;
     publishAt?: string | null;
     fileUrl?: string;
@@ -180,6 +183,7 @@ const TesteAcademii = () => {
         year: data.year || null,
         answer_key: Array.isArray(data.answerKey) ? data.answerKey : null,
         oficiu: data.oficiu ?? 0,
+        item_points: data.itemPoints || null,
         timer_minutes: data.timerMinutes ?? 180,
         publish_at: data.publishAt ?? null,
       };

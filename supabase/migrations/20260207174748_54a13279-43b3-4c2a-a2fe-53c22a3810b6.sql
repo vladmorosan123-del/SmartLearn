@@ -1,0 +1,1 @@
+ALTER TABLE public.materials ADD COLUMN item_points jsonb DEFAULT NULL;
