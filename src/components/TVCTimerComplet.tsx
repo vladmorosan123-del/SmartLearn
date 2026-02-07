@@ -208,10 +208,10 @@ const TVCTimerComplet = ({
         </div>
       )}
       
-      <div className="relative flex w-full h-full">
+      <div className="relative flex flex-col md:flex-row w-full h-full overflow-y-auto md:overflow-hidden">
         {/* Left Side - PDF Viewer */}
         {hasStarted ? (
-          <div className="flex-1 flex flex-col bg-background/95 border-r border-border">
+          <div className="min-h-[60vh] md:min-h-0 md:flex-1 flex flex-col bg-background/95 md:border-r border-b md:border-b-0 border-border">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-gold" />
@@ -326,7 +326,7 @@ const TVCTimerComplet = ({
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col bg-background/95 border-r border-border items-center justify-center">
+          <div className="flex-1 flex flex-col bg-background/95 md:border-r border-border items-center justify-center">
             <div className="text-center p-12 max-w-md">
               <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Clock className="w-12 h-12 text-gold" />
@@ -355,7 +355,7 @@ const TVCTimerComplet = ({
         )}
 
         {/* Right Side - Quiz Panel */}
-        <div className="w-80 lg:w-[480px] flex flex-col bg-card border-l border-border overflow-hidden">
+        <div className="w-full md:w-80 lg:w-[480px] flex flex-col bg-card md:border-l border-border overflow-hidden">
           <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-border bg-gold/10">
             <Clock className="w-4 h-4 text-gold" />
             <span className="text-sm font-medium text-gold">
