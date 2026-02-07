@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image, FileSpreadsheet, FileType, File, Presentation, Video, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSignedUrl } from '@/hooks/useSignedUrl';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
 
 interface FileViewerProps {
@@ -35,9 +34,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   const [iframeError, setIframeError] = useState(false);
   const [loadTimeout, setLoadTimeout] = useState(false);
   
-  // Resolve signed URL for private bucket
-  const { signedUrl, isLoading: isUrlLoading } = useSignedUrl(isOpen ? fileUrl : null);
-  const safeFileUrl = useMemo(() => (signedUrl || '').trim(), [signedUrl]);
+  const safeFileUrl = useMemo(() => (fileUrl || '').trim(), [fileUrl]);
   const type = fileType.toLowerCase();
 
   // Reset states when URL changes or modal opens
@@ -58,19 +55,6 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType }: FileViewer
   }, [isOpen, safeFileUrl]);
 
   if (!isOpen) return null;
-
-  // Show loading while resolving signed URL
-  if (isUrlLoading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative flex flex-col items-center justify-center p-8">
-          <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
-          <p className="text-white">Se pregătește fișierul...</p>
-        </div>
-      </div>
-    );
-  }
 
   const hasValidUrl = safeFileUrl && safeFileUrl.length > 0 && safeFileUrl.startsWith('http');
 
