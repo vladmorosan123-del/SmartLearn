@@ -401,15 +401,35 @@ const TVCSubmissionsViewer = () => {
               {(() => {
                 const material = selectedSubmission.material;
                 const answers = selectedSubmission.answers;
-                let oficiu = material?.oficiu ?? 0;
-                let baseGrade = selectedSubmission.score;
+                let finalGrade = 0;
+                let gradeDetails = '';
                 
-                // For multi-subject, compute grade from item points or config
+                const WEIGHTS: Record<string, number> = { matematica: 0.5, informatica: 0.3, fizica: 0.2 };
+
+                // Multi-subject: weighted average
                 if (answers && typeof answers === 'object' && !Array.isArray(answers) && material?.subject_config) {
-                  oficiu = Object.values(material.subject_config).reduce((sum, c) => sum + (c.oficiu || 0), 0);
+                  const subjectConfig = material.subject_config;
+                  const parts: string[] = [];
+                  for (const [subj, config] of Object.entries(subjectConfig)) {
+                    const userAnswers = (answers as Record<string, string[]>)[subj] || [];
+                    const correctAnswers = config.answerKey || [];
+                    const correct = userAnswers.filter((a, i) => a && a.trim() !== '' && a === correctAnswers[i]).length;
+                    const oficiu = config.oficiu || 0;
+                    const subjectGrade = correct + oficiu;
+                    const weight = WEIGHTS[subj] || 0;
+                    finalGrade += subjectGrade * weight;
+                    const subjectLabel = subjectNames[subj as Subject] || subj;
+                    parts.push(`${subjectLabel}: ${correct}+${oficiu}of = ${subjectGrade} (×${(weight * 100).toFixed(0)}%)`);
+                  }
+                  finalGrade = parseFloat(finalGrade.toFixed(2));
+                  gradeDetails = parts.join(' | ');
+                } else {
+                  // Single subject
+                  const oficiu = material?.oficiu ?? 0;
+                  finalGrade = Math.min(10, selectedSubmission.score + oficiu);
+                  if (oficiu > 0) gradeDetails = `${selectedSubmission.score} puncte + ${oficiu} oficiu`;
                 }
-                
-                const finalGrade = Math.min(10, baseGrade + oficiu);
+
                 const percentage = selectedSubmission.total_questions > 0 
                   ? Math.round((selectedSubmission.score / selectedSubmission.total_questions) * 100) 
                   : 0;
@@ -417,7 +437,6 @@ const TVCSubmissionsViewer = () => {
                   ? 'bg-green-500/20 border border-green-500/50' 
                   : 'bg-destructive/20 border border-destructive/50';
 
-                // Format time
                 const timeSeconds = selectedSubmission.time_spent_seconds;
                 let timeDisplay = '-';
                 if (timeSeconds && timeSeconds > 0) {
@@ -431,8 +450,10 @@ const TVCSubmissionsViewer = () => {
                     <p className="text-2xl font-bold">Nota: {finalGrade.toFixed(2)}</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {selectedSubmission.score} / {selectedSubmission.total_questions} răspunsuri corecte ({percentage}%)
-                      {oficiu > 0 && ` + ${oficiu} oficiu`}
                     </p>
+                    {gradeDetails && (
+                      <p className="text-xs text-muted-foreground mt-1">{gradeDetails}</p>
+                    )}
                     <p className="text-sm text-muted-foreground mt-1">
                       ⏱ Timp: {timeDisplay}
                     </p>
