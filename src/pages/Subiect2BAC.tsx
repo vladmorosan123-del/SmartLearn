@@ -1,35 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, FileText, Plus, Trash2, Edit, Eye } from 'lucide-react';
+import { ArrowLeft, Shield, FileText, Trash2, Edit, Eye, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-
-interface Template {
-  id: number;
-  title: string | null;
-  description?: string;
-  pdfUrl?: string;
-  status: 'uploaded' | 'not-uploaded';
-}
-
-const initialTemplates: Template[] = [
-  { id: 1, title: 'Șablon Comentariu Literar - Poezie', description: 'Structura comentariului pentru poezie modernistă', pdfUrl: 'https://example.com/pdf', status: 'uploaded' },
-  { id: 2, title: 'Șablon Comentariu Literar - Proză', description: 'Structura comentariului pentru proză', status: 'uploaded' },
-  { id: 3, title: 'Șablon Caracterizare Personaj', description: 'Model pentru caracterizarea personajelor', status: 'uploaded' },
-  ...Array.from({ length: 7 }, (_, i) => ({
-    id: i + 4,
-    title: null,
-    status: 'not-uploaded' as const,
-  })),
-];
+import { useMaterials, Material } from '@/hooks/useMaterials';
+import { getSignedFileUrl } from '@/lib/storage';
+import { downloadFile } from '@/lib/downloadFile';
+import UploadMaterialModal from '@/components/UploadMaterialModal';
+import EditMaterialModal from '@/components/EditMaterialModal';
+import FileViewer from '@/components/FileViewer';
 
 const Subiect2BAC = () => {
   const { role, subject } = useApp();
@@ -37,11 +18,15 @@ const Subiect2BAC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isProfessor = role === 'profesor' || authRole === 'admin';
-  
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', pdfUrl: '' });
+
+  const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
+    subject: 'romana',
+    category: 'subiect2',
+  });
+
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
 
   // Only for Romanian
   if (subject !== 'romana') {
@@ -60,40 +45,55 @@ const Subiect2BAC = () => {
     );
   }
 
-  const handleAddTemplate = (id: number) => {
-    const existing = templates.find(t => t.id === id);
-    setFormData({
-      title: existing?.title || '',
-      description: existing?.description || '',
-      pdfUrl: existing?.pdfUrl || '',
-    });
-    setSelectedTemplateId(id);
-    setIsModalOpen(true);
+  const handleSave = async (data: {
+    title: string;
+    description: string;
+    fileUrl: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    publishAt?: string;
+  }) => {
+    try {
+      await addMaterial({
+        title: data.title,
+        description: data.description || null,
+        file_name: data.fileName,
+        file_type: data.fileType,
+        file_url: data.fileUrl,
+        file_size: data.fileSize,
+        subject: 'romana',
+        category: 'subiect2',
+        lesson_number: null,
+        author: null,
+        genre: null,
+        year: null,
+        publish_at: data.publishAt || null,
+      });
+      toast({ title: 'Șablon salvat', description: 'Șablonul a fost salvat cu succes.' });
+      setIsUploadOpen(false);
+    } catch (error) {
+      console.error('Error saving template:', error);
+    }
   };
 
-  const handleSave = () => {
-    if (!formData.title.trim() || selectedTemplateId === null) return;
-    
-    setTemplates(prev => prev.map(t => 
-      t.id === selectedTemplateId 
-        ? { ...t, title: formData.title, description: formData.description, pdfUrl: formData.pdfUrl, status: 'uploaded' as const }
-        : t
-    ));
-    setIsModalOpen(false);
-    setFormData({ title: '', description: '', pdfUrl: '' });
-    toast({ title: 'Șablon salvat', description: 'Șablonul a fost salvat cu succes.' });
+  const handleDelete = async (material: Material) => {
+    await deleteMaterial(material.id, material.file_url);
   };
 
-  const handleDelete = (id: number) => {
-    setTemplates(prev => prev.map(t => 
-      t.id === id 
-        ? { ...t, title: null, description: undefined, pdfUrl: undefined, status: 'not-uploaded' as const }
-        : t
-    ));
-    toast({ title: 'Șablon șters', description: 'Șablonul a fost șters.' });
+  const handleView = async (material: Material) => {
+    const signedUrl = await getSignedFileUrl(material.file_url);
+    if (signedUrl) {
+      setViewingFile({ url: signedUrl, name: material.file_name, type: material.file_type });
+    }
   };
 
-  const uploadedCount = templates.filter(t => t.status === 'uploaded').length;
+  const handleDownload = async (material: Material) => {
+    const signedUrl = await getSignedFileUrl(material.file_url);
+    if (signedUrl) {
+      downloadFile(signedUrl, material.file_name);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,12 +130,14 @@ const Subiect2BAC = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-8 animate-fade-up">
           <div className="bg-card rounded-lg p-4 border border-border">
-            <p className="text-2xl font-bold text-gold">{uploadedCount}</p>
+            <p className="text-2xl font-bold text-gold">{materials.length}</p>
             <p className="text-xs text-muted-foreground">Șabloane încărcate</p>
           </div>
           <div className="bg-card rounded-lg p-4 border border-border">
-            <p className="text-2xl font-bold text-foreground">{templates.length}</p>
-            <p className="text-xs text-muted-foreground">Total sloturi</p>
+            <p className="text-2xl font-bold text-foreground">
+              {materials.filter(m => m.file_type === 'pdf').length}
+            </p>
+            <p className="text-xs text-muted-foreground">Documente PDF</p>
           </div>
         </div>
 
@@ -148,121 +150,116 @@ const Subiect2BAC = () => {
           </p>
         </div>
 
-        {/* Templates Grid */}
-        <div className="grid gap-4 animate-fade-up delay-200">
-          {templates.map((template, index) => (
-            <div 
-              key={template.id}
-              className={`bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 transition-all ${
-                template.status === 'not-uploaded' ? 'opacity-60' : ''
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    template.status === 'uploaded' ? 'bg-gold/20 text-gold' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <span className="font-bold">{index + 1}</span>
+        {/* Add button for professors */}
+        {isProfessor && (
+          <div className="mb-6 animate-fade-up delay-150">
+            <Button variant="gold" className="gap-2" onClick={() => setIsUploadOpen(true)}>
+              <FileText className="w-4 h-4" />
+              Adaugă Șablon
+            </Button>
+          </div>
+        )}
+
+        {/* Templates List */}
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Se încarcă...</p>
+          </div>
+        ) : materials.length === 0 ? (
+          <div className="text-center py-12 animate-fade-up delay-200">
+            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Nu există șabloane încărcate.</p>
+            {isProfessor && (
+              <p className="text-sm text-muted-foreground mt-2">Apasă „Adaugă Șablon" pentru a încărca primul.</p>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4 animate-fade-up delay-200">
+            {materials.map((material, index) => (
+              <div 
+                key={material.id}
+                className="bg-card rounded-xl p-6 shadow-card border border-border hover:border-gold/50 transition-all"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gold/20 text-gold">
+                      <span className="font-bold">{index + 1}</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground">{material.title}</h3>
+                      {material.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{material.description}</p>
+                      )}
+                      <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded mt-2 inline-flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        {material.file_type.toUpperCase()}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    {template.status === 'not-uploaded' ? (
-                      <h3 className="font-medium text-muted-foreground italic">Șablon neîncărcat</h3>
-                    ) : (
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    {isProfessor ? (
                       <>
-                        <h3 className="font-medium text-foreground">{template.title}</h3>
-                        {template.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
-                        )}
-                        {template.pdfUrl && (
-                          <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded mt-2 inline-flex items-center gap-1">
-                            <FileText className="w-3 h-3" />
-                            PDF atașat
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap shrink-0">
-                  {isProfessor ? (
-                    template.status === 'not-uploaded' ? (
-                      <Button variant="gold" size="sm" className="gap-2" onClick={() => handleAddTemplate(template.id)}>
-                        <Plus className="w-4 h-4" />
-                        Adaugă
-                      </Button>
-                    ) : (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={() => handleAddTemplate(template.id)}>
+                        <Button variant="outline" size="sm" className="gap-1" onClick={() => handleView(material)}>
+                          <Eye className="w-4 h-4" />
+                          Vezi
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1" onClick={() => handleDownload(material)}>
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingMaterial(material)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(template.id)}>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(material)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </>
-                    )
-                  ) : (
-                    template.status === 'uploaded' && (
-                      <Button variant="gold" size="sm" className="gap-2">
+                    ) : (
+                      <Button variant="gold" size="sm" className="gap-2" onClick={() => handleView(material)}>
                         <Eye className="w-4 h-4" />
                         Vizualizează
                       </Button>
-                    )
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
 
-      {/* Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display">Adaugă Șablon</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Titlu *</label>
-              <input
-                type="text"
-                placeholder="ex: Șablon Comentariu - Poezie"
-                value={formData.title}
-                onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Descriere</label>
-              <textarea
-                placeholder="Descriere scurtă..."
-                value={formData.description}
-                onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">URL PDF (opțional)</label>
-              <input
-                type="url"
-                placeholder="https://example.com/sablon.pdf"
-                value={formData.pdfUrl}
-                onChange={e => setFormData(prev => ({ ...prev, pdfUrl: e.target.value }))}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
-                Anulează
-              </Button>
-              <Button variant="gold" className="flex-1" onClick={handleSave} disabled={!formData.title.trim()}>
-                Salvează
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Upload Modal */}
+      <UploadMaterialModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onSave={handleSave}
+        title="Adaugă Șablon Subiectul II"
+        category="subiect2"
+        subject="romana"
+      />
+
+      {/* Edit Modal */}
+      {editingMaterial && (
+        <EditMaterialModal
+          isOpen={!!editingMaterial}
+          onClose={() => setEditingMaterial(null)}
+          material={editingMaterial}
+          onSave={async (updates) => {
+            await updateMaterial(editingMaterial.id, updates);
+            setEditingMaterial(null);
+          }}
+        />
+      )}
+
+      {/* File Viewer */}
+      {viewingFile && (
+        <FileViewer
+          isOpen={!!viewingFile}
+          fileUrl={viewingFile.url}
+          fileName={viewingFile.name}
+          fileType={viewingFile.type}
+          onClose={() => setViewingFile(null)}
+        />
+      )}
     </div>
   );
 };
