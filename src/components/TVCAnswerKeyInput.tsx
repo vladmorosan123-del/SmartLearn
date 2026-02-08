@@ -148,94 +148,110 @@ const TVCAnswerKeyInput = ({
           </Button>
         </div>
       </div>
-      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+      <div className="bg-muted/30 rounded-lg p-3 sm:p-4 space-y-2">
         {Array.from({ length: questionCount }).map((_, index) => {
           const maxLetter = getMaxForQuestion(index);
           const options = getOptionsUpTo(maxLetter);
           const hasOverride = perQuestionMax[index] !== undefined;
 
           return (
-            <div key={index} className="grid items-center gap-2" style={{ gridTemplateColumns: 'auto 1fr auto auto' }}>
-              <span className="w-6 text-sm font-medium text-muted-foreground">
+            <div key={index} className="flex items-center gap-1.5 sm:gap-2">
+              {/* Question number */}
+              <span className="w-5 sm:w-6 text-xs sm:text-sm font-medium text-muted-foreground shrink-0 text-right">
                 {index + 1}.
               </span>
-              <RadioGroup
-                value={value[index] || ''}
-                onValueChange={(answer) => handleAnswerChange(index, answer)}
-                className="grid grid-cols-6 gap-x-1 gap-y-1 sm:gap-x-3"
-              >
-                {ALL_OPTIONS.map((option) => {
-                  const isVisible = options.includes(option);
-                  return (
-                    <div key={option} className={`flex items-center space-x-1 ${!isVisible ? 'invisible' : ''}`}>
-                      <RadioGroupItem
-                        value={option}
-                        id={`q${index}-${option}`}
-                        className="border-gold data-[state=checked]:bg-gold data-[state=checked]:border-gold"
-                        disabled={!isVisible}
-                      />
-                      <Label
-                        htmlFor={`q${index}-${option}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {option}
-                      </Label>
-                    </div>
-                  );
-                })}
-              </RadioGroup>
-              <div className="flex items-center gap-1">
-                <Select
-                  value={maxLetter}
-                  onValueChange={(val) => handlePerQuestionMaxChange(index, val)}
+
+              {/* Radio options — fixed width, always 6 cols so alignment is consistent */}
+              <div className="w-[180px] sm:w-[240px] shrink-0">
+                <RadioGroup
+                  value={value[index] || ''}
+                  onValueChange={(answer) => handleAnswerChange(index, answer)}
+                  className="flex gap-1.5 sm:gap-2"
                 >
-                  <SelectTrigger className={`h-7 w-[62px] text-xs ${hasOverride ? 'border-gold/50' : ''}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALL_OPTIONS.slice(1).map((letter) => (
-                      <SelectItem key={letter} value={letter} className="text-xs">
-                        A-{letter}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {hasOverride ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleResetPerQuestion(index)}
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    title="Resetează la global"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                ) : <div className="w-6" />}
-                {showItemPoints && itemPoints && (
-                  <>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="10"
-                      value={itemPoints[index] ?? ''}
-                      onChange={(e) => handlePointsChange(index, e.target.value)}
-                      className="w-16 h-8 text-xs text-center bg-background px-1"
-                      placeholder="pct"
-                    />
-                    <span className="text-xs text-muted-foreground">pct</span>
-                  </>
-                )}
+                  {ALL_OPTIONS.map((option) => {
+                    const isActive = options.includes(option);
+                    return (
+                      <div
+                        key={option}
+                        className={`flex items-center space-x-0.5 sm:space-x-1 w-[28px] sm:w-[36px] ${!isActive ? 'opacity-0 pointer-events-none' : ''}`}
+                      >
+                        <RadioGroupItem
+                          value={option}
+                          id={`q${index}-${option}`}
+                          className="border-gold data-[state=checked]:bg-gold data-[state=checked]:border-gold h-3.5 w-3.5 sm:h-4 sm:w-4"
+                          disabled={!isActive}
+                        />
+                        <Label
+                          htmlFor={`q${index}-${option}`}
+                          className="text-xs sm:text-sm cursor-pointer"
+                        >
+                          {option}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
               </div>
+
+              {/* Per-question range selector */}
+              <Select
+                value={maxLetter}
+                onValueChange={(val) => handlePerQuestionMaxChange(index, val)}
+              >
+                <SelectTrigger className={`h-7 w-[58px] sm:w-[62px] text-xs shrink-0 ${hasOverride ? 'border-gold/50' : ''}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_OPTIONS.slice(1).map((letter) => (
+                    <SelectItem key={letter} value={letter} className="text-xs">
+                      A-{letter}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Reset override button or spacer */}
+              {hasOverride ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleResetPerQuestion(index)}
+                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                  title="Resetează la global"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              ) : (
+                <div className="w-6 shrink-0" />
+              )}
+
+              {/* Item points */}
+              {showItemPoints && itemPoints && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="10"
+                    value={itemPoints[index] ?? ''}
+                    onChange={(e) => handlePointsChange(index, e.target.value)}
+                    className="w-14 sm:w-16 h-7 sm:h-8 text-xs text-center bg-background px-1"
+                    placeholder="pct"
+                  />
+                  <span className="text-xs text-muted-foreground">pct</span>
+                </div>
+              )}
+
+              {/* Clear single */}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => handleClearOne(index)}
-                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </Button>
             </div>
           );
