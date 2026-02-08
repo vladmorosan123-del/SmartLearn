@@ -1,7 +1,8 @@
-import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Trash2, X } from 'lucide-react';
 
 interface TVCAnswerKeyInputProps {
   value: string[];
@@ -20,7 +21,7 @@ const TVCAnswerKeyInput = ({
   onItemPointsChange,
   showItemPoints = false,
 }: TVCAnswerKeyInputProps) => {
-  const options = ['A', 'B', 'C', 'D'];
+  const options = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
     const newAnswers = [...value];
@@ -36,28 +37,58 @@ const TVCAnswerKeyInput = ({
     onItemPointsChange(newPoints);
   };
 
+  const handleClearOne = (questionIndex: number) => {
+    const newAnswers = [...value];
+    newAnswers[questionIndex] = '';
+    onChange(newAnswers);
+    if (onItemPointsChange && itemPoints) {
+      const newPoints = [...itemPoints];
+      newPoints[questionIndex] = 0;
+      onItemPointsChange(newPoints);
+    }
+  };
+
+  const handleClearAll = () => {
+    onChange(Array(questionCount).fill(''));
+    if (onItemPointsChange) {
+      onItemPointsChange(Array(questionCount).fill(0));
+    }
+  };
+
   const totalPoints = itemPoints?.reduce((sum, p) => sum + p, 0) ?? 0;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Label className="text-foreground font-medium">Barem - Răspunsuri Corecte (Grilă)</Label>
-        {showItemPoints && itemPoints && (
-          <span className="text-xs text-muted-foreground">
-            Total puncte: <strong className={totalPoints > 0 ? 'text-foreground' : ''}>{totalPoints.toFixed(2)}</strong>
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {showItemPoints && itemPoints && (
+            <span className="text-xs text-muted-foreground">
+              Total: <strong className={totalPoints > 0 ? 'text-foreground' : ''}>{totalPoints.toFixed(2)}</strong> pct
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAll}
+            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1" />
+            Șterge tot
+          </Button>
+        </div>
       </div>
       <div className="bg-muted/30 rounded-lg p-4 space-y-3">
         {Array.from({ length: questionCount }).map((_, index) => (
-          <div key={index} className="flex items-center gap-3">
+          <div key={index} className="flex items-center gap-2">
             <span className="w-6 text-sm font-medium text-muted-foreground shrink-0">
               {index + 1}.
             </span>
             <RadioGroup
               value={value[index] || ''}
               onValueChange={(answer) => handleAnswerChange(index, answer)}
-              className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
+              className="grid grid-cols-6 gap-1 sm:flex sm:gap-3 flex-1"
             >
               {options.map((option) => (
                 <div key={option} className="flex items-center space-x-1">
@@ -90,11 +121,20 @@ const TVCAnswerKeyInput = ({
                 <span className="text-xs text-muted-foreground">pct</span>
               </div>
             )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleClearOne(index)}
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
           </div>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Completează răspunsurile corecte{showItemPoints ? ' și punctajul' : ''} pentru fiecare întrebare din grilă.
+        Completează răspunsurile corecte (A-F){showItemPoints ? ' și punctajul' : ''} pentru fiecare întrebare din grilă.
       </p>
     </div>
   );
