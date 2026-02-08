@@ -243,16 +243,6 @@ const TVCAnswerKeyInput = ({
                 </div>
               )}
 
-              {/* Clear single */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => handleClearOne(index)}
-                className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              >
-                <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              </Button>
             </div>
           );
         })}
