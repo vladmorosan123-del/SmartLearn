@@ -28,31 +28,36 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // Clean up old auth tokens and app keys on mount and tab close
+  // Restore session from localStorage on mount (since persistSession is false)
   useEffect(() => {
-    // Clear any old persisted auth tokens
-    ['localStorage', 'sessionStorage'].forEach(storageType => {
-      const storage = storageType === 'localStorage' ? localStorage : sessionStorage;
-      const keys = Object.keys(storage).filter(
-        key => key.startsWith('sb-') || key.startsWith('supabase.')
-      );
-      keys.forEach(key => storage.removeItem(key));
-    });
-
-    const handleBeforeUnload = () => {
-      localStorage.removeItem('lm_user_role');
-      localStorage.removeItem('lm_subject');
-      localStorage.removeItem('lm_user_name');
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    const stored = localStorage.getItem('lm_session');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        supabase.auth.setSession({
+          access_token: parsed.access_token,
+          refresh_token: parsed.refresh_token,
+        });
+      } catch {
+        localStorage.removeItem('lm_session');
+      }
+    }
   }, []);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        // Persist session for refresh survival
+        if (session) {
+          localStorage.setItem('lm_session', JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }));
+        } else {
+          localStorage.removeItem('lm_session');
+        }
+
         setAuthState(prev => ({
           ...prev,
           session,
@@ -212,7 +217,8 @@ export const useAuth = () => {
       isLoading: false,
     });
 
-    // Clear all Supabase auth tokens from sessionStorage
+    // Clear persisted session and auth tokens
+    localStorage.removeItem('lm_session');
     const keysToRemove = Object.keys(sessionStorage).filter(
       key => key.startsWith('sb-') || key.startsWith('supabase.')
     );
