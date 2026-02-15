@@ -98,7 +98,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // Password is already SHA-512 hashed by the client
+    // Password is already SHA-256 hashed by the client
     // Update user password
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       profile.user_id,
