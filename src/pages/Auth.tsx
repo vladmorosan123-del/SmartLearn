@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, User, Lock, ArrowRight, Loader2, KeyRound, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { GraduationCap, User, Lock, ArrowRight, Loader2, KeyRound, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,9 +23,6 @@ const Auth = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(false);
   const [errors, setErrors] = useState<{
     username?: string;
@@ -52,8 +49,6 @@ const Auth = () => {
 
     if (!password) {
       newErrors.password = "Parola este obligatorie";
-    } else if (password.length < 8) {
-      newErrors.password = "Parola trebuie să aibă cel puțin 8 caractere";
     }
 
     setErrors(newErrors);
@@ -67,10 +62,8 @@ const Auth = () => {
       newErrors.newPassword = "Noua parolă este obligatorie";
     } else if (newPassword.length < 8) {
       newErrors.newPassword = "Parola trebuie să aibă cel puțin 8 caractere";
-    } else if (!/[A-Z]/.test(newPassword)) {
-      newErrors.newPassword = "Parola trebuie să conțină cel puțin o literă mare";
-    } else if (!/[^A-Za-z0-9]/.test(newPassword)) {
-      newErrors.newPassword = "Parola trebuie să conțină cel puțin un caracter special (!@#$%...)";
+    } else if (!/^[A-Za-z1-9]+$/.test(newPassword)) {
+      newErrors.newPassword = "Parola trebuie să aibă cel puțin 1 caracter:#,!,?";
     }
 
     if (!confirmPassword) {
@@ -243,7 +236,7 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="password"
-                      type={showPassword ? "text" : "password"}
+                      type="password"
                       autoComplete="off"
                       placeholder="Introdu parola"
                       value={password}
@@ -251,12 +244,9 @@ const Auth = () => {
                         setPassword(e.target.value);
                         if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
                       }}
-                      className={`pl-10 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                      className={`pl-10 ${errors.password ? "border-destructive" : ""}`}
                       disabled={isLoading}
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
                   </div>
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
@@ -313,19 +303,16 @@ const Auth = () => {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         id="newPassword"
-                        type={showNewPassword ? "text" : "password"}
+                        type="password"
                         placeholder="Introdu noua parolă"
                         value={newPassword}
                         onChange={(e) => {
                           setNewPassword(e.target.value);
                           if (errors.newPassword) setErrors((prev) => ({ ...prev, newPassword: undefined }));
                         }}
-                        className={`pl-10 pr-10 ${errors.newPassword ? "border-destructive" : ""}`}
+                        className={`pl-10 ${errors.newPassword ? "border-destructive" : ""}`}
                         disabled={isLoading}
                       />
-                      <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
                     </div>
                     {errors.newPassword && <p className="text-sm text-destructive">{errors.newPassword}</p>}
                   </div>
@@ -336,19 +323,16 @@ const Auth = () => {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         id="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
+                        type="password"
                         placeholder="Confirmă noua parolă"
                         value={confirmPassword}
                         onChange={(e) => {
                           setConfirmPassword(e.target.value);
                           if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
                         }}
-                        className={`pl-10 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                        className={`pl-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
                         disabled={isLoading}
                       />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
                     </div>
                     {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                   </div>
