@@ -51,8 +51,6 @@ const Auth = () => {
       newErrors.password = "Parola este obligatorie";
     } else if (password.length < 8) {
       newErrors.password = "Parola trebuie să aibă cel puțin 8 caractere";
-    } else if (!/^[A-Za-z1-9]+$/.test(password)) {
-      newErrors.password = "Parola trebuie să aibă cel puțin 1 caracter:#,!,?";
     }
 
     setErrors(newErrors);
