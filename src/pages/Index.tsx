@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useApp } from '@/contexts/AppContext';
-import WelcomeAnimation from '@/components/WelcomeAnimation';
-import RoleSelection from '@/components/RoleSelection';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useApp } from "@/contexts/AppContext";
+import WelcomeAnimation from "@/components/WelcomeAnimation";
+import RoleSelection from "@/components/RoleSelection";
 
 const Index = () => {
   const [showAnimation, setShowAnimation] = useState(true);
@@ -13,18 +13,16 @@ const Index = () => {
   useEffect(() => {
     if (role && subject) {
       setShowAnimation(false);
-      navigate('/dashboard');
+      navigate("/dashboard");
     } else if (role && !subject) {
       setShowAnimation(false);
-      navigate('/materii');
+      navigate("/materii");
     }
   }, [role, subject, navigate]);
 
   return (
     <>
-      {showAnimation && (
-        <WelcomeAnimation onComplete={() => setShowAnimation(false)} />
-      )}
+      {showAnimation && <WelcomeAnimation onComplete={() => setShowAnimation(true)} />}
       {!showAnimation && !role && <RoleSelection />}
     </>
   );
