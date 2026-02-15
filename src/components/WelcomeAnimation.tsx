@@ -21,7 +21,13 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 bg-gradient-hero flex items-center justify-center z-50 overflow-hidden">
+    <div
+      className="fixed inset-0 bg-gradient-hero flex items-center justify-center z-50 overflow-hidden cursor-pointer"
+      onClick={onComplete}
+      onKeyDown={(e) => { if (e.key === 'Enter') onComplete(); }}
+      tabIndex={0}
+      role="button"
+    >
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gold/5 rounded-full blur-3xl" />
