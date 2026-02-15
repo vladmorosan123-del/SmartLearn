@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Shield, BookOpen, ClipboardList, Settings, LogOut, 
   ChevronRight, Plus, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -383,6 +384,17 @@ const Dashboard = () => {
                 <p className="text-primary-foreground/60 text-xs">Online</p>
               </div>
             </div>
+            <ChangePasswordDialog />
+            {authRole === 'admin' && (
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-primary-foreground/70 hover:text-primary-foreground hover:bg-sidebar-accent"
+                onClick={() => navigate('/admin')}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Panou Admin
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               className="w-full justify-start text-primary-foreground/70 hover:text-primary-foreground hover:bg-sidebar-accent"
