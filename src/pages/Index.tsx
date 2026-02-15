@@ -22,7 +22,7 @@ const Index = () => {
 
   return (
     <>
-      {showAnimation && <WelcomeAnimation onComplete={() => setShowAnimation(true)} />}
+      {showAnimation && <WelcomeAnimation onComplete={() => setShowAnimation(false)} />}
       {!showAnimation && !role && <RoleSelection />}
     </>
   );
