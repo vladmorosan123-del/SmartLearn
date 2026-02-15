@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { hashPassword } from '@/lib/hashPassword';
 
 interface CreateStudentFormProps {
   onStudentCreated?: () => void;
@@ -59,10 +60,11 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
     setCreatedUser(null);
 
     try {
+      const hashed = await hashPassword(password);
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           username,
-          password,
+          password: hashed,
           fullName: fullName || username,
           role: 'student',
           studyYear,

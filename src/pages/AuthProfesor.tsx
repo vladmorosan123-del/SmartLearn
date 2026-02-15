@@ -10,6 +10,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { hashPassword } from '@/lib/hashPassword';
 
 type AuthView = 'login' | 'signup' | 'verify-code';
 
@@ -178,12 +179,13 @@ const AuthProfesor = () => {
     setIsLoading(true);
     
     try {
+      const hashed = await hashPassword(password);
       const { data, error } = await supabase.functions.invoke('admin-management', {
         body: { 
           action: 'register-professor',
           code: invitationCode,
           username: username.trim(),
-          password,
+          password: hashed,
           fullName: fullName.trim() || undefined,
         },
       });
