@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { hashPassword } from '@/lib/hashPassword';
 
 type AuthView = 'login' | 'change-password';
 
@@ -136,8 +137,9 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
+      const hashed = await hashPassword(newPassword);
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password: hashed
       });
       
       if (error) {
