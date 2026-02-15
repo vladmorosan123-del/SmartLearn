@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { hashPassword } from '@/lib/hashPassword';
 
 export type AppRole = 'student' | 'profesor' | 'admin' | null;
 
@@ -138,21 +139,21 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    const hashed = await hashPassword(password);
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: hashed,
     });
     return { error };
   };
 
   const signInWithUsername = async (username: string, password: string) => {
-    // Use the convention: email = username@lm.local
-    // This allows login without querying the profiles table first (which requires auth)
     const email = `${username}@lm.local`;
+    const hashed = await hashPassword(password);
     
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: hashed,
     });
 
     if (error) {
@@ -168,10 +169,11 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, username: string, fullName?: string, role: AppRole = 'student') => {
     const redirectUrl = `${window.location.origin}/`;
+    const hashed = await hashPassword(password);
 
     const { data, error } = await supabase.auth.signUp({
       email,
-      password,
+      password: hashed,
       options: {
         emailRedirectTo: redirectUrl,
       },
