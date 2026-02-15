@@ -51,7 +51,7 @@ const Auth = () => {
       newErrors.password = "Parola este obligatorie";
     } else if (password.length < 8) {
       newErrors.password = "Parola trebuie să aibă cel puțin 8 caractere";
-    } else if (!/^[A-Za-z0-9]+$/.test(password)) {
+    } else if (!/^[A-Za-z1-9]+$/.test(password)) {
       newErrors.password = "Parola trebuie să aibă cel puțin 1 caracter:#,!,?";
     }
 
@@ -64,8 +64,10 @@ const Auth = () => {
 
     if (!newPassword) {
       newErrors.newPassword = "Noua parolă este obligatorie";
-    } else if (newPassword.length < 6) {
-      newErrors.newPassword = "Parola trebuie să aibă cel puțin 6 caractere";
+    } else if (password.length < 8) {
+      newErrors.password = "Parola trebuie să aibă cel puțin 8 caractere";
+    } else if (!/^[A-Za-z1-9]+$/.test(password)) {
+      newErrors.password = "Parola trebuie să aibă cel puțin 1 caracter:#,!,?";
     }
 
     if (!confirmPassword) {
