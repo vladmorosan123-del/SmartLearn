@@ -120,7 +120,7 @@ serve(async (req: Request) => {
     // Create email from username
     const email = `${username}@lm.local`;
 
-    // Password is already SHA-512 hashed by the client
+    // Password is already SHA-256 hashed by the client
     // Create user using admin API
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
       email,
