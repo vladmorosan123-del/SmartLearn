@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Loader2, CheckCircle, KeyRound } from 'lucide-react';
+import { Lock, Loader2, CheckCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,9 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{ currentPassword?: string; newPassword?: string; confirmPassword?: string }>({});
 
   const validate = () => {
@@ -39,6 +42,10 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
       newErrors.newPassword = 'Noua parolă este obligatorie';
     } else if (newPassword.length < 6) {
       newErrors.newPassword = 'Parola trebuie să aibă cel puțin 6 caractere';
+    } else if (!/[A-Z]/.test(newPassword)) {
+      newErrors.newPassword = 'Parola trebuie să conțină cel puțin o literă mare';
+    } else if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      newErrors.newPassword = 'Parola trebuie să conțină cel puțin un caracter special (!@#$%...)';
     }
 
     if (!confirmPassword) {
@@ -134,13 +141,16 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="currentPassword"
-                type="password"
+                type={showCurrentPassword ? "text" : "password"}
                 placeholder="Introdu parola curentă"
                 value={currentPassword}
                 onChange={(e) => { setCurrentPassword(e.target.value); if (errors.currentPassword) setErrors(prev => ({ ...prev, currentPassword: undefined })); }}
-                className={`pl-10 ${errors.currentPassword ? 'border-destructive' : ''}`}
+                className={`pl-10 pr-10 ${errors.currentPassword ? 'border-destructive' : ''}`}
                 disabled={isLoading}
               />
+              <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.currentPassword && <p className="text-sm text-destructive">{errors.currentPassword}</p>}
           </div>
@@ -151,13 +161,16 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="newPasswordDialog"
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 placeholder="Introdu noua parolă"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); if (errors.newPassword) setErrors(prev => ({ ...prev, newPassword: undefined })); }}
-                className={`pl-10 ${errors.newPassword ? 'border-destructive' : ''}`}
+                className={`pl-10 pr-10 ${errors.newPassword ? 'border-destructive' : ''}`}
                 disabled={isLoading}
               />
+              <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.newPassword && <p className="text-sm text-destructive">{errors.newPassword}</p>}
           </div>
@@ -168,13 +181,16 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="confirmPasswordDialog"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirmă noua parolă"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: undefined })); }}
-                className={`pl-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
                 disabled={isLoading}
               />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
           </div>
