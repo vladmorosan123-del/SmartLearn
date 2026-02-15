@@ -1,104 +1,112 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { GraduationCap, User, Lock, ArrowRight, Loader2, KeyRound, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { hashPassword } from '@/lib/hashPassword';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { GraduationCap, User, Lock, ArrowRight, Loader2, KeyRound, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { hashPassword } from "@/lib/hashPassword";
 
-type AuthView = 'login' | 'change-password';
+type AuthView = "login" | "change-password";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, signInWithUsername, user } = useAuthContext();
-  
-  const [view, setView] = useState<AuthView>('login');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [view, setView] = useState<AuthView>("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(false);
-  const [errors, setErrors] = useState<{ username?: string; password?: string; newPassword?: string; confirmPassword?: string }>({});
+  const [errors, setErrors] = useState<{
+    username?: string;
+    password?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
 
   // Redirect if already authenticated (only for login view, and not while checking role)
   useEffect(() => {
-    if (isAuthenticated && !authLoading && !isCheckingRole && view === 'login') {
-      navigate('/materii');
+    if (isAuthenticated && !authLoading && !isCheckingRole && view === "login") {
+      navigate("/materii");
     }
   }, [isAuthenticated, authLoading, isCheckingRole, navigate, view]);
 
   const validateLoginForm = () => {
     const newErrors: { username?: string; password?: string } = {};
-    
+
     if (!username.trim()) {
-      newErrors.username = 'Numele de utilizator este obligatoriu';
+      newErrors.username = "Numele de utilizator este obligatoriu";
     } else if (username.length < 3) {
-      newErrors.username = 'Numele de utilizator trebuie să aibă cel puțin 3 caractere';
+      newErrors.username = "Numele de utilizator trebuie să aibă cel puțin 3 caractere";
     }
-    
+
     if (!password) {
-      newErrors.password = 'Parola este obligatorie';
-    } else if (password.length < 6) {
-      newErrors.password = 'Parola trebuie să aibă cel puțin 6 caractere';
+      newErrors.password = "Parola este obligatorie";
+    } else if (password.length < 8) {
+      newErrors.password = "Parola trebuie să aibă cel puțin 8 caractere";
+    } else if (!/^[A-Za-z0-9]+$/.test(password)) {
+      newErrors.password = "Parola trebuie să aibă cel puțin 1 caracter:#,!,?";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validatePasswordForm = () => {
     const newErrors: { newPassword?: string; confirmPassword?: string } = {};
-    
+
     if (!newPassword) {
-      newErrors.newPassword = 'Noua parolă este obligatorie';
+      newErrors.newPassword = "Noua parolă este obligatorie";
     } else if (newPassword.length < 6) {
-      newErrors.newPassword = 'Parola trebuie să aibă cel puțin 6 caractere';
+      newErrors.newPassword = "Parola trebuie să aibă cel puțin 6 caractere";
     }
-    
+
     if (!confirmPassword) {
-      newErrors.confirmPassword = 'Confirmarea parolei este obligatorie';
+      newErrors.confirmPassword = "Confirmarea parolei este obligatorie";
     } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'Parolele nu coincid';
+      newErrors.confirmPassword = "Parolele nu coincid";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateLoginForm()) return;
-    
+
     setIsLoading(true);
     setIsCheckingRole(true);
-    
+
     try {
       const { error } = await signInWithUsername(username.trim(), password);
-      
+
       if (error) {
         setIsCheckingRole(false);
         toast({
           title: "Eroare de autentificare",
-          description: error.message === 'Invalid login credentials' 
-            ? 'Nume de utilizator sau parolă incorectă'
-            : error.message,
+          description:
+            error.message === "Invalid login credentials" ? "Nume de utilizator sau parolă incorectă" : error.message,
           variant: "destructive",
         });
         return;
       }
 
       // Check role - only students allowed here
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: role } = await supabase.rpc('get_user_role', { _user_id: session.user.id });
-        if (role === 'profesor' || role === 'admin') {
+        const { data: role } = await supabase.rpc("get_user_role", { _user_id: session.user.id });
+        if (role === "profesor" || role === "admin") {
           // Block professors/admins - sign them out
           await supabase.auth.signOut();
           setIsCheckingRole(false);
@@ -116,7 +124,7 @@ const Auth = () => {
         title: "Autentificare reușită",
         description: "Bine ai venit!",
       });
-      navigate('/materii');
+      navigate("/materii");
     } catch (err) {
       setIsCheckingRole(false);
       toast({
@@ -131,17 +139,17 @@ const Auth = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validatePasswordForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       const hashed = await hashPassword(newPassword);
       const { error } = await supabase.auth.updateUser({
-        password: hashed
+        password: hashed,
       });
-      
+
       if (error) {
         toast({
           title: "Eroare",
@@ -153,9 +161,9 @@ const Auth = () => {
           title: "Parolă schimbată",
           description: "Parola ta a fost actualizată cu succes!",
         });
-        setNewPassword('');
-        setConfirmPassword('');
-        navigate('/materii');
+        setNewPassword("");
+        setConfirmPassword("");
+        navigate("/materii");
       }
     } catch (err) {
       toast({
@@ -191,19 +199,15 @@ const Auth = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-hero rounded-full mb-4">
             <GraduationCap className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-2xl text-foreground">
-            Colegiul Național Militar „Ștefan cel Mare"
-          </h1>
+          <h1 className="font-display text-2xl text-foreground">Colegiul Național Militar „Ștefan cel Mare"</h1>
           <p className="text-muted-foreground mt-1">Platformă Educațională</p>
         </div>
 
-        {view === 'login' ? (
+        {view === "login" ? (
           <Card className="border-border shadow-card">
             <CardHeader className="text-center">
               <CardTitle className="font-display text-xl">Autentificare Elev</CardTitle>
-              <CardDescription>
-                Introdu datele tale de autentificare pentru a accesa platforma
-              </CardDescription>
+              <CardDescription>Introdu datele tale de autentificare pentru a accesa platforma</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
@@ -219,15 +223,13 @@ const Auth = () => {
                       value={username}
                       onChange={(e) => {
                         setUsername(e.target.value);
-                        if (errors.username) setErrors(prev => ({ ...prev, username: undefined }));
+                        if (errors.username) setErrors((prev) => ({ ...prev, username: undefined }));
                       }}
-                      className={`pl-10 ${errors.username ? 'border-destructive' : ''}`}
+                      className={`pl-10 ${errors.username ? "border-destructive" : ""}`}
                       disabled={isLoading}
                     />
                   </div>
-                  {errors.username && (
-                    <p className="text-sm text-destructive">{errors.username}</p>
-                  )}
+                  {errors.username && <p className="text-sm text-destructive">{errors.username}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -242,23 +244,16 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
-                        if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                        if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
                       }}
-                      className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
+                      className={`pl-10 ${errors.password ? "border-destructive" : ""}`}
                       disabled={isLoading}
                     />
                   </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
+                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                <Button 
-                  type="submit" 
-                  variant="gold" 
-                  className="w-full mt-6"
-                  disabled={isLoading}
-                >
+                <Button type="submit" variant="gold" className="w-full mt-6" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -274,19 +269,16 @@ const Auth = () => {
               </form>
 
               <div className="mt-6 pt-6 border-t border-border space-y-3">
-                <button 
-                  onClick={() => setView('change-password')}
+                <button
+                  onClick={() => setView("change-password")}
                   className="w-full text-sm text-center text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <KeyRound className="w-4 h-4 inline mr-2" />
                   Schimbă parola
                 </button>
                 <p className="text-sm text-center text-muted-foreground">
-                  Ești profesor?{' '}
-                  <button 
-                    onClick={() => navigate('/')}
-                    className="text-gold hover:underline font-medium"
-                  >
+                  Ești profesor?{" "}
+                  <button onClick={() => navigate("/")} className="text-gold hover:underline font-medium">
                     Accesează ca profesor
                   </button>
                 </p>
@@ -301,7 +293,7 @@ const Auth = () => {
                 Schimbare Parolă
               </CardTitle>
               <CardDescription>
-                {user ? 'Introdu noua ta parolă' : 'Autentifică-te mai întâi pentru a schimba parola'}
+                {user ? "Introdu noua ta parolă" : "Autentifică-te mai întâi pentru a schimba parola"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -318,15 +310,13 @@ const Auth = () => {
                         value={newPassword}
                         onChange={(e) => {
                           setNewPassword(e.target.value);
-                          if (errors.newPassword) setErrors(prev => ({ ...prev, newPassword: undefined }));
+                          if (errors.newPassword) setErrors((prev) => ({ ...prev, newPassword: undefined }));
                         }}
-                        className={`pl-10 ${errors.newPassword ? 'border-destructive' : ''}`}
+                        className={`pl-10 ${errors.newPassword ? "border-destructive" : ""}`}
                         disabled={isLoading}
                       />
                     </div>
-                    {errors.newPassword && (
-                      <p className="text-sm text-destructive">{errors.newPassword}</p>
-                    )}
+                    {errors.newPassword && <p className="text-sm text-destructive">{errors.newPassword}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -340,23 +330,16 @@ const Auth = () => {
                         value={confirmPassword}
                         onChange={(e) => {
                           setConfirmPassword(e.target.value);
-                          if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                          if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
                         }}
-                        className={`pl-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                        className={`pl-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
                         disabled={isLoading}
                       />
                     </div>
-                    {errors.confirmPassword && (
-                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                    )}
+                    {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    variant="gold" 
-                    className="w-full mt-6"
-                    disabled={isLoading}
-                  >
+                  <Button type="submit" variant="gold" className="w-full mt-6" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -372,18 +355,16 @@ const Auth = () => {
                 </form>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted-foreground mb-4">
-                    Pentru a schimba parola, trebuie să fii autentificat.
-                  </p>
-                  <Button variant="gold" onClick={() => setView('login')}>
+                  <p className="text-muted-foreground mb-4">Pentru a schimba parola, trebuie să fii autentificat.</p>
+                  <Button variant="gold" onClick={() => setView("login")}>
                     Înapoi la autentificare
                   </Button>
                 </div>
               )}
 
               <div className="mt-6 pt-6 border-t border-border">
-                <button 
-                  onClick={() => setView('login')}
+                <button
+                  onClick={() => setView("login")}
                   className="w-full text-sm text-center text-muted-foreground hover:text-foreground transition-colors"
                 >
                   ← Înapoi la autentificare
