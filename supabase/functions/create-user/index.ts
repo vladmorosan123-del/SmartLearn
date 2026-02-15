@@ -1,5 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
+import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+import { encodeHex } from "https://deno.land/std@0.190.0/encoding/hex.ts";
+
+async function hashPassword(password: string): Promise<string> {
+  const data = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+  return encodeHex(new Uint8Array(hashBuffer));
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,10 +129,13 @@ serve(async (req: Request) => {
     // Create email from username
     const email = `${username}@lm.local`;
 
+    // Hash password with SHA-512 before storing
+    const hashedPassword = await hashPassword(password);
+
     // Create user using admin API
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
+      password: hashedPassword,
       email_confirm: true,
     });
 
