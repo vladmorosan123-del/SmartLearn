@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { apiChangePassword } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { hashPassword } from "@/lib/hashPassword";
 
 type AuthView = "login" | "change-password";
@@ -15,7 +15,7 @@ type AuthView = "login" | "change-password";
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading, signInWithUsername, user, role } = useAuthContext();
+  const { isAuthenticated, isLoading: authLoading, signInWithUsername, user } = useAuthContext();
 
   const [view, setView] = useState<AuthView>("login");
   const [username, setUsername] = useState("");
@@ -91,16 +91,32 @@ const Auth = () => {
         setIsCheckingRole(false);
         toast({
           title: "Eroare de autentificare",
-          description: error.message,
+          description:
+            error.message === "Invalid login credentials" ? "Nume de utilizator sau parolă incorectă" : error.message,
           variant: "destructive",
         });
         return;
       }
 
-      // Role is now available from the login response via useAuth
-      // We need to wait for state to update, the useEffect will handle redirect
-      // But check role restriction: only students allowed here
-      // The role comes back from the API in the auth state
+      // Check role - only students allowed here
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: role } = await supabase.rpc("get_user_role", { _user_id: session.user.id });
+        if (role === "profesor" || role === "admin") {
+          // Block professors/admins - sign them out
+          await supabase.auth.signOut();
+          setIsCheckingRole(false);
+          toast({
+            title: "Acces restricționat",
+            description: "Contul tău este de profesor/admin. Folosește secțiunea dedicată profesorilor.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       setIsCheckingRole(false);
       toast({
         title: "Autentificare reușită",
@@ -127,14 +143,15 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const hashedCurrent = await hashPassword(password || ""); // user must enter current password
-      const hashedNew = await hashPassword(newPassword);
-      const { error } = await apiChangePassword(hashedCurrent, hashedNew);
+      const hashed = await hashPassword(newPassword);
+      const { error } = await supabase.auth.updateUser({
+        password: hashed,
+      });
 
       if (error) {
         toast({
           title: "Eroare",
-          description: error,
+          description: error.message,
           variant: "destructive",
         });
       } else {
