@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { apiCreateUser } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { hashPassword } from '@/lib/hashPassword';
 
@@ -61,22 +61,19 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
 
     try {
       const hashed = await hashPassword(password);
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: {
-          username,
-          password: hashed,
-          fullName: fullName || username,
-          role: 'student',
-          studyYear,
-          studyClass,
-        },
+      const { data, error } = await apiCreateUser({
+        username,
+        password: hashed,
+        fullName: fullName || username,
+        role: 'student',
+        studyYear,
+        studyClass,
       });
 
       if (error) {
-        console.error('Error creating student:', error);
         toast({
           title: 'Eroare',
-          description: error.message || 'Nu s-a putut crea contul.',
+          description: error,
           variant: 'destructive',
         });
         return;
