@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
-import { supabase } from '@/integrations/supabase/client';
+import { apiAdminAction } from '@/lib/api';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { hashPassword } from '@/lib/hashPassword';
 
@@ -33,7 +33,6 @@ const AuthProfesor = () => {
   // Redirect if already authenticated as profesor or admin
   useEffect(() => {
     if (isAuthenticated && !authLoading && (authRole === 'profesor' || authRole === 'admin')) {
-      // Set the role in AppContext so Dashboard can use it
       setRole(authRole);
       navigate('/materii');
     }
@@ -41,45 +40,37 @@ const AuthProfesor = () => {
 
   const validateLoginForm = () => {
     const newErrors: Record<string, string> = {};
-    
     if (!username.trim()) {
       newErrors.username = 'Numele de utilizator este obligatoriu';
     }
-    
     if (!password) {
       newErrors.password = 'Parola este obligatorie';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateSignupForm = () => {
     const newErrors: Record<string, string> = {};
-    
     if (!username.trim()) {
       newErrors.username = 'Numele de utilizator este obligatoriu';
     } else if (username.length < 3) {
       newErrors.username = 'Numele trebuie să aibă cel puțin 3 caractere';
     }
-    
     if (!password) {
       newErrors.password = 'Parola este obligatorie';
     } else if (password.length < 6) {
       newErrors.password = 'Parola trebuie să aibă cel puțin 6 caractere';
     }
-
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Parolele nu coincid';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateLoginForm()) return;
     
     setIsLoading(true);
@@ -96,27 +87,11 @@ const AuthProfesor = () => {
         return;
       }
 
-      // Check role - only professors/admins allowed here
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: role } = await supabase.rpc('get_user_role', { _user_id: session.user.id });
-        if (role === 'student') {
-          // Block students - sign them out
-          await supabase.auth.signOut();
-          toast({
-            title: "Acces restricționat",
-            description: "Contul tău este de elev. Folosește secțiunea dedicată elevilor.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
+      // Role check is handled by the useEffect redirect above
       toast({
         title: "Autentificare reușită",
         description: "Bine ai venit!",
       });
-      // Role will be set by the useEffect when authRole changes
     } catch (err) {
       toast({
         title: "Eroare",
@@ -141,14 +116,12 @@ const AuthProfesor = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('admin-management', {
-        body: { action: 'verify-code', code: invitationCode },
-      });
+      const { data, error } = await apiAdminAction({ action: 'verify-code', code: invitationCode });
 
-      if (error || !data.valid) {
+      if (error || !data?.valid) {
         toast({
           title: "Cod invalid",
-          description: data?.error || "Codul introdus nu este valid sau a expirat",
+          description: error || data?.error || "Codul introdus nu este valid sau a expirat",
           variant: "destructive",
         });
         setInvitationCode('');
@@ -173,27 +146,24 @@ const AuthProfesor = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateSignupForm()) return;
     
     setIsLoading(true);
     
     try {
       const hashed = await hashPassword(password);
-      const { data, error } = await supabase.functions.invoke('admin-management', {
-        body: { 
-          action: 'register-professor',
-          code: invitationCode,
-          username: username.trim(),
-          password: hashed,
-          fullName: fullName.trim() || undefined,
-        },
+      const { data, error } = await apiAdminAction({ 
+        action: 'register-professor',
+        code: invitationCode,
+        username: username.trim(),
+        password: hashed,
+        fullName: fullName.trim() || undefined,
       });
 
-      if (error || data.error) {
+      if (error || data?.error) {
         toast({
           title: "Eroare la înregistrare",
-          description: data?.error || error?.message || "A apărut o eroare",
+          description: error || data?.error || "A apărut o eroare",
           variant: "destructive",
         });
       } else {
@@ -505,7 +475,7 @@ const AuthProfesor = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Se creează contul...
+                      Se creează...
                     </>
                   ) : (
                     <>
@@ -522,10 +492,8 @@ const AuthProfesor = () => {
                     setView('login');
                     setCodeVerified(false);
                     setInvitationCode('');
-                    setUsername('');
                     setPassword('');
                     setConfirmPassword('');
-                    setFullName('');
                   }}
                   className="w-full text-sm text-center text-muted-foreground hover:text-foreground transition-colors"
                 >
