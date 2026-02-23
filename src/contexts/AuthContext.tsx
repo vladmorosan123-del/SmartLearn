@@ -1,5 +1,4 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
 import { useAuth, AppRole } from '@/hooks/useAuth';
 
 interface Profile {
@@ -9,16 +8,19 @@ interface Profile {
   full_name: string | null;
 }
 
+interface SimpleUser {
+  id: string;
+  email: string;
+}
+
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: SimpleUser | null;
+  session: { access_token: string } | null;
   profile: Profile | null;
   role: AppRole;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithUsername: (username: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, username: string, fullName?: string, role?: AppRole) => Promise<{ error: any; user: User | null }>;
   signOut: () => Promise<{ error: any }>;
 }
 

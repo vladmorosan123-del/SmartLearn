@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiChangePassword } from '@/lib/api';
 import { hashPassword } from '@/lib/hashPassword';
 
 interface ChangePasswordDialogProps {
@@ -64,34 +64,21 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
 
     setIsLoading(true);
     try {
-      // Verify current password by trying to sign in
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) throw new Error('User not found');
-
       const hashedCurrent = await hashPassword(currentPassword);
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: hashedCurrent,
-      });
-
-      if (signInError) {
-        setErrors({ currentPassword: 'Parola curentă este incorectă' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Update to new password
       const hashedNew = await hashPassword(newPassword);
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: hashedNew,
-      });
+      
+      const { error } = await apiChangePassword(hashedCurrent, hashedNew);
 
-      if (updateError) {
-        toast({
-          title: 'Eroare',
-          description: updateError.message,
-          variant: 'destructive',
-        });
+      if (error) {
+        if (error.includes('incorectă')) {
+          setErrors({ currentPassword: error });
+        } else {
+          toast({
+            title: 'Eroare',
+            description: error,
+            variant: 'destructive',
+          });
+        }
       } else {
         toast({
           title: 'Parolă schimbată',
