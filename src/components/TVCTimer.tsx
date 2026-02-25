@@ -195,7 +195,7 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                 ) : signedPdfUrl ? (
                   <ZoomableWrapper>
                     <iframe 
-                      src={getPdfViewerUrl(signedPdfUrl)} 
+                      src={signedPdfUrl} 
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title="TVC Subject PDF"
                       allow="autoplay"
