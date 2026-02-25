@@ -37,10 +37,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
   const [iframeLoading, setIframeLoading] = useState(true);
   const [iframeError, setIframeError] = useState(false);
   const [loadTimeout, setLoadTimeout] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [pdfBlobError, setPdfBlobError] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pdfBlobUrlRef = useRef<string | null>(null);
   
   // Resolve signed URL for private bucket
   const { signedUrl, isLoading: isUrlLoading } = useSignedUrl(isOpen ? fileUrl : null);
@@ -65,57 +62,6 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
       };
     }
   }, [isOpen, safeFileUrl]);
-
-  // Convert PDF to blob URL to avoid Chrome iframe blocking
-  useEffect(() => {
-    if (pdfBlobUrlRef.current) {
-      URL.revokeObjectURL(pdfBlobUrlRef.current);
-      pdfBlobUrlRef.current = null;
-    }
-
-    setPdfBlobUrl(null);
-    setPdfBlobError(false);
-
-    if (!isOpen || !safeFileUrl || fileType.toLowerCase() !== 'pdf') return;
-
-    let cancelled = false;
-
-    const fetchPdfAsBlob = async () => {
-      try {
-        const response = await fetch(safeFileUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF blob: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-
-        if (cancelled) {
-          URL.revokeObjectURL(objectUrl);
-          return;
-        }
-
-        pdfBlobUrlRef.current = objectUrl;
-        setPdfBlobUrl(objectUrl);
-      } catch (error) {
-        console.error('Error loading PDF blob in FileViewer:', error);
-        if (!cancelled) {
-          setPdfBlobError(true);
-          setIframeLoading(false);
-        }
-      }
-    };
-
-    fetchPdfAsBlob();
-
-    return () => {
-      cancelled = true;
-      if (pdfBlobUrlRef.current) {
-        URL.revokeObjectURL(pdfBlobUrlRef.current);
-        pdfBlobUrlRef.current = null;
-      }
-    };
-  }, [isOpen, safeFileUrl, fileType]);
 
   if (!isOpen) return null;
 
@@ -247,14 +193,14 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
         <div className="flex-1 flex items-center justify-center p-4 overflow-auto bg-muted/30">
           {canPreview ? (
             <div className="w-full h-full flex items-center justify-center relative">
-              {iframeLoading && ((isPdf && !!pdfBlobUrl && !pdfBlobError) || isOfficeDoc || isTxt) && !loadTimeout && (
+              {iframeLoading && (isPdf || isOfficeDoc || isTxt) && !loadTimeout && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
                   <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
                   <p className="text-muted-foreground">Se încarcă documentul...</p>
                 </div>
               )}
 
-              {(loadTimeout || iframeError) && isOfficeDoc ? (
+              {(loadTimeout || iframeError) && (isPdf || isOfficeDoc) ? (
                 renderFallbackOptions()
               ) : (
                 <>
@@ -268,24 +214,17 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
                     )
                   )}
                   
-                  {isPdf && (
-                    pdfBlobError ? renderFallbackOptions() : pdfBlobUrl ? (
-                      <ZoomableWrapper>
-                        <iframe
-                          src={pdfBlobUrl}
-                          className="w-full h-full rounded-lg border border-border bg-white"
-                          title={fileName}
-                          allow="autoplay"
-                          onLoad={handleIframeLoad}
-                          onError={handleIframeError}
-                        />
-                      </ZoomableWrapper>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-12">
-                        <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
-                        <p className="text-muted-foreground">Se pregătește documentul...</p>
-                      </div>
-                    )
+                  {isPdf && !loadTimeout && !iframeError && (
+                    <ZoomableWrapper>
+                      <iframe
+                        src={getGoogleViewerUrl(safeFileUrl)}
+                        className="w-full h-full rounded-lg border border-border bg-white"
+                        title={fileName}
+                        allow="autoplay"
+                        onLoad={handleIframeLoad}
+                        onError={handleIframeError}
+                      />
+                    </ZoomableWrapper>
                   )}
                   
                   {isTxt && (
