@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X } from 'lucide-react';
+import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { supabase } from '@/integrations/supabase/client';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 
 interface TVCTimerProps {
   subjectTitle: string;
@@ -35,6 +36,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   const [autoSubmitQuiz, setAutoSubmitQuiz] = useState(false);
   
   const quizRef = useRef<TVCQuizInterfaceRef>(null);
+
+  // Get signed URL for the PDF
+  const { signedUrl: signedPdfUrl, isLoading: isPdfUrlLoading } = useSignedUrl(pdfUrl || null);
 
   // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
@@ -183,14 +187,33 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             {/* PDF Content Area */}
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
               {pdfUrl ? (
-                <ZoomableWrapper>
-                  <iframe 
-                    src={getPdfViewerUrl(pdfUrl)} 
-                    className="w-full h-full rounded-lg border border-border bg-white"
-                    title="TVC Subject PDF"
-                    allow="autoplay"
-                  />
-                </ZoomableWrapper>
+                isPdfUrlLoading ? (
+                  <div className="flex flex-col items-center justify-center p-12">
+                    <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
+                    <p className="text-muted-foreground">Se pregătește documentul...</p>
+                  </div>
+                ) : signedPdfUrl ? (
+                  <ZoomableWrapper>
+                    <iframe 
+                      src={getPdfViewerUrl(signedPdfUrl)} 
+                      className="w-full h-full rounded-lg border border-border bg-white"
+                      title="TVC Subject PDF"
+                      allow="autoplay"
+                    />
+                  </ZoomableWrapper>
+                ) : (
+                  <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-display text-lg text-foreground mb-2">
+                      Nu s-a putut încărca documentul
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Încearcă să reîncarci pagina.
+                    </p>
+                  </div>
+                )
               ) : (
                 <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border max-w-md">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
