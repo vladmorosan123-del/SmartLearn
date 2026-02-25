@@ -37,8 +37,40 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   
   const quizRef = useRef<TVCQuizInterfaceRef>(null);
 
-  // Get signed URL for the PDF
+  // Get signed URL for the PDF, then convert to blob URL to avoid Chrome blocking
   const { signedUrl: signedPdfUrl, isLoading: isPdfUrlLoading } = useSignedUrl(pdfUrl || null);
+  const [blobPdfUrl, setBlobPdfUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!signedPdfUrl) {
+      setBlobPdfUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchBlob = async () => {
+      try {
+        const response = await fetch(signedPdfUrl);
+        const blob = await response.blob();
+        if (!cancelled) {
+          const objectUrl = URL.createObjectURL(blob);
+          setBlobPdfUrl(objectUrl);
+        }
+      } catch (err) {
+        console.error('Error fetching PDF as blob:', err);
+        // Fallback to signed URL directly
+        if (!cancelled) setBlobPdfUrl(signedPdfUrl);
+      }
+    };
+    fetchBlob();
+
+    return () => {
+      cancelled = true;
+      if (blobPdfUrl && blobPdfUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobPdfUrl);
+      }
+    };
+  }, [signedPdfUrl]);
 
   // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
@@ -187,15 +219,15 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             {/* PDF Content Area */}
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
               {pdfUrl ? (
-                isPdfUrlLoading ? (
+                isPdfUrlLoading || (signedPdfUrl && !blobPdfUrl) ? (
                   <div className="flex flex-col items-center justify-center p-12">
                     <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
                     <p className="text-muted-foreground">Se pregătește documentul...</p>
                   </div>
-                ) : signedPdfUrl ? (
+                ) : blobPdfUrl ? (
                   <ZoomableWrapper>
                     <iframe 
-                      src={signedPdfUrl} 
+                      src={blobPdfUrl} 
                       className="w-full h-full rounded-lg border border-border bg-white"
                       title="TVC Subject PDF"
                       allow="autoplay"
