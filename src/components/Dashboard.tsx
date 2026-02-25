@@ -262,6 +262,10 @@ const Dashboard = () => {
             <div>
               <span className="font-display text-lg text-primary-foreground block">CNM Ștefan cel Mare</span>
               <span className="text-xs text-primary-foreground/60">Platformă Educațională</span>
+              <span className="text-[10px] text-gold font-semibold block mt-1">SMART LEARNING</span>
+              <span className="text-[9px] text-primary-foreground/50 block leading-tight">Integrarea AI în învățare</span>
+              <span className="text-[9px] text-primary-foreground/40 block mt-0.5 leading-tight">Prof. coord. Anca Tudose</span>
+              <span className="text-[9px] text-primary-foreground/40 block leading-tight">Echipa: Moroșan Ștefan, Turculeț Ștefan, Roșu Vasile</span>
             </div>
           </div>
 
