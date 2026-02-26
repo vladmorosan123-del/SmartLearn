@@ -287,7 +287,7 @@ const AuthProfesor = () => {
                     <Input
                       id="password"
                       type="password"
-                      autoComplete="off"
+                      autoComplete="new-password"
                       placeholder="Introdu parola"
                       value={password}
                       onChange={(e) => {
@@ -417,7 +417,7 @@ const AuthProfesor = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSignup} className="space-y-4">
+              <form onSubmit={handleSignup} className="space-y-4" autoComplete="off">
                 <div className="space-y-2">
                   <Label htmlFor="signup-username">Nume de utilizator</Label>
                   <div className="relative">
@@ -425,6 +425,7 @@ const AuthProfesor = () => {
                     <Input
                       id="signup-username"
                       type="text"
+                      autoComplete="off"
                       placeholder="Alege un nume de utilizator"
                       value={username}
                       onChange={(e) => {
@@ -459,6 +460,7 @@ const AuthProfesor = () => {
                     <Input
                       id="signup-password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Alege o parolă"
                       value={password}
                       onChange={(e) => {
@@ -481,6 +483,7 @@ const AuthProfesor = () => {
                     <Input
                       id="confirm-password"
                       type="password"
+                      autoComplete="new-password"
                       placeholder="Confirmă parola"
                       value={confirmPassword}
                       onChange={(e) => {
