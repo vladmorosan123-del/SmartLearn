@@ -77,7 +77,7 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
 
         {/* Welcome text */}
         <h1 className={`font-display text-5xl md:text-7xl text-primary-foreground mb-4 transition-all duration-1000 ${phase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          Bine ați venit
+          Bine ați venit!
         </h1>
 
         {/* School name */}
