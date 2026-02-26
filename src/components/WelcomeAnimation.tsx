@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Shield, Star } from 'lucide-react';
 
 interface WelcomeAnimationProps {
@@ -7,6 +7,7 @@ interface WelcomeAnimationProps {
 
 const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
   const [phase, setPhase] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timers = [
@@ -16,17 +17,27 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
       setTimeout(() => setPhase(4), 2800),
     ];
 
-    const handleKeyDown = () => onComplete();
-    window.addEventListener('keydown', handleKeyDown);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      onComplete();
+    };
+
+    const focusTimer = window.setTimeout(() => {
+      containerRef.current?.focus();
+    }, 0);
+
+    document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       timers.forEach(clearTimeout);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [onComplete]);
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 bg-gradient-hero flex items-center justify-center z-50 overflow-hidden cursor-pointer"
       onClick={onComplete}
       onKeyDown={() => onComplete()}
