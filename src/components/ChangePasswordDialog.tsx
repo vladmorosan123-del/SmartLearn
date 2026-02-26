@@ -134,7 +134,7 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
             Introdu parola curentă și noua parolă
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Parola curentă</Label>
             <div className="relative">
@@ -142,6 +142,7 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
               <Input
                 id="currentPassword"
                 type={showCurrentPassword ? "text" : "password"}
+                autoComplete="new-password"
                 placeholder="Introdu parola curentă"
                 value={currentPassword}
                 onChange={(e) => { setCurrentPassword(e.target.value); if (errors.currentPassword) setErrors(prev => ({ ...prev, currentPassword: undefined })); }}
@@ -162,6 +163,7 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
               <Input
                 id="newPasswordDialog"
                 type={showNewPassword ? "text" : "password"}
+                autoComplete="new-password"
                 placeholder="Introdu noua parolă"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); if (errors.newPassword) setErrors(prev => ({ ...prev, newPassword: undefined })); }}
@@ -182,6 +184,7 @@ const ChangePasswordDialog = ({ trigger }: ChangePasswordDialogProps) => {
               <Input
                 id="confirmPasswordDialog"
                 type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
                 placeholder="Confirmă noua parolă"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: undefined })); }}

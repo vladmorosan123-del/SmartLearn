@@ -237,7 +237,7 @@ const Auth = () => {
                     <Input
                       id="password"
                       type="password"
-                      autoComplete="off"
+                      autoComplete="new-password"
                       placeholder="Introdu parola"
                       value={password}
                       onChange={(e) => {
@@ -296,7 +296,7 @@ const Auth = () => {
             </CardHeader>
             <CardContent>
               {user ? (
-                <form onSubmit={handleChangePassword} className="space-y-4">
+                <form onSubmit={handleChangePassword} className="space-y-4" autoComplete="off">
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">Parola nouă</Label>
                     <div className="relative">
@@ -304,6 +304,7 @@ const Auth = () => {
                       <Input
                         id="newPassword"
                         type="password"
+                        autoComplete="new-password"
                         placeholder="Introdu noua parolă"
                         value={newPassword}
                         onChange={(e) => {
@@ -324,6 +325,7 @@ const Auth = () => {
                       <Input
                         id="confirmPassword"
                         type="password"
+                        autoComplete="new-password"
                         placeholder="Confirmă noua parolă"
                         value={confirmPassword}
                         onChange={(e) => {
