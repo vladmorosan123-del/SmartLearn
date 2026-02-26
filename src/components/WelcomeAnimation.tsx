@@ -16,8 +16,14 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
       setTimeout(() => setPhase(4), 2800),
     ];
 
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    const handleKeyDown = () => onComplete();
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onComplete]);
 
   return (
     <div
