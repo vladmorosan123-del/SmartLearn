@@ -575,7 +575,6 @@ const AdminUserManagement = () => {
               <Input
                 id="new-password"
                 type="password"
-                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Minim 6 caractere"
