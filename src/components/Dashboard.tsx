@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Shield, BookOpen, ClipboardList, Settings, LogOut, 
+import {
+  Shield, BookOpen, ClipboardList, Settings, LogOut,
   ChevronRight, Plus, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound
-} from 'lucide-react';
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound } from
+'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 import { useApp, Subject } from '@/contexts/AppContext';
@@ -22,21 +22,21 @@ const subjectIcons = {
   informatica: Code,
   romana: BookText,
   matematica: Calculator,
-  fizica: Atom,
+  fizica: Atom
 };
 
 const subjectNames: Record<Subject, string> = {
   informatica: 'Informatică',
   romana: 'Limba Română',
   matematica: 'Matematică',
-  fizica: 'Fizică',
+  fizica: 'Fizică'
 };
 
 const subjectColors = {
   informatica: 'from-blue-500 to-blue-700',
   romana: 'from-rose-500 to-rose-700',
   matematica: 'from-emerald-500 to-emerald-700',
-  fizica: 'from-violet-500 to-violet-700',
+  fizica: 'from-violet-500 to-violet-700'
 };
 
 const Dashboard = () => {
@@ -50,16 +50,16 @@ const Dashboard = () => {
   const [selectedLessonNumber, setSelectedLessonNumber] = useState<number>(1);
   const [editingLesson, setEditingLesson] = useState<LessonEditData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
-  
+  const [viewingFile, setViewingFile] = useState<{url: string;name: string;type: string;} | null>(null);
+
   const isProfessor = role === 'profesor' || authRole === 'admin';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
   const subjectName = subject ? subjectNames[subject] : 'Materie';
   const subjectColor = subject ? subjectColors[subject] : 'from-gray-500 to-gray-700';
-  
+
   const { materials, isLoading, addMaterial, updateMaterial, deleteMaterial } = useMaterials({
     subject: subject || 'informatica',
-    category: 'lesson',
+    category: 'lesson'
   });
 
   // Convert materials to lessons for display
@@ -74,9 +74,9 @@ const Dashboard = () => {
       fileType: m.file_type,
       fileSize: m.file_size || undefined,
       status: 'locked' as const,
-      materialId: m.id,
+      materialId: m.id
     }));
-    
+
     // Add empty slots up to 10 if less than 10 materials
     const emptySlots = Math.max(0, 10 - lessons.length);
     for (let i = 0; i < emptySlots; i++) {
@@ -84,30 +84,30 @@ const Dashboard = () => {
         id: lessons.length + 1,
         title: null,
         duration: null,
-        status: 'not-uploaded' as const,
+        status: 'not-uploaded' as const
       });
     }
-    
+
     return lessons;
   }, [materials]);
 
   // Filtered lessons based on search
   const filteredLessons = useMemo(() => {
     if (!searchQuery.trim()) return currentLessons;
-    return currentLessons.filter(lesson => 
-      lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    return currentLessons.filter((lesson) =>
+    lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [currentLessons, searchQuery]);
 
   // Stats calculations
-  const uploadedLessons = currentLessons.filter(l => l.status !== 'not-uploaded').length;
-  const totalDuration = currentLessons
-    .filter(l => l.duration)
-    .reduce((acc, l) => {
-      const minutes = parseInt(l.duration?.replace(/\D/g, '') || '0');
-      return acc + minutes;
-    }, 0);
+  const uploadedLessons = currentLessons.filter((l) => l.status !== 'not-uploaded').length;
+  const totalDuration = currentLessons.
+  filter((l) => l.duration).
+  reduce((acc, l) => {
+    const minutes = parseInt(l.duration?.replace(/\D/g, '') || '0');
+    return acc + minutes;
+  }, 0);
 
   const handleSubjectChange = (newSubject: Subject) => {
     setSubject(newSubject);
@@ -129,17 +129,17 @@ const Dashboard = () => {
   };
 
   const handleEditLesson = (lessonId: number) => {
-    const lesson = currentLessons.find(l => l.id === lessonId);
+    const lesson = currentLessons.find((l) => l.id === lessonId);
     if (!lesson || !lesson.materialId) return;
-    
-    const material = materials.find(m => m.id === lesson.materialId);
+
+    const material = materials.find((m) => m.id === lesson.materialId);
     if (!material) return;
-    
+
     // Parse duration from description (format: "45 min - description")
     const durationMatch = material.description?.match(/^(\d+\s*min)/);
     const duration = durationMatch ? durationMatch[1] : '45 min';
     const description = material.description?.replace(/^\d+\s*min\s*-\s*/, '') || '';
-    
+
     setSelectedLessonNumber(lessonId);
     setEditingLesson({
       materialId: material.id,
@@ -149,7 +149,7 @@ const Dashboard = () => {
       fileUrl: material.file_url,
       fileName: material.file_name,
       fileType: material.file_type,
-      fileSize: material.file_size || 0,
+      fileSize: material.file_size || 0
     });
     setIsModalOpen(true);
   };
@@ -160,32 +160,32 @@ const Dashboard = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveLesson = async (lessonData: { 
-    title: string; 
-    duration: string; 
-    description: string; 
+  const handleSaveLesson = async (lessonData: {
+    title: string;
+    duration: string;
+    description: string;
     fileUrl?: string;
     fileName?: string;
     fileType?: string;
     fileSize?: number;
   }) => {
     if (!subject) {
-      toast({ 
-        title: 'Eroare', 
-        description: 'Selectează o materie.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Eroare',
+        description: 'Selectează o materie.',
+        variant: 'destructive'
       });
       return;
     }
-    
+
     try {
       // If editing an existing lesson
       if (editingLesson) {
         const updates: any = {
           title: lessonData.title,
-          description: `${lessonData.duration} - ${lessonData.description}`,
+          description: `${lessonData.duration} - ${lessonData.description}`
         };
-        
+
         // Only update file info if a new file was uploaded
         if (lessonData.fileUrl && lessonData.fileUrl !== editingLesson.fileUrl) {
           updates.file_name = lessonData.fileName;
@@ -193,20 +193,20 @@ const Dashboard = () => {
           updates.file_url = lessonData.fileUrl;
           updates.file_size = lessonData.fileSize;
         }
-        
+
         await updateMaterial(editingLesson.materialId, updates);
         toast({ title: 'Lecție actualizată', description: 'Modificările au fost salvate cu succes.' });
       } else {
         // Adding new lesson - file is required
         if (!lessonData.fileUrl) {
-          toast({ 
-            title: 'Eroare', 
-            description: 'Te rugăm să încarci un fișier.', 
-            variant: 'destructive' 
+          toast({
+            title: 'Eroare',
+            description: 'Te rugăm să încarci un fișier.',
+            variant: 'destructive'
           });
           return;
         }
-        
+
         await addMaterial({
           title: lessonData.title,
           description: `${lessonData.duration} - ${lessonData.description}`,
@@ -219,12 +219,12 @@ const Dashboard = () => {
           lesson_number: selectedLessonNumber,
           author: null,
           genre: null,
-          year: null,
+          year: null
         });
-        
+
         toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
       }
-      
+
       setEditingLesson(null);
     } catch (error) {
       console.error('Error saving lesson:', error);
@@ -232,10 +232,10 @@ const Dashboard = () => {
   };
 
   const handleDeleteLesson = async (lessonId: number) => {
-    const lesson = currentLessons.find(l => l.id === lessonId);
+    const lesson = currentLessons.find((l) => l.id === lessonId);
     if (!lesson || !(lesson as any).materialId) return;
-    
-    const material = materials.find(m => m.id === (lesson as any).materialId);
+
+    const material = materials.find((m) => m.id === (lesson as any).materialId);
     if (material) {
       await deleteMaterial(material.id, material.file_url);
     }
@@ -246,7 +246,7 @@ const Dashboard = () => {
       setViewingFile({
         url: lesson.fileUrl,
         name: lesson.fileName,
-        type: lesson.fileType,
+        type: lesson.fileType
       });
     }
   };
@@ -260,21 +260,21 @@ const Dashboard = () => {
           <div className="flex items-center gap-3 mb-8 p-2">
             <Shield className="w-10 h-10 text-gold" />
             <div>
-              <span className="font-display text-lg text-primary-foreground block">CNM Ștefan cel Mare</span>
-              <span className="text-xs text-primary-foreground/60">Platformă Educațională</span>
-              <span className="text-[10px] text-gold font-semibold block mt-1">SMART LEARNING</span>
-              <span className="text-[9px] text-primary-foreground/50 block leading-tight">Integrarea AI în învățare</span>
-              <span className="text-[9px] text-primary-foreground/40 block mt-0.5 leading-tight">Prof. coord. Anca Tudose</span>
-              <span className="text-[9px] text-primary-foreground/40 block leading-tight">Echipa: Moroșan Ștefan, Turculeț Ștefan, Roșu Vasile</span>
+              <span className="font-display text-primary-foreground block py-0 px-0 text-left text-base">CNM Ștefan cel Mare</span>
+              <span className="text-xs text-primary-foreground/60 text-center">Platformă Educațională</span>
+              <span className="text-[10px] text-gold font-semibold block mt-1 text-center">SMART LEARNING</span>
+              <span className="text-[9px] text-primary-foreground/50 block leading-tight text-center">Integrarea AI în învățare</span>
+              <span className="text-[9px] text-primary-foreground/40 block mt-0.5 leading-tight text-center">Prof. coord. Anca Tudose</span>
+              <span className="text-[9px] text-primary-foreground/40 block leading-tight text-center">Echipa: Moroșan Ștefan, Turculeț Ștefan, Roșu Vasile</span>
             </div>
           </div>
 
           {/* Subject Selector */}
           <div className="mb-6 relative">
-            <button 
+            <button
               onClick={() => setShowSubjectDropdown(!showSubjectDropdown)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors"
-            >
+              className="w-full flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors">
+
               <div className={`w-10 h-10 bg-gradient-to-br ${subjectColor} rounded-lg flex items-center justify-center`}>
                 <SubjectIcon className="w-5 h-5 text-white" />
               </div>
@@ -285,23 +285,23 @@ const Dashboard = () => {
               <ChevronRight className={`w-4 h-4 text-primary-foreground/60 transition-transform ${showSubjectDropdown ? 'rotate-90' : ''}`} />
             </button>
 
-            {showSubjectDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-10">
+            {showSubjectDropdown &&
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-lg shadow-elegant border border-border overflow-hidden z-10">
                 {Object.entries(subjectNames).map(([key, name]) => {
-                  const Icon = subjectIcons[key as Subject];
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => handleSubjectChange(key as Subject)}
-                      className={`w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors ${subject === key ? 'bg-muted' : ''}`}
-                    >
+                const Icon = subjectIcons[key as Subject];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleSubjectChange(key as Subject)}
+                    className={`w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors ${subject === key ? 'bg-muted' : ''}`}>
+
                       <Icon className="w-5 h-5 text-foreground" />
                       <span className="text-foreground">{name}</span>
-                    </button>
-                  );
-                })}
+                    </button>);
+
+              })}
               </div>
-            )}
+            }
           </div>
 
           {/* Navigation */}
@@ -310,67 +310,67 @@ const Dashboard = () => {
               <BookOpen className="w-5 h-5" />
               <span>Lecții</span>
             </a>
-            <a 
+            <a
               onClick={() => navigate('/modele-bac')}
-              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-            >
+              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
               <ClipboardList className="w-5 h-5" />
               <span>Modele BAC</span>
             </a>
-            {subject !== 'romana' && (
-              <a 
-                onClick={() => navigate('/teste-academii')}
-                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-              >
+            {subject !== 'romana' &&
+            <a
+              onClick={() => navigate('/teste-academii')}
+              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
                 <Award className="w-5 h-5" />
                 <span>TVC Academii</span>
               </a>
-            )}
-            {(subject === 'matematica' || subject === 'fizica') && (
-              <a 
-                onClick={() => navigate('/portofoliu-formule')}
-                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-              >
+            }
+            {(subject === 'matematica' || subject === 'fizica') &&
+            <a
+              onClick={() => navigate('/portofoliu-formule')}
+              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
                 <BookMarked className="w-5 h-5" />
                 <span>Portofoliu Formule</span>
               </a>
-            )}
-            {subject !== 'romana' && (
-              <a 
-                onClick={() => navigate('/tvc-complet')}
-                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-              >
+            }
+            {subject !== 'romana' &&
+            <a
+              onClick={() => navigate('/tvc-complet')}
+              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
                 <Timer className="w-5 h-5" />
                 <span>TVC Complet</span>
               </a>
-            )}
-            {subject === 'romana' && (
-              <>
-                <a 
-                  onClick={() => navigate('/subiect2-bac')}
-                  className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-                >
+            }
+            {subject === 'romana' &&
+            <>
+                <a
+                onClick={() => navigate('/subiect2-bac')}
+                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
                   <ClipboardList className="w-5 h-5" />
                   <span>Subiectul II BAC</span>
                 </a>
-                <a 
-                  onClick={() => navigate('/eseuri-bac')}
-                  className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-                >
+                <a
+                onClick={() => navigate('/eseuri-bac')}
+                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
                   <BookMarked className="w-5 h-5" />
                   <span>Eseuri BAC</span>
                 </a>
               </>
-            )}
-            {isProfessor && (
-              <a 
-                onClick={() => navigate('/admin')}
-                className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer"
-              >
+            }
+            {isProfessor &&
+            <a
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
                 <Settings className="w-5 h-5" />
                 <span>Administrare</span>
               </a>
-            )}
+            }
           </nav>
 
           {/* User & Logout */}
@@ -389,21 +389,21 @@ const Dashboard = () => {
               </div>
             </div>
             <ChangePasswordDialog />
-            {authRole === 'admin' && (
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-primary-foreground/70 hover:text-primary-foreground hover:bg-sidebar-accent"
-                onClick={() => navigate('/admin')}
-              >
+            {authRole === 'admin' &&
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-primary-foreground/70 hover:text-primary-foreground hover:bg-sidebar-accent"
+              onClick={() => navigate('/admin')}>
+
                 <Settings className="w-4 h-4 mr-2" />
                 Panou Admin
               </Button>
-            )}
-            <Button 
-              variant="ghost" 
+            }
+            <Button
+              variant="ghost"
               className="w-full justify-start text-primary-foreground/70 hover:text-primary-foreground hover:bg-sidebar-accent"
-              onClick={handleLogout}
-            >
+              onClick={handleLogout}>
+
               <LogOut className="w-4 h-4 mr-2" />
               Deconectare
             </Button>
@@ -412,20 +412,20 @@ const Dashboard = () => {
       </aside>
 
       {/* Mobile menu button */}
-      <button 
+      <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary text-primary-foreground rounded-lg"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
+        onClick={() => setSidebarOpen(!sidebarOpen)}>
+
         {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen &&
+      <div
+        className="lg:hidden fixed inset-0 bg-black/50 z-40"
+        onClick={() => setSidebarOpen(false)} />
+
+      }
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 p-4 pt-16 sm:p-6 lg:p-8 lg:pt-8">
@@ -440,12 +440,12 @@ const Dashboard = () => {
                 {isProfessor ? 'Gestionează conținutul educațional' : 'Explorează lecțiile și materialele'}
               </p>
             </div>
-            {isProfessor && (
-              <Button variant="gold" className="gap-2" onClick={handleAddNewLesson}>
+            {isProfessor &&
+            <Button variant="gold" className="gap-2" onClick={handleAddNewLesson}>
                 <Plus className="w-4 h-4" />
                 Adaugă lecție nouă
               </Button>
-            )}
+            }
           </div>
         </header>
 
@@ -457,24 +457,24 @@ const Dashboard = () => {
             iconBg="bg-primary/10"
             value={uploadedLessons}
             label="Lecții disponibile"
-            delay="delay-100"
-          />
+            delay="delay-100" />
+
           <StatsCard
             icon={Search}
             iconColor="text-gold"
             iconBg="bg-gold/10"
             value={`${totalDuration} min`}
             label="Timp total studiu"
-            delay="delay-200"
-          />
+            delay="delay-200" />
+
           <StatsCard
             icon={Users}
             iconColor="text-emerald-500"
             iconBg="bg-emerald-500/10"
             value={materials.length}
             label="Fișiere încărcate"
-            delay="delay-300"
-          />
+            delay="delay-300" />
+
         </div>
 
         {/* Search */}
@@ -482,52 +482,52 @@ const Dashboard = () => {
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Caută lecții după titlu..."
-          />
+            placeholder="Caută lecții după titlu..." />
+
         </div>
 
         {/* Lessons List */}
         <section id="lectii" className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
           
-          {isLoading ? (
-            <div className="text-center py-12">
+          {isLoading ?
+          <div className="text-center py-12">
               <p className="text-muted-foreground">Se încarcă...</p>
+            </div> :
+          filteredLessons.length === 0 ?
+          searchQuery ?
+          <EmptyState
+            icon={Search}
+            title="Niciun rezultat"
+            description={`Nu am găsit lecții care să conțină "${searchQuery}"`}
+            actionLabel="Șterge căutarea"
+            onAction={() => setSearchQuery('')} /> :
+
+
+          <EmptyState
+            icon={BookOpen}
+            title="Nicio lecție încă"
+            description="Nu există lecții încărcate pentru această materie."
+            actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
+            onAction={isProfessor ? handleAddNewLesson : undefined} /> :
+
+
+
+          <div className="space-y-4">
+              {filteredLessons.map((lesson, index) =>
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
+              index={currentLessons.findIndex((l) => l.id === lesson.id)}
+              isProfessor={isProfessor}
+              onAdd={handleAddLesson}
+              onEdit={handleEditLesson}
+              onDelete={handleDeleteLesson}
+              onViewFile={handleViewFile} />
+
+            )}
             </div>
-          ) : filteredLessons.length === 0 ? (
-            searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="Niciun rezultat"
-                description={`Nu am găsit lecții care să conțină "${searchQuery}"`}
-                actionLabel="Șterge căutarea"
-                onAction={() => setSearchQuery('')}
-              />
-            ) : (
-              <EmptyState
-                icon={BookOpen}
-                title="Nicio lecție încă"
-                description="Nu există lecții încărcate pentru această materie."
-                actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
-                onAction={isProfessor ? handleAddNewLesson : undefined}
-              />
-            )
-          ) : (
-            <div className="space-y-4">
-              {filteredLessons.map((lesson, index) => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  index={currentLessons.findIndex(l => l.id === lesson.id)}
-                  isProfessor={isProfessor}
-                  onAdd={handleAddLesson}
-                  onEdit={handleEditLesson}
-                  onDelete={handleDeleteLesson}
-                  onViewFile={handleViewFile}
-                />
-              ))}
-            </div>
-          )}
+          }
         </section>
 
         {/* Add Lesson Modal */}
@@ -540,22 +540,22 @@ const Dashboard = () => {
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonNumber}
           subject={subject || 'informatica'}
-          editData={editingLesson}
-        />
+          editData={editingLesson} />
+
 
         {/* File Viewer */}
-        {viewingFile && (
-          <FileViewer
-            isOpen={!!viewingFile}
-            onClose={() => setViewingFile(null)}
-            fileUrl={viewingFile.url}
-            fileName={viewingFile.name}
-            fileType={viewingFile.type}
-          />
-        )}
+        {viewingFile &&
+        <FileViewer
+          isOpen={!!viewingFile}
+          onClose={() => setViewingFile(null)}
+          fileUrl={viewingFile.url}
+          fileName={viewingFile.name}
+          fileType={viewingFile.type} />
+
+        }
       </main>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Dashboard;
