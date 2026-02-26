@@ -129,13 +129,12 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="username">Nume de utilizator *</Label>
           <Input
             id="username"
             type="text"
-            autoComplete="off"
             placeholder="ex: ion.popescu"
             value={username}
             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '.'))}
@@ -206,7 +205,6 @@ const CreateStudentForm = ({ onStudentCreated }: CreateStudentFormProps) => {
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
               placeholder="Cel puțin 6 caractere"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
