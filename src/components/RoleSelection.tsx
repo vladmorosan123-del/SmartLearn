@@ -43,10 +43,10 @@ const RoleSelection = () => {
         {/* Role Cards */}
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Student Card */}
-          <div 
+          <div
             className="group cursor-pointer animate-fade-up delay-200"
-            onClick={() => handleRoleSelect('student')}
-          >
+            onClick={() => handleRoleSelect('student')}>
+
             <div className="bg-card rounded-2xl p-8 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-500 military-border">
               <div className="flex flex-col items-center text-center">
                 <div className="w-20 h-20 bg-gradient-hero rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -79,10 +79,10 @@ const RoleSelection = () => {
           </div>
 
           {/* Professor Card */}
-          <div 
+          <div
             className="group cursor-pointer animate-fade-up delay-300"
-            onClick={() => handleRoleSelect('profesor')}
-          >
+            onClick={() => handleRoleSelect('profesor')}>
+
             <div className="bg-card rounded-2xl p-8 shadow-card border border-border hover:border-gold/50 hover:shadow-gold transition-all duration-500 military-border">
               <div className="flex flex-col items-center text-center">
                 <div className="w-20 h-20 bg-gradient-gold rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -117,13 +117,13 @@ const RoleSelection = () => {
 
         {/* Footer */}
         <footer className="mt-16 text-center animate-fade-up delay-500">
-          <p className="text-sm text-muted-foreground">
-            Colegiul Național Militar „Ștefan cel Mare" • Platformă Educațională Oficială
+          <p className="text-sm text-muted-foreground">Colegiul Național Militar „Ștefan cel Mare" • Platformă Educațională instituțională
+
           </p>
         </footer>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default RoleSelection;
