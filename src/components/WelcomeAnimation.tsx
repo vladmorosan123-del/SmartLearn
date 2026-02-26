@@ -14,17 +14,16 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
       setTimeout(() => setPhase(2), 1200),
       setTimeout(() => setPhase(3), 2000),
       setTimeout(() => setPhase(4), 2800),
-      setTimeout(() => onComplete(), 4000),
     ];
 
     return () => timers.forEach(clearTimeout);
-  }, [onComplete]);
+  }, []);
 
   return (
     <div
       className="fixed inset-0 bg-gradient-hero flex items-center justify-center z-50 overflow-hidden cursor-pointer"
       onClick={onComplete}
-      onKeyDown={(e) => { if (e.key === 'Enter') onComplete(); }}
+      onKeyDown={() => onComplete()}
       tabIndex={0}
       role="button"
     >
@@ -79,13 +78,19 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
           Excelență în educație și disciplină
         </p>
 
-        {/* Loading indicator */}
-        <div className={`mt-12 transition-all duration-500 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex justify-center space-x-2">
-            <div className="w-2 h-2 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 bg-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 bg-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
+        {/* Project info */}
+        <div className={`mt-6 transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
+          <p className="text-gold text-sm font-semibold tracking-wide">SMART LEARNING</p>
+          <p className="text-primary-foreground/50 text-xs mt-1">Integrarea AI în învățare</p>
+          <p className="text-primary-foreground/40 text-xs mt-1">Prof. coord. Anca Tudose</p>
+          <p className="text-primary-foreground/40 text-xs">Echipa: Moroșan Ștefan, Turculeț Ștefan, Roșu Vasile</p>
+        </div>
+
+        {/* Continue hint */}
+        <div className={`mt-10 transition-all duration-500 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
+          <p className="text-primary-foreground/50 text-sm animate-pulse">
+            Click sau apasă orice tastă pentru a continua
+          </p>
         </div>
       </div>
     </div>
