@@ -82,7 +82,7 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
 
         {/* School name */}
         <div className={`transition-all duration-1000 ${phase >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <p className="text-gold text-xl md:text-2xl font-medium tracking-wide mb-2">
+          <p className="text-gold text-xl md:text-2xl font-bold tracking-[0.2em] uppercase mb-2">
             Colegiul Național Militar
           </p>
           <h2 className="font-display text-3xl md:text-5xl text-gradient-gold">
@@ -91,16 +91,34 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
         </div>
 
         {/* Motto */}
-        <p className={`mt-8 text-primary-foreground/70 text-lg italic transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
+        <p className={`mt-6 text-primary-foreground/70 text-lg italic transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
           Excelență în educație și disciplină
         </p>
 
+        {/* Gold separator line */}
+        <div className={`flex justify-center mt-8 transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="w-48 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+        </div>
+
         {/* Project info */}
         <div className={`mt-6 transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
-          <p className="text-gold text-sm font-semibold tracking-wide">SMART LEARNING</p>
-          <p className="text-primary-foreground/50 text-xs mt-1">Integrarea AI în învățare</p>
-          <p className="text-primary-foreground/40 text-xs mt-1">Prof. coord. Anca Tudose</p>
-          <p className="text-primary-foreground/40 text-xs">Echipa: Moroșan Ștefan, Turculeț Ștefan, Roșu Vasile</p>
+          <p className="text-gold text-base md:text-lg font-bold tracking-[0.15em]">SMART LEARNING</p>
+          <p className="text-primary-foreground/60 text-sm md:text-base mt-1">Integrarea A.I. în învățare</p>
+        </div>
+
+        {/* Gold separator line */}
+        <div className={`flex justify-center mt-6 transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="w-48 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+        </div>
+
+        {/* Team & Coordinator */}
+        <div className={`mt-6 transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
+          <p className="text-primary-foreground/60 text-sm">
+            Echipa de proiect: <span className="text-gold">Ștefan Moroșan • Ștefan Turculeț • Vasile Roșu</span>
+          </p>
+          <p className="text-primary-foreground/60 text-sm mt-1">
+            Coordonator: <span className="text-gold">prof. Anca Tudose</span>
+          </p>
         </div>
 
         {/* Continue hint */}
