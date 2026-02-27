@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { getAccessibleFileUrl } from '@/lib/storageApi';
 
 /**
  * Extract the storage path from a full Supabase public URL.
@@ -14,26 +14,13 @@ export const extractStoragePath = (fileUrl: string): string | null => {
 };
 
 /**
- * Generate a signed URL for a file in the materials bucket.
- * Falls back to the original URL if signing fails.
- * @param fileUrl - The stored file URL (public pattern or path)
- * @param expiresIn - Seconds until expiry (default 1 hour)
+ * Generate a signed / accessible URL for a file.
+ * Delegates to the storage API abstraction which handles
+ * both custom server and cloud storage.
  */
 export const getSignedFileUrl = async (
   fileUrl: string,
   expiresIn = 3600
 ): Promise<string> => {
-  const path = extractStoragePath(fileUrl);
-  if (!path) return fileUrl;
-
-  const { data, error } = await supabase.storage
-    .from('materials')
-    .createSignedUrl(path, expiresIn);
-
-  if (error || !data?.signedUrl) {
-    console.warn('Failed to generate signed URL, falling back:', error?.message);
-    return fileUrl;
-  }
-
-  return data.signedUrl;
+  return getAccessibleFileUrl(fileUrl, expiresIn);
 };
