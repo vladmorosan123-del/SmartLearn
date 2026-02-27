@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { deleteFile } from '@/lib/storageApi';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
@@ -195,11 +196,11 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
   const deleteMaterial = async (id: string, fileUrl: string) => {
     try {
-      // Extract file path from URL
+      // Delete file from storage (works with both cloud and custom server)
       const urlParts = fileUrl.split('/materials/');
       if (urlParts.length > 1) {
-        const filePath = urlParts[1];
-        await supabase.storage.from('materials').remove([filePath]);
+        const filePath = decodeURIComponent(urlParts[1]);
+        await deleteFile('materials', filePath);
       }
 
       const { error } = await supabase

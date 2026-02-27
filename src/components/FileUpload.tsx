@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, X, FileText, Image, FileSpreadsheet, FileType, File, Video, Presentation, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { uploadFile } from '@/lib/storageApi';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
@@ -218,22 +218,16 @@ const FileUpload = ({ onUploadComplete, category, subject, multiple = true }: Fi
       try {
         const fileExt = uploadedFile.file.name.split('.').pop()?.toLowerCase() || '';
         const sanitizedName = sanitizeFileName(uploadedFile.file.name);
-        const fileName = `${category}/${subject}/${Date.now()}_${sanitizedName}`;
+        const filePath = `${category}/${subject}/${Date.now()}_${sanitizedName}`;
         
-        const { data, error } = await supabase.storage
-          .from('materials')
-          .upload(fileName, uploadedFile.file, {
-            contentType: MIME_TYPES[fileExt] || 'application/octet-stream',
-            upsert: false,
-          });
+        const result = await uploadFile(
+          'materials',
+          filePath,
+          uploadedFile.file,
+          MIME_TYPES[fileExt] || 'application/octet-stream',
+        );
 
-        if (error) throw error;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('materials')
-          .getPublicUrl(data.path);
-
-        onUploadComplete(publicUrl, uploadedFile.file.name, fileExt, uploadedFile.file.size);
+        onUploadComplete(result.url, uploadedFile.file.name, fileExt, uploadedFile.file.size);
         
         // Update status to success
         setSelectedFiles(prev => prev.map((f, idx) => 
