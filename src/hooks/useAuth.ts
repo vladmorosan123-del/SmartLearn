@@ -31,7 +31,7 @@ export const useAuth = () => {
 
   // Restore session from localStorage on mount (since persistSession is false)
   useEffect(() => {
-    const stored = localStorage.getItem('lm_session');
+    const stored = sessionStorage.getItem('lm_session');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -40,7 +40,7 @@ export const useAuth = () => {
           refresh_token: parsed.refresh_token,
         });
       } catch {
-        localStorage.removeItem('lm_session');
+        sessionStorage.removeItem('lm_session');
       }
     }
   }, []);
@@ -51,12 +51,12 @@ export const useAuth = () => {
       (event, session) => {
         // Persist session for refresh survival
         if (session) {
-          localStorage.setItem('lm_session', JSON.stringify({
+          sessionStorage.setItem('lm_session', JSON.stringify({
             access_token: session.access_token,
             refresh_token: session.refresh_token,
           }));
         } else {
-          localStorage.removeItem('lm_session');
+          sessionStorage.removeItem('lm_session');
         }
 
         setAuthState(prev => ({
@@ -220,7 +220,7 @@ export const useAuth = () => {
     });
 
     // Clear persisted session and auth tokens
-    localStorage.removeItem('lm_session');
+    sessionStorage.removeItem('lm_session');
     const keysToRemove = Object.keys(sessionStorage).filter(
       key => key.startsWith('sb-') || key.startsWith('supabase.')
     );
