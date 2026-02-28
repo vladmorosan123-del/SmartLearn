@@ -29,8 +29,17 @@ export const useAuth = () => {
     isLoading: true,
   });
 
-  // Restore session from localStorage on mount (since persistSession is false)
+  // Clean up stale localStorage keys from previous implementation & restore session
   useEffect(() => {
+    // Clear any old localStorage keys that may interfere
+    const staleKeys = Object.keys(localStorage).filter(
+      key => key.startsWith('sb-') || key.startsWith('supabase.') || key === 'lm_session'
+    );
+    staleKeys.forEach(key => localStorage.removeItem(key));
+
+    // Also clear old app context keys from localStorage
+    ['lm_role', 'lm_subject', 'lm_userName'].forEach(key => localStorage.removeItem(key));
+
     const stored = sessionStorage.getItem('lm_session');
     if (stored) {
       try {
