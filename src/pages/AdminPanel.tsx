@@ -79,6 +79,7 @@ const AdminPanel = () => {
   const [recentMaterials, setRecentMaterials] = useState<RecentMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const { students: progressStudents, stats: progressStats, isLoading: isProgressLoading, refetch: refetchProgress, formatTime } = useStudentProgress();
 
   // Fetch real data from database
