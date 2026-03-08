@@ -3,7 +3,7 @@ import { CheckCircle, XCircle, Send, RotateCcw, Loader2, Clock } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface QuizResult {
