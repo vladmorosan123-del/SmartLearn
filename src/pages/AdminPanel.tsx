@@ -55,6 +55,19 @@ interface RecentMaterial {
   updated_at: string;
 }
 
+interface ActivityLog {
+  id: string;
+  user_id: string;
+  username: string;
+  action: string;
+  entity_type: string;
+  entity_title: string | null;
+  entity_subject: string | null;
+  entity_category: string | null;
+  details: Record<string, any> | null;
+  created_at: string;
+}
+
 const AdminPanel = () => {
   const { role } = useApp();
   const { role: authRole } = useAuthContext();
