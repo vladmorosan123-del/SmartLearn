@@ -4,6 +4,7 @@ import { deleteFile } from '@/lib/storageApi';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
+import { logActivity } from '@/lib/activityLogger';
 
 export interface Material {
   id: string;
