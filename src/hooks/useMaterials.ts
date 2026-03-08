@@ -150,6 +150,21 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
       if (error) throw error;
       
+      // Log activity
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('username').eq('user_id', user.id).single();
+        logActivity({
+          userId: user.id,
+          username: profile?.username || 'unknown',
+          action: 'create',
+          entityType: 'material',
+          entityTitle: materialData.title,
+          entitySubject: materialData.subject,
+          entityCategory: materialData.category,
+        });
+      }
+      
       // When adding, we're a privileged user, so don't hide answer_key
       setMaterials(prev => [mapToMaterial(data, false), ...prev]);
       return mapToMaterial(data, false);
