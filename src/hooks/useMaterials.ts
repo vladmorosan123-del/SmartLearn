@@ -212,6 +212,9 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
   const deleteMaterial = async (id: string, fileUrl: string) => {
     try {
+      // Get material info before deleting for logging
+      const materialToDelete = materials.find(m => m.id === id);
+      
       // Delete file from storage (works with both cloud and custom server)
       const urlParts = fileUrl.split('/materials/');
       if (urlParts.length > 1) {
@@ -225,6 +228,22 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .eq('id', id);
 
       if (error) throw error;
+      
+      // Log activity
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user && materialToDelete) {
+        const { data: profile } = await supabase.from('profiles').select('username').eq('user_id', user.id).single();
+        logActivity({
+          userId: user.id,
+          username: profile?.username || 'unknown',
+          action: 'delete',
+          entityType: 'material',
+          entityTitle: materialToDelete.title,
+          entitySubject: materialToDelete.subject,
+          entityCategory: materialToDelete.category,
+          details: { fileName: materialToDelete.file_name },
+        });
+      }
       
       setMaterials(prev => prev.filter(m => m.id !== id));
       
