@@ -3,7 +3,7 @@ import { Play, Send, Clock, FileText, Download, AlertTriangle, ClipboardCheck, X
 import { Button } from '@/components/ui/button';
 import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizAutoSubmit from '@/components/TVCQuizAutoSubmit';
 import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
 
