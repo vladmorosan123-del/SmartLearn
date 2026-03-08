@@ -658,10 +658,10 @@ const AdminPanel = () => {
 
 
             
-              <div className="bg-card rounded-xl p-4 border border-border shadow-card text-center">
-                <p className="text-3xl font-bold text-foreground">{platformStats.totalTvcMaterials}</p>
-                <p className="text-sm text-muted-foreground">Materiale TVC</p>
-              </div>
+              
+
+
+            
             </div>
           </div>
         }
