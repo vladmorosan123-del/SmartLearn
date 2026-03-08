@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_category: string | null
+          entity_subject: string | null
+          entity_title: string | null
+          entity_type: string
+          id: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_category?: string | null
+          entity_subject?: string | null
+          entity_title?: string | null
+          entity_type: string
+          id?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_category?: string | null
+          entity_subject?: string | null
+          entity_title?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       invitation_codes: {
         Row: {
           code: string
