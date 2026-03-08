@@ -137,6 +137,16 @@ const AdminPanel = () => {
         // Set recent materials (last 10)
         setRecentMaterials(materials.slice(0, 10) as RecentMaterial[]);
       }
+      // Fetch activity logs
+      const { data: logs } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (logs) {
+        setActivityLogs(logs as ActivityLog[]);
+      }
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
