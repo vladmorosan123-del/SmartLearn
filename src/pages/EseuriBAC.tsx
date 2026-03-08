@@ -12,7 +12,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import FileUpload from '@/components/FileUpload';
 import FileViewer from '@/components/FileViewer';
 import MultiFileViewer, { extractSubjectFiles } from '@/components/MultiFileViewer';

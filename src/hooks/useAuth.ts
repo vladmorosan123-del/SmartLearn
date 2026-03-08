@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import { hashPassword } from '@/lib/hashPassword';
 
 export type AppRole = 'student' | 'profesor' | 'admin' | null;
