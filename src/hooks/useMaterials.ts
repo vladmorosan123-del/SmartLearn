@@ -4,6 +4,7 @@ import { deleteFile } from '@/lib/storageApi';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
+import { logActivity } from '@/lib/activityLogger';
 
 export interface Material {
   id: string;
@@ -149,6 +150,21 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
       if (error) throw error;
       
+      // Log activity
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('username').eq('user_id', user.id).single();
+        logActivity({
+          userId: user.id,
+          username: profile?.username || 'unknown',
+          action: 'create',
+          entityType: 'material',
+          entityTitle: materialData.title,
+          entitySubject: materialData.subject,
+          entityCategory: materialData.category,
+        });
+      }
+      
       // When adding, we're a privileged user, so don't hide answer_key
       setMaterials(prev => [mapToMaterial(data, false), ...prev]);
       return mapToMaterial(data, false);
@@ -196,6 +212,9 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
   const deleteMaterial = async (id: string, fileUrl: string) => {
     try {
+      // Get material info before deleting for logging
+      const materialToDelete = materials.find(m => m.id === id);
+      
       // Delete file from storage (works with both cloud and custom server)
       const urlParts = fileUrl.split('/materials/');
       if (urlParts.length > 1) {
@@ -209,6 +228,22 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .eq('id', id);
 
       if (error) throw error;
+      
+      // Log activity
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user && materialToDelete) {
+        const { data: profile } = await supabase.from('profiles').select('username').eq('user_id', user.id).single();
+        logActivity({
+          userId: user.id,
+          username: profile?.username || 'unknown',
+          action: 'delete',
+          entityType: 'material',
+          entityTitle: materialToDelete.title,
+          entitySubject: materialToDelete.subject,
+          entityCategory: materialToDelete.category,
+          details: { fileName: materialToDelete.file_name },
+        });
+      }
       
       setMaterials(prev => prev.filter(m => m.id !== id));
       
