@@ -702,60 +702,87 @@ const AdminPanel = () => {
         <div className="space-y-6 animate-fade-up">
             <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
               <div className="p-6 border-b border-border">
-                <h3 className="font-display text-lg text-foreground">Activitate Recentă - Ultimele Materiale</h3>
+                <h3 className="font-display text-lg text-foreground">Istoric Activitate</h3>
+                <p className="text-sm text-muted-foreground mt-1">Toate acțiunile efectuate pe platformă</p>
               </div>
-              {recentMaterials.length > 0 ?
-            <div className="divide-y divide-border">
-                  {recentMaterials.map((material) => {
-                const isNew = new Date(material.created_at).getTime() === new Date(material.updated_at).getTime();
-                const categoryLabel = material.category === 'lectie' ? 'Lecție' :
-                material.category === 'bac' ? 'Model BAC' :
-                material.category === 'tvc' ? 'Material TVC' :
-                material.category === 'eseu' ? 'Eseu' :
-                material.category === 'portofoliu' ? 'Portofoliu' : 'Material';
+              {activityLogs.length > 0 ?
+            <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">Tip</TableHead>
+                        <TableHead>Acțiune</TableHead>
+                        <TableHead>Document</TableHead>
+                        <TableHead>Materie</TableHead>
+                        <TableHead>Categorie</TableHead>
+                        <TableHead>De către</TableHead>
+                        <TableHead>Data & Ora</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activityLogs.map((log) => {
+                    const actionLabel = log.action === 'create' ? 'Adăugat' :
+                      log.action === 'update' ? 'Modificat' :
+                      log.action === 'delete' ? 'Șters' : log.action;
+                    
+                    const actionColor = log.action === 'create' ? 'text-emerald-500 bg-emerald-500/10' :
+                      log.action === 'update' ? 'text-gold bg-gold/10' :
+                      log.action === 'delete' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground bg-muted';
 
-                const formatRelativeTime = (dateStr: string) => {
-                  const date = new Date(dateStr);
-                  const now = new Date();
-                  const diffMs = now.getTime() - date.getTime();
-                  const diffMins = Math.floor(diffMs / 60000);
-                  const diffHours = Math.floor(diffMs / 3600000);
-                  const diffDays = Math.floor(diffMs / 86400000);
+                    const ActionIcon = log.action === 'create' ? Plus :
+                      log.action === 'update' ? Eye :
+                      log.action === 'delete' ? Trash2 : Activity;
 
-                  if (diffMins < 60) return `Acum ${diffMins} minute`;
-                  if (diffHours < 24) return `Acum ${diffHours} ore`;
-                  if (diffDays === 1) return 'Ieri';
-                  if (diffDays < 7) return `Acum ${diffDays} zile`;
-                  return date.toLocaleDateString('ro-RO');
-                };
+                    const categoryLabel = log.entity_category === 'lesson' ? 'Lecție' :
+                      log.entity_category === 'bac_model' ? 'Model BAC' :
+                      log.entity_category === 'tvc' ? 'TVC' :
+                      log.entity_category === 'tvc_complet' ? 'TVC Complet' :
+                      log.entity_category === 'eseu' ? 'Eseu' :
+                      log.entity_category === 'portofoliu' ? 'Portofoliu' :
+                      log.entity_category === 'subiect2' ? 'Subiect II' :
+                      log.entity_category || '-';
 
-                return (
-                  <div key={material.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    isNew ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gold/10 text-gold'}`
-                    }>
-                          {isNew ? <Plus className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">
-                            {isNew ? `${categoryLabel} adăugat` : `${categoryLabel} modificat`}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {material.title} • {subjectNames[material.subject as Subject]}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          {formatRelativeTime(material.updated_at)}
-                        </div>
-                      </div>);
+                    const date = new Date(log.created_at);
+                    const dateStr = date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const timeStr = date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 
-              })}
+                    return (
+                      <TableRow key={log.id}>
+                            <TableCell>
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${actionColor}`}>
+                                <ActionIcon className="w-4 h-4" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`font-medium ${log.action === 'delete' ? 'text-destructive' : 'text-foreground'}`}>
+                                {actionLabel}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground max-w-[200px] truncate">
+                              {log.entity_title || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {log.entity_subject ? subjectNames[log.entity_subject as Subject] || log.entity_subject : '-'}
+                            </TableCell>
+                            <TableCell>{categoryLabel}</TableCell>
+                            <TableCell>
+                              <span className="text-foreground font-medium">{log.username}</span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-foreground text-sm">{dateStr}</span>
+                                <span className="text-muted-foreground text-xs">{timeStr}</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>);
+                  })}
+                    </TableBody>
+                  </Table>
                 </div> :
-
             <div className="p-12 text-center">
                   <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground">Nu există activitate recentă încă.</p>
+                  <p className="text-muted-foreground">Nu există activitate înregistrată încă.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Activitățile vor apărea aici când adaugi, modifici sau ștergi materiale.</p>
                 </div>
             }
             </div>
