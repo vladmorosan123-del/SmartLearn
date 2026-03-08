@@ -1,246 +1,242 @@
-# Configurare Server Propriu pentru Stocare Fișiere
+# SmartLearning — Ghid Complet Server Propriu
 
-## Prezentare Generală
+## Prezentare generală
 
-Aplicația Smart Learning este pregătită să se conecteze la un server propriu pentru stocarea fișierelor (PDF-uri, imagini, video-uri). Când serverul este configurat, toate operațiunile de upload, descărcare și ștergere vor trece prin API-ul serverului în loc de cloud storage.
+Aplicația SmartLearning poate funcționa în două moduri:
+1. **Lovable Cloud** — modul curent, fără configurare suplimentară
+2. **Server propriu (Express.js + PostgreSQL)** — independență completă
 
----
-
-## 1. Activare
-
-Setați variabila de environment în fișierul `.env` al aplicației:
-
-```env
-VITE_SERVER_URL=https://server-vostru.example.com
-```
-
-Aplicația detectează automat această variabilă. Dacă este setată, toate operațiunile de stocare sunt redirecționate către server. Dacă nu este setată, aplicația continuă să folosească cloud storage (comportamentul actual).
+Această documentație descrie configurarea modului 2.
 
 ---
 
-## 2. Endpoint-uri API necesare
-
-Serverul trebuie să implementeze **3 endpoint-uri REST**:
-
-### 2.1 `POST /api/storage/upload`
-
-Încarcă un fișier pe server.
-
-**Request:**
-- `Content-Type: multipart/form-data`
-- Header: `Authorization: Bearer <jwt_token>`
-- Form fields:
-  - `file` — fișierul binar
-  - `bucket` — numele bucket-ului (ex: `"materials"`)
-  - `path` — calea în care se salvează fișierul (ex: `"lectii/romana/1709123456_fisier.pdf"`)
-
-**Response (JSON):**
-```json
-{
-  "url": "https://server-vostru.example.com/files/materials/lectii/romana/1709123456_fisier.pdf",
-  "path": "lectii/romana/1709123456_fisier.pdf"
-}
-```
-
-### 2.2 `GET /api/storage/signed-url`
-
-Generează un URL temporar pentru accesarea securizată a unui fișier.
-
-**Query Parameters:**
-- `url` — URL-ul fișierului stocat în baza de date
-- `expires` — durata de valabilitate în secunde (default: 3600)
-
-**Header:** `Authorization: Bearer <jwt_token>`
-
-**Response (JSON):**
-```json
-{
-  "signedUrl": "https://server-vostru.example.com/files/materials/lectii/romana/fisier.pdf?token=abc123&expires=1709127056"
-}
-```
-
-### 2.3 `DELETE /api/storage/delete`
-
-Șterge un fișier de pe server.
-
-**Request:**
-- `Content-Type: application/json`
-- Header: `Authorization: Bearer <jwt_token>`
-- Body:
-```json
-{
-  "bucket": "materials",
-  "path": "lectii/romana/1709123456_fisier.pdf"
-}
-```
-
-**Response:** `200 OK` (fără body obligatoriu)
-
----
-
-## 3. Structura Folderelor pe Server
+## Arhitectura serverului
 
 ```
-/var/www/storage/              ← directorul rădăcină pentru fișiere
-└── materials/                 ← bucket-ul principal
-    ├── lectii/
-    │   ├── romana/
-    │   │   ├── 1709123456_fisier.pdf
-    │   │   └── 1709123457_alt_fisier.pdf
-    │   ├── matematica/
-    │   └── ...
-    ├── modele-bac/
-    ├── eseuri-bac/
-    ├── subiect2-bac/
-    └── teste-academii/
+server/
+├── index.js              # Entry point Express
+├── package.json          # Dependențe Node.js
+├── .env.example          # Template configurare
+├── db/
+│   ├── pool.js           # Conexiune PostgreSQL
+│   └── schema.sql        # Schema completă a bazei de date
+├── middleware/
+│   └── auth.js           # JWT auth & role middleware
+└── routes/
+    ├── auth.js           # Login, register, logout, password update
+    ├── db.js             # CRUD generic pentru toate tabelele
+    ├── rpc.js            # Funcții PostgreSQL echivalente
+    ├── functions.js      # Admin management, create user, verify quiz
+    └── storage.js        # Upload/download/delete fișiere local
 ```
 
 ---
 
-## 4. Permisiuni (Linux)
+## Cerințe sistem
+
+- **Node.js** ≥ 18
+- **PostgreSQL** ≥ 14
+- **Disk space** ≥ 10GB (pentru fișiere stocate)
+- **RAM** ≥ 1GB
+- **OS** recomandat: Ubuntu 22.04+, Debian 12+
+
+---
+
+## Pași de instalare
+
+### 1. Clonează și instalează dependențele
 
 ```bash
-# Creare folder
-sudo mkdir -p /var/www/storage/materials
-sudo chown -R www-data:www-data /var/www/storage
-sudo chmod -R 755 /var/www/storage
+cd server
+npm install
+```
+
+### 2. Configurează baza de date
+
+```bash
+sudo -u postgres createdb smartlearning
+psql -U postgres -d smartlearning -f db/schema.sql
+```
+
+### 3. Configurează variabilele de mediu
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Completează:
+- `JWT_SECRET` — generează cu `openssl rand -hex 64`
+- `DB_PASSWORD` — parola PostgreSQL
+- `STORAGE_PATH` — calea absolută pentru fișiere (ex: `/var/data/smartlearning/uploads`)
+- `SERVER_PUBLIC_URL` — URL-ul public al serverului (ex: `https://api.scoala-ta.ro`)
+- `CORS_ORIGINS` — URL-ul frontend-ului (ex: `https://smartlearningtvc.lovable.app`)
+
+### 4. Creează directorul de stocare
+
+```bash
+sudo mkdir -p /var/data/smartlearning/uploads/materials
+sudo chown -R $USER:$USER /var/data/smartlearning
+chmod -R 755 /var/data/smartlearning
+```
+
+### 5. Creează contul de administrator
+
+```bash
+node -e "
+const bcrypt = require('bcryptjs');
+const sha256 = 'YOUR_SHA256_HASH_HERE'; // SHA-256 of 'plutonul.7'
+bcrypt.hash(sha256, 10).then(h => console.log('Hash:', h));
+"
+```
+
+Apoi inserează manual:
+```sql
+INSERT INTO users (email, password_hash) 
+VALUES ('administrator.7@lm.local', '<bcrypt_hash>');
+
+SELECT id FROM users WHERE email = 'administrator.7@lm.local';
+
+INSERT INTO profiles (user_id, username, full_name) 
+VALUES ('<user_id>', 'administrator.7', 'Administrator');
+
+INSERT INTO user_roles (user_id, role) 
+VALUES ('<user_id>', 'admin');
+```
+
+### 6. Pornește serverul
+
+```bash
+npm run dev   # Development
+npm start     # Production
+```
+
+### 7. Configurează frontend-ul
+
+Setează variabila de mediu:
+```
+VITE_SERVER_URL=https://api.scoala-ta.ro
 ```
 
 ---
 
-## 5. Tehnologie Backend Recomandată
+## API Endpoints
 
-Puteți folosi orice limbaj/framework. Exemple:
+### Autentificare (`/api/auth/`)
 
-### Node.js (Express)
+| Metodă | Endpoint | Descriere | Auth |
+|--------|----------|-----------|------|
+| POST | `/api/auth/login` | Login cu email + SHA-256 password | ❌ |
+| POST | `/api/auth/register` | Creează cont nou | ❌ |
+| POST | `/api/auth/logout` | Logout (stateless) | ✅ |
+| GET | `/api/auth/me` | Info utilizator curent | ✅ |
+| PUT | `/api/auth/password` | Schimbă parola | ✅ |
 
-```javascript
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
+### Baza de date (`/api/db/`)
 
-const app = express();
-const STORAGE_ROOT = '/var/www/storage';
+| Metodă | Endpoint | Descriere | Auth |
+|--------|----------|-----------|------|
+| GET | `/api/db/:table` | SELECT cu filtre | ✅ |
+| POST | `/api/db/:table` | INSERT | ✅ |
+| PUT | `/api/db/:table` | UPDATE | ✅ |
+| DELETE | `/api/db/:table` | DELETE | ✅ |
 
-// CORS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
+Tabele permise: `materials`, `profiles`, `user_roles`, `tvc_submissions`, `lesson_views`, `invitation_codes`
 
-app.use(express.json());
+### Funcții RPC (`/api/rpc/`)
 
-// Middleware autentificare (verifică JWT)
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-  // TODO: Verifică token-ul JWT cu cheia secretă Supabase
-  next();
-};
+| Metodă | Endpoint | Descriere |
+|--------|----------|-----------|
+| POST | `/api/rpc/get_user_role` | Obține rolul utilizatorului |
+| POST | `/api/rpc/has_role` | Verifică dacă utilizatorul are un rol |
+| POST | `/api/rpc/is_admin` | Verifică dacă e admin |
+| POST | `/api/rpc/verify_invitation_code` | Verifică cod de invitație |
+| POST | `/api/rpc/get_materials_for_students` | Materiale fără answer_key |
+| POST | `/api/rpc/get_material_question_count` | Număr întrebări |
+| POST | `/api/rpc/get_material_answer_key` | Cheie răspunsuri (doar profesori) |
 
-// Upload
-const upload = multer({ dest: '/tmp/uploads' });
-app.post('/api/storage/upload', authenticate, upload.single('file'), (req, res) => {
-  const { bucket, path: filePath } = req.body;
-  const destDir = path.join(STORAGE_ROOT, bucket, path.dirname(filePath));
-  fs.mkdirSync(destDir, { recursive: true });
-  const destPath = path.join(STORAGE_ROOT, bucket, filePath);
-  fs.renameSync(req.file.path, destPath);
-  res.json({
-    url: `${req.protocol}://${req.get('host')}/files/${bucket}/${filePath}`,
-    path: filePath,
-  });
-});
+### Funcții Admin (`/api/functions/`)
 
-// Signed URL
-app.get('/api/storage/signed-url', authenticate, (req, res) => {
-  const { url, expires = '3600' } = req.query;
-  const token = crypto.randomBytes(32).toString('hex');
-  // TODO: Salvează token-ul cu expirare
-  res.json({ signedUrl: `${url}?token=${token}&expires=${Date.now() + parseInt(expires) * 1000}` });
-});
+| Metodă | Endpoint | Descriere |
+|--------|----------|-----------|
+| POST | `/api/functions/admin-management` | Toate acțiunile admin |
+| POST | `/api/functions/create-user` | Creează cont elev |
+| POST | `/api/functions/update-password` | Resetează parola (admin) |
+| POST | `/api/functions/verify-quiz-answers` | Verifică răspunsuri quiz |
 
-// Delete
-app.delete('/api/storage/delete', authenticate, (req, res) => {
-  const { bucket, path: filePath } = req.body;
-  const fullPath = path.join(STORAGE_ROOT, bucket, filePath);
-  if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-  res.sendStatus(200);
-});
+### Stocare (`/api/storage/`)
 
-// Serve fișiere statice
-app.use('/files', express.static(STORAGE_ROOT));
+| Metodă | Endpoint | Descriere |
+|--------|----------|-----------|
+| POST | `/api/storage/upload` | Upload fișier |
+| GET | `/api/storage/signed-url` | URL de acces |
+| DELETE | `/api/storage/delete` | Șterge fișier |
 
-app.listen(3001, () => console.log('Storage server running on :3001'));
+---
+
+## Frontend API Client (`src/lib/apiClient.ts`)
+
+Clientul API unificat detectează automat backend-ul:
+
+```typescript
+import { apiClient } from '@/lib/apiClient';
+
+// Funcționează identic indiferent de backend
+const { data } = await apiClient.from('materials').select('*').eq('category', 'lectie');
+const { data: role } = await apiClient.rpc('get_user_role', { _user_id: '...' });
+const { data } = await apiClient.functions.invoke('admin-management', { body: { action: '...' } });
 ```
 
-### Python (Flask) / PHP (Laravel) — Aceeași structură de endpoint-uri.
+Dacă `VITE_SERVER_URL` este setat → Express server. Altfel → Supabase Cloud.
 
 ---
 
-## 6. Cerințe Minime Server
+## Securitate
 
-| Cerință | Valoare recomandată |
-|---------|-------------------|
-| OS | Ubuntu 22.04+ / Debian 12+ |
-| RAM | minim 2 GB |
-| Disk | minim 50 GB (depinde de volumul fișierelor) |
-| Web Server | Nginx ca reverse proxy |
-| Runtime | Node.js 18+ / Python 3.10+ / PHP 8.1+ |
-| HTTPS | Obligatoriu (Let's Encrypt / certificat propriu) |
-| CORS | Permis pentru domeniul aplicației |
+- Parole: SHA-256 (client) → bcrypt (server)
+- JWT cu expirare configurabilă
+- Middleware role-based (`requireAuth`, `requireAdmin`, `requireProfesor`)
+- Filtrare automată pe `user_id` pentru studenți
+- Protecție path traversal pe stocare
+- HTTPS obligatoriu în producție
 
 ---
 
-## 7. Configurare Nginx (Reverse Proxy)
+## Deploy producție
 
+### PM2
+```bash
+npm install -g pm2
+pm2 start index.js --name smartlearning-api
+pm2 save && pm2 startup
+```
+
+### Nginx reverse proxy
 ```nginx
 server {
     listen 443 ssl;
-    server_name storage.liceul-vostru.ro;
+    server_name api.scoala-ta.ro;
 
-    ssl_certificate /etc/letsencrypt/live/storage.liceul-vostru.ro/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/storage.liceul-vostru.ro/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/api.scoala-ta.ro/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.scoala-ta.ro/privkey.pem;
 
-    client_max_body_size 100M;  # pentru video-uri
+    client_max_body_size 100M;
 
-    location /api/ {
+    location / {
         proxy_pass http://127.0.0.1:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /files/ {
-        alias /var/www/storage/;
-        expires 1h;
-        add_header Cache-Control "public, no-transform";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
 ---
 
-## 8. Securitate
+## Migrare date
 
-- **HTTPS obligatoriu** — toate transferurile de fișiere trebuie criptate
-- **Autentificare JWT** — fiecare request trebuie să aibă token valid
-- **Validare fișiere** — verificați extensia și dimensiunea pe server (max 10MB documente, 100MB video)
-- **Path traversal** — sanitizați calea fișierului pentru a preveni accesul la alte directoare
-- **Rate limiting** — limitați upload-urile la max 10/minut per utilizator
-- **Backup** — configurați backup automat al folderului de stocare
-
----
-
-## 9. Rezumat Pași de Implementare
-
-1. ✅ Aplicația este deja pregătită (codul de abstractizare este implementat)
-2. ⬜ Configurați serverul cu unul din framework-urile de mai sus
-3. ⬜ Implementați cele 3 endpoint-uri API
-4. ⬜ Configurați HTTPS și Nginx
-5. ⬜ Setați `VITE_SERVER_URL` în aplicație
-6. ⬜ Testați upload, vizualizare și ștergere
+1. Exportă datele din backend-ul curent
+2. Importă în PostgreSQL cu `psql -f export.sql`
+3. Mută fișierele în `STORAGE_PATH/materials/`
+4. Actualizează URL-urile din tabela `materials` dacă e necesar
