@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import { hashPassword } from '@/lib/hashPassword';
 
 interface ChangePasswordDialogProps {

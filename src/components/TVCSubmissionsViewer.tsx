@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ClipboardCheck, User, Calendar, CheckCircle, XCircle, Loader2, Search, X, Filter, Trash2, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import { toast } from 'sonner';
 import {
   Table,

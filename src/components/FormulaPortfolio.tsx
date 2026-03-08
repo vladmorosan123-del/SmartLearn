@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMaterials, Material } from '@/hooks/useMaterials';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import FileUpload from '@/components/FileUpload';
 import FileViewer from '@/components/FileViewer';
 

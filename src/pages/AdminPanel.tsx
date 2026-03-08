@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient as supabase } from '@/lib/apiClient';
 import TVCSubmissionsViewer from '@/components/TVCSubmissionsViewer';
 import CreateStudentForm from '@/components/CreateStudentForm';
 import AdminUserManagement from '@/components/AdminUserManagement';
