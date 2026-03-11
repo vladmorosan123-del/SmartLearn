@@ -10,7 +10,7 @@ export const useTimeTracking = ({ materialId, category }: UseTimeTrackingProps) 
   const [isTracking, setIsTracking] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startTimeRef = useRef<Date | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const viewIdRef = useRef<string | null>(null);
 
   const startTracking = useCallback(async () => {
