@@ -265,7 +265,7 @@ const Dashboard = () => {
               <span className="text-[10px] text-gold font-semibold block mt-1 text-center">SMART LEARNING</span>
               <span className="text-[9px] text-primary-foreground/50 block leading-tight text-center">Integrarea AI în învățare</span>
               <span className="text-[9px] text-primary-foreground/40 block mt-0.5 leading-tight text-center">Prof. coord. Anca Tudose</span>
-              <span className="text-[9px] text-primary-foreground/40 block leading-tight text-center">Echipa: Moroșan Ștefan, Turculeț Ștefan, Roșu Vasile</span>
+              <span className="text-[9px] text-primary-foreground/40 block leading-tight text-center">Echipa: Moroșan Ștefan, Turculeț Ștefan</span>
             </div>
           </div>
 
