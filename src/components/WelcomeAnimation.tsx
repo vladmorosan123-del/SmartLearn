@@ -114,7 +114,7 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
         {/* Team & Coordinator */}
         <div className={`mt-6 transition-all duration-1000 ${phase >= 4 ? 'opacity-100' : 'opacity-0'}`}>
           <p className="text-primary-foreground/60 text-sm">
-            Echipa de proiect: <span className="text-gold">Ștefan Moroșan • Ștefan Turculeț • Vasile Roșu</span>
+            Echipa de proiect: <span className="text-gold">Ștefan Moroșan • Ștefan Turculeț</span>
           </p>
           <p className="text-primary-foreground/60 text-sm mt-1">
             Coordonator: <span className="text-gold">prof. Anca Tudose</span>
