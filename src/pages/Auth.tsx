@@ -373,7 +373,7 @@ const Auth = () => {
         )}
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 Colegiul Național Militar „Ștefan cel Mare" • Toate drepturile rezervate
+          © Colegiul Național Militar „Ștefan cel Mare" • Toate drepturile rezervate
         </p>
       </div>
     </div>
