@@ -70,7 +70,7 @@ const WelcomeAnimation = ({ onComplete }: WelcomeAnimationProps) => {
           <div className="relative inline-block">
             <Shield className="w-24 h-24 text-gold animate-glow" strokeWidth={1.5} />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-gold font-display text-2xl font-bold">CNM</span>
+              <span className="text-gold font-display text-base font-bold">CNMSM</span>
             </div>
           </div>
         </div>
