@@ -197,7 +197,7 @@ const Auth = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-hero rounded-full mb-4">
             <GraduationCap className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-2xl text-foreground">Colegiul Național Militar „Ștefan cel Mare"</h1>
+          <h1 className="font-display text-2xl text-foreground whitespace-nowrap">Colegiul Național Militar „Ștefan cel Mare"</h1>
           <p className="text-muted-foreground mt-1">Platformă Educațională</p>
         </div>
 
