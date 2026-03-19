@@ -15,7 +15,7 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL as string | undefined;
 
 /** Whether a custom server is configured */
 export const isCustomServerEnabled = (): boolean => {
-  return !!SERVER_URL && SERVER_URL.trim().length > 0;
+  return !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
 };
 
 /**
@@ -23,10 +23,15 @@ export const isCustomServerEnabled = (): boolean => {
  * Sends the current Supabase JWT so the server can verify identity.
  */
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
-  const { data: { session } } = await supabase.auth.getSession();
   const headers: Record<string, string> = {};
-  if (session?.access_token) {
-    headers['Authorization'] = `Bearer ${session.access_token}`;
+  if (isCustomServerEnabled()) {
+    const token = sessionStorage.getItem('lm_server_token');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
   }
   return headers;
 };
