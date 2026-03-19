@@ -15,7 +15,7 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL as string | undefined;
 
 /** Whether a custom server is configured */
 export const isCustomServerEnabled = (): boolean => {
-  return !!SERVER_URL && SERVER_URL.trim().length > 0;
+  return !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
 };
 
 /**
