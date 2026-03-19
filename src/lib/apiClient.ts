@@ -34,7 +34,7 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL as string | undefined;
 
 /** Whether the custom server is being used */
 export const isCustomServer = (): boolean => {
-  return !!SERVER_URL && SERVER_URL.trim().length > 0;
+  return !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
 };
 
 // ─── Token Management ──────────────────────────────────────
