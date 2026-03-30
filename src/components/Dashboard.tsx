@@ -261,7 +261,7 @@ const Dashboard = () => {
             <Shield className="w-10 h-10 text-gold" />
             <div>
               <span className="font-display text-primary-foreground block py-0 px-0 text-center text-base">CNM Ștefan cel Mare</span>
-              <span className="text-xs text-primary-foreground/60 text-center">Platformă Educațională</span>
+              <span className="text-xs text-primary-foreground/60 block text-center mr-2">Platformă Educațională</span>
               <span className="text-[10px] text-gold font-semibold block mt-1 text-center">SMART LEARNING</span>
               <span className="text-[9px] text-primary-foreground/50 block leading-tight text-center">Integrarea AI în învățare</span>
               <span className="text-[9px] text-primary-foreground/40 block mt-0.5 leading-tight text-center">Prof. coord. Anca Tudose</span>
