@@ -199,6 +199,10 @@ const Auth = () => {
           </div>
           <h1 className="font-display text-2xl text-foreground whitespace-nowrap">Colegiul Național Militar „Ștefan cel Mare"</h1>
           <p className="text-muted-foreground mt-1">Platformă Educațională</p>
+          <p className="text-gold text-[10px] font-semibold mt-2 tracking-wide">SMART LEARNING</p>
+          <p className="text-muted-foreground/60 text-[9px]">Integrarea AI în învățare</p>
+          <p className="text-muted-foreground/50 text-[9px] mt-0.5">Prof. coord. Anca Tudose</p>
+          <p className="text-muted-foreground/50 text-[9px] whitespace-nowrap">Elevi: Moroșan Ștefan • Turculeț Ștefan</p>
         </div>
 
         {view === "login" ? (
