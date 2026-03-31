@@ -257,15 +257,15 @@ const Dashboard = () => {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-hero transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full p-4 overflow-y-auto">
           {/* Logo */}
-          <div className="flex flex-col items-center gap-3 mb-8 p-2">
+          <div className="flex items-center gap-3 mb-8 p-2">
             <Shield className="w-10 h-10 text-gold" />
             <div>
-              <span className="font-display text-primary-foreground block py-0 px-0 text-center text-base">CNM Ștefan cel Mare</span>
-              <span className="text-xs text-primary-foreground/60 block text-center mr-2">Platformă Educațională</span>
+              <span className="font-display text-primary-foreground block py-0 px-0 text-left text-base">CNM Ștefan cel Mare</span>
+              <span className="text-xs text-primary-foreground/60 text-center">Platformă Educațională</span>
               <span className="text-[10px] text-gold font-semibold block mt-1 text-center">SMART LEARNING</span>
               <span className="text-[9px] text-primary-foreground/50 block leading-tight text-center">Integrarea AI în învățare</span>
               <span className="text-[9px] text-primary-foreground/40 block mt-0.5 leading-tight text-center">Prof. coord. Anca Tudose</span>
-              <span className="text-[9px] text-primary-foreground/40 block leading-tight text-center whitespace-nowrap">Elevi: Moroșan Ștefan • Turculeț Ștefan</span>
+              <span className="text-[9px] text-primary-foreground/40 block leading-tight text-center">Echipa: Moroșan Ștefan, Turculeț Ștefan</span>
             </div>
           </div>
 
