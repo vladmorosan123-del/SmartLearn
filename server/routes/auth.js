@@ -8,11 +8,9 @@ const router = express.Router();
 // ─── POST /api/auth/login ──────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    // "email" trimis de frontend este "username@lm.local" — extragem username-ul
-    const username = email && email.includes('@')
-      ? email.split('@')[0]
-      : email;
+    const { username, password } = req.body;
+    // password is already SHA-256 hashed by the client
+ 
  
     if (!username || !password) {
       return res.status(400).json({ error: 'Utilizatorul și parola sunt obligatorii' });
