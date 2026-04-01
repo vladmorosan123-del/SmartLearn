@@ -16,11 +16,16 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user
-    const { rows: users } = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+    const username = email.endsWith('@lm.local')
+     ? email.replace('@lm.local', '')
+     : email;
 
+   const { rows: users } = await pool.query(
+    `SELECT u.* FROM users u
+     JOIN profiles p ON p.user_id = u.id
+     WHERE p.username = $1`,
+  [username]
+);
     if (users.length === 0) {
       return res.status(401).json({ error: 'Nume de utilizator sau parolă incorectă' });
     }
