@@ -2,73 +2,67 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { generateToken, requireAuth } = require('../middleware/auth');
-
+ 
 const router = express.Router();
-
+ 
 // ─── POST /api/auth/login ──────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    // password is already SHA-256 hashed by the client
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email și parola sunt obligatorii' });
+    // "email" trimis de frontend este "username@lm.local" — extragem username-ul
+    const username = email && email.includes('@')
+      ? email.split('@')[0]
+      : email;
+ 
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Utilizatorul și parola sunt obligatorii' });
     }
-
-    // Find user
-    const username = email.endsWith('@lm.local')
-     ? email.replace('@lm.local', '')
-     : email;
-
-   const { rows: users } = await pool.query(
-    `SELECT u.* FROM users u
-     JOIN profiles p ON p.user_id = u.id
-     WHERE p.username = $1`,
-  [username]
-);
+ 
+    // Caută userul după username în tabela profiles
+    const { rows: users } = await pool.query(
+      `SELECT u.* FROM users u
+       JOIN profiles p ON p.user_id = u.id
+       WHERE p.username = $1`,
+      [username]
+    );
+ 
     if (users.length === 0) {
       return res.status(401).json({ error: 'Nume de utilizator sau parolă incorectă' });
     }
-
+ 
     const user = users[0];
-
-    // Verify password (client sends SHA-256 hash, server stores bcrypt of that hash)
+ 
+    // Verifică parola (clientul trimite SHA-256, serverul stochează bcrypt)
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Nume de utilizator sau parolă incorectă' });
     }
-
-    // Check if blocked
+ 
+    // Verifică dacă e blocat
     const { rows: profiles } = await pool.query(
-      'SELECT is_blocked FROM profiles WHERE user_id = $1',
+      'SELECT * FROM profiles WHERE user_id = $1',
       [user.id]
     );
     if (profiles[0]?.is_blocked) {
       return res.status(403).json({ error: 'Contul tău este blocat' });
     }
-
-    // Get role
+ 
+    // Obține rolul
     const { rows: roles } = await pool.query(
       'SELECT role FROM user_roles WHERE user_id = $1 LIMIT 1',
       [user.id]
     );
     const role = roles[0]?.role || 'student';
-
-    // Get profile
-    const { rows: profileRows } = await pool.query(
-      'SELECT * FROM profiles WHERE user_id = $1',
-      [user.id]
-    );
-
-    const token = generateToken({ id: user.id, email: user.email, role });
-
+ 
+    const token = generateToken({ id: user.id, username, role });
+ 
     res.json({
       access_token: token,
       user: {
         id: user.id,
-        email: user.email,
+        email: `${username}@lm.local`,
       },
-      profile: profileRows[0] || null,
+      profile: profiles[0] || null,
       role,
     });
   } catch (err) {
@@ -76,27 +70,19 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
+ 
 // ─── POST /api/auth/register ───────────────────────────────
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, username, fullName, role = 'student', studyYear, studyClass } = req.body;
-    // password is already SHA-256 hashed by the client
-
-    if (!email || !password || !username) {
+    const { email, password, username: bodyUsername, fullName, role = 'student', studyYear, studyClass } = req.body;
+    // Acceptă username direct sau extras din "username@lm.local"
+    const username = bodyUsername || (email && email.includes('@') ? email.split('@')[0] : email);
+ 
+    if (!username || !password) {
       return res.status(400).json({ error: 'Câmpuri obligatorii lipsă' });
     }
-
-    // Check if email exists
-    const { rows: existing } = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-    if (existing.length > 0) {
-      return res.status(400).json({ error: 'Email-ul este deja folosit' });
-    }
-
-    // Check if username exists
+ 
+    // Verifică dacă username-ul există deja
     const { rows: existingProfile } = await pool.query(
       'SELECT id FROM profiles WHERE username = $1',
       [username]
@@ -104,35 +90,36 @@ router.post('/register', async (req, res) => {
     if (existingProfile.length > 0) {
       return res.status(400).json({ error: 'Numele de utilizator este deja folosit' });
     }
-
-    // Hash the SHA-256 password with bcrypt
+ 
+    // Hash parola
     const passwordHash = await bcrypt.hash(password, 10);
-
-    // Create user
+ 
+    // Creează userul cu email intern username@lm.local
+    const internalEmail = `${username}@lm.local`;
     const { rows: newUsers } = await pool.query(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
-      [email, passwordHash]
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id',
+      [internalEmail, passwordHash]
     );
     const userId = newUsers[0].id;
-
-    // Create profile
+ 
+    // Creează profilul
     await pool.query(
       `INSERT INTO profiles (user_id, username, full_name, study_year, study_class)
        VALUES ($1, $2, $3, $4, $5)`,
       [userId, username, fullName || username, studyYear || null, studyClass || null]
     );
-
-    // Assign role
+ 
+    // Asignează rolul
     await pool.query(
       'INSERT INTO user_roles (user_id, role) VALUES ($1, $2)',
       [userId, role]
     );
-
-    const token = generateToken({ id: userId, email, role });
-
+ 
+    const token = generateToken({ id: userId, username, role });
+ 
     res.json({
       access_token: token,
-      user: { id: userId, email },
+      user: { id: userId, email: internalEmail },
       role,
     });
   } catch (err) {
@@ -140,58 +127,3 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-// ─── POST /api/auth/logout ─────────────────────────────────
-router.post('/logout', (req, res) => {
-  // JWT is stateless — client just discards the token
-  res.json({ success: true });
-});
-
-// ─── GET /api/auth/me ──────────────────────────────────────
-router.get('/me', requireAuth, async (req, res) => {
-  try {
-    const { rows: profiles } = await pool.query(
-      'SELECT * FROM profiles WHERE user_id = $1',
-      [req.user.id]
-    );
-
-    const { rows: roles } = await pool.query(
-      'SELECT role FROM user_roles WHERE user_id = $1 LIMIT 1',
-      [req.user.id]
-    );
-
-    res.json({
-      user: { id: req.user.id, email: req.user.email },
-      profile: profiles[0] || null,
-      role: roles[0]?.role || 'student',
-    });
-  } catch (err) {
-    console.error('Me error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ─── PUT /api/auth/password ────────────────────────────────
-router.put('/password', requireAuth, async (req, res) => {
-  try {
-    const { newPassword } = req.body;
-    // newPassword is already SHA-256 hashed by the client
-
-    if (!newPassword) {
-      return res.status(400).json({ error: 'Noua parolă este obligatorie' });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await pool.query(
-      'UPDATE users SET password_hash = $1 WHERE id = $2',
-      [passwordHash, req.user.id]
-    );
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Password update error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-module.exports = router;
