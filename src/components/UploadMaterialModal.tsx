@@ -30,6 +30,9 @@ interface UploadMaterialModalProps {
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
+    baremUrl?: string | null;
+    baremName?: string | null;
+    baremSize?: number | null;
   }) => void;
   title: string;
   category: string;
@@ -38,6 +41,7 @@ interface UploadMaterialModalProps {
   showAnswerKey?: boolean;
   showTimer?: boolean;
   showSubjectSelector?: boolean;
+  showBarem?: boolean;
 }
 
 const tvcSubjectOptions = [
@@ -56,7 +60,8 @@ const UploadMaterialModal = ({
   showYear = false,
   showAnswerKey = false,
   showTimer = false,
-  showSubjectSelector = false
+  showSubjectSelector = false,
+  showBarem = false
 }: UploadMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -77,6 +82,7 @@ const UploadMaterialModal = ({
     type: string;
     size: number;
   }[]>([]);
+  const [baremFile, setBaremFile] = useState<{ url: string; name: string; size: number } | null>(null);
 
   if (!isOpen) return null;
 
