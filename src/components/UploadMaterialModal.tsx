@@ -30,9 +30,6 @@ interface UploadMaterialModalProps {
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
-    baremUrl?: string | null;
-    baremName?: string | null;
-    baremSize?: number | null;
   }) => void;
   title: string;
   category: string;
