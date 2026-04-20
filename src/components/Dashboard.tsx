@@ -54,6 +54,8 @@ const Dashboard = () => {
   const [selectedLessonNumber, setSelectedLessonNumber] = useState<number>(1);
   const [editingLesson, setEditingLesson] = useState<LessonEditData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [chapterFilter, setChapterFilter] = useState<string>('all');
+  const [isChapterManagerOpen, setIsChapterManagerOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<{url: string;name: string;type: string;} | null>(null);
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
@@ -65,6 +67,8 @@ const Dashboard = () => {
     subject: subject || 'informatica',
     category: 'lesson'
   });
+
+  const { chapters } = useChapters(subject || 'informatica');
 
   // Convert materials to lessons for display
   const currentLessons: Lesson[] = useMemo(() => {
