@@ -675,8 +675,15 @@ const Dashboard = () => {
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonNumber}
           subject={subject || 'informatica'}
+          subjectName={subjectName}
           editData={editingLesson} />
 
+        {/* Chapter Manager Modal */}
+        <ChapterManagerModal
+          isOpen={isChapterManagerOpen}
+          onClose={() => setIsChapterManagerOpen(false)}
+          subject={subject || 'informatica'}
+          subjectName={subjectName} />
 
         {/* File Viewer */}
         {viewingFile &&
