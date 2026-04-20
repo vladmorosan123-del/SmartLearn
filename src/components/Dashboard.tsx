@@ -82,7 +82,8 @@ const Dashboard = () => {
       fileType: m.file_type,
       fileSize: m.file_size || undefined,
       status: 'locked' as const,
-      materialId: m.id
+      materialId: m.id,
+      chapterId: m.chapter_id || null
     }));
 
     // Add empty slots up to 10 if less than 10 materials
