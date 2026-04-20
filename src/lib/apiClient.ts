@@ -343,7 +343,7 @@ const serverAuth = {
   async signInWithPassword({ email, password }: { email: string; password: string }) {
     const { data, error } = await serverFetch('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username: email, password }),
+      body: JSON.stringify({ email, password }),
     });
 
     if (error) return { data: null, error };
