@@ -311,7 +311,11 @@ export type Database = {
         Args: never
         Returns: {
           author: string
+          barem_name: string
+          barem_size: number
+          barem_url: string
           category: string
+          chapter_id: string
           created_at: string
           description: string
           file_name: string

@@ -38,6 +38,7 @@ interface UploadMaterialModalProps {
   showAnswerKey?: boolean;
   showTimer?: boolean;
   showSubjectSelector?: boolean;
+  showBarem?: boolean;
 }
 
 const tvcSubjectOptions = [
@@ -56,7 +57,8 @@ const UploadMaterialModal = ({
   showYear = false,
   showAnswerKey = false,
   showTimer = false,
-  showSubjectSelector = false
+  showSubjectSelector = false,
+  showBarem = false
 }: UploadMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
