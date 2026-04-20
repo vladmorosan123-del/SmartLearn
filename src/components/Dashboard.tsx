@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Shield, BookOpen, ClipboardList, Settings, LogOut,
   ChevronRight, Plus, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound } from
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound, Filter } from
 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import ChapterManagerModal from '@/components/ChapterManagerModal';
+import { useChapters } from '@/hooks/useChapters';
 import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
