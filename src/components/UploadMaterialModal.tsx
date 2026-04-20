@@ -79,7 +79,6 @@ const UploadMaterialModal = ({
     type: string;
     size: number;
   }[]>([]);
-  const [baremFile, setBaremFile] = useState<{ url: string; name: string; size: number } | null>(null);
 
   if (!isOpen) return null;
 
