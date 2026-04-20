@@ -114,6 +114,7 @@ const UploadMaterialModal = ({
     setUploadTab('file');
     setLinkUrl('');
     setUploadedFiles([]);
+    setBaremFile(null);
   };
 
   const handleClose = () => {
