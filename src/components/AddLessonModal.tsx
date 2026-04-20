@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Video, Presentation, Save, Link as LinkIcon } from 'lucide-react';
+import { X, FileText, Video, Presentation, Save, Link as LinkIcon, BookMarked, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FileUpload from '@/components/FileUpload';
+import { useChapters } from '@/hooks/useChapters';
+import ChapterManagerModal from '@/components/ChapterManagerModal';
 
 // Data for an existing lesson when editing
 export interface LessonEditData {
@@ -17,6 +20,7 @@ export interface LessonEditData {
   fileName: string;
   fileType: string;
   fileSize: number;
+  chapterId?: string | null;
 }
 
 interface AddLessonModalProps {
@@ -30,17 +34,23 @@ interface AddLessonModalProps {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
+    chapterId?: string | null;
   }) => void;
   lessonNumber: number;
   subject: string;
+  subjectName?: string;
   // Optional: if provided, we're editing an existing lesson
   editData?: LessonEditData | null;
 }
 
-const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData }: AddLessonModalProps) => {
+const NO_CHAPTER_VALUE = '__none__';
+
+const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, subjectName, editData }: AddLessonModalProps) => {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
+  const [chapterId, setChapterId] = useState<string>(NO_CHAPTER_VALUE);
+  const [isChapterManagerOpen, setIsChapterManagerOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<{
     url: string;
     name: string;
@@ -50,13 +60,14 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   const [activeTab, setActiveTab] = useState('document');
   const [linkUrl, setLinkUrl] = useState('');
 
+  const { chapters } = useChapters(subject);
   const isEditing = !!editData;
 
-  // Define resetForm before using it in useEffect
   const resetForm = () => {
     setTitle('');
     setDuration('');
     setDescription('');
+    setChapterId(NO_CHAPTER_VALUE);
     setUploadedFiles([]);
     setActiveTab('document');
     setLinkUrl('');
@@ -68,6 +79,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
       setTitle(editData.title);
       setDuration(editData.duration);
       setDescription(editData.description);
+      setChapterId(editData.chapterId || NO_CHAPTER_VALUE);
       setUploadedFiles([{
         url: editData.fileUrl,
         name: editData.fileName,
@@ -75,7 +87,6 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
         size: editData.fileSize,
       }]);
     } else if (!isOpen) {
-      // Reset when modal closes
       resetForm();
     }
   }, [editData, isOpen]);
@@ -86,6 +97,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     e.preventDefault();
     if (title.trim()) {
       const hasLink = activeTab === 'link' && linkUrl.trim();
+      const finalChapterId = chapterId === NO_CHAPTER_VALUE ? null : chapterId;
       
       if (hasLink) {
         onSave({ 
@@ -96,9 +108,9 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           fileName: linkUrl.trim(),
           fileType: 'link',
           fileSize: 0,
+          chapterId: finalChapterId,
         });
       } else if (uploadedFiles.length > 0) {
-        // Save each uploaded file as a separate entry
         for (const file of uploadedFiles) {
           onSave({ 
             title: uploadedFiles.length > 1 ? `${title.trim()} - ${file.name}` : title.trim(), 
@@ -108,14 +120,15 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             fileName: file.name,
             fileType: file.type,
             fileSize: file.size,
+            chapterId: finalChapterId,
           });
         }
       } else {
-        // No file, just metadata
         onSave({ 
           title: title.trim(), 
           duration: duration.trim() || '', 
           description: description.trim(),
+          chapterId: finalChapterId,
         });
       }
       resetForm();
@@ -134,23 +147,10 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
 
   const getFileTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      pdf: 'PDF',
-      doc: 'Word',
-      docx: 'Word',
-      xls: 'Excel',
-      xlsx: 'Excel',
-      ppt: 'PowerPoint',
-      pptx: 'PowerPoint',
-      txt: 'Text',
-      csv: 'CSV',
-      jpg: 'Imagine',
-      jpeg: 'Imagine',
-      png: 'Imagine',
-      mp4: 'Video',
-      webm: 'Video',
-      mov: 'Video',
-      avi: 'Video',
-      mkv: 'Video',
+      pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel',
+      ppt: 'PowerPoint', pptx: 'PowerPoint', txt: 'Text', csv: 'CSV',
+      jpg: 'Imagine', jpeg: 'Imagine', png: 'Imagine',
+      mp4: 'Video', webm: 'Video', mov: 'Video', avi: 'Video', mkv: 'Video',
     };
     return labels[type.toLowerCase()] || type.toUpperCase();
   };
@@ -167,16 +167,14 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={handleClose}
       />
       
-      {/* Modal */}
       <div className="relative bg-card rounded-2xl shadow-elegant border border-border w-full max-w-lg mx-4 animate-scale-in max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <div>
             <h2 className="font-display text-xl text-foreground">
@@ -194,7 +192,6 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Titlul lecției *</Label>
@@ -206,6 +203,43 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
               required
               className="bg-background"
             />
+          </div>
+
+          {/* Chapter selector */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <BookMarked className="w-4 h-4 text-gold" />
+              Capitol
+            </Label>
+            <div className="flex gap-2">
+              <Select value={chapterId} onValueChange={setChapterId}>
+                <SelectTrigger className="flex-1 bg-background">
+                  <SelectValue placeholder="Selectează capitolul" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_CHAPTER_VALUE}>Fără capitol</SelectItem>
+                  {chapters.map((chapter) => (
+                    <SelectItem key={chapter.id} value={chapter.id}>
+                      {chapter.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setIsChapterManagerOpen(true)}
+                title="Gestionează capitolele"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            {chapters.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">
+                Niciun capitol creat încă. Apasă „+" pentru a adăuga capitole.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -237,7 +271,6 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
               Materiale pentru lecție {!isEditing && '(opțional)'}
             </Label>
             
-            {/* Uploaded files list */}
             {uploadedFiles.length > 0 && (
               <div className="space-y-2 mb-3">
                 {uploadedFiles.map((file, idx) => (
@@ -263,9 +296,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                       </div>
                     </div>
                     <Button 
-                      type="button"
-                      variant="ghost" 
-                      size="sm"
+                      type="button" variant="ghost" size="sm"
                       onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
                     >
                       <X className="w-4 h-4" />
@@ -275,7 +306,6 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
               </div>
             )}
 
-            {/* Upload tabs - always visible */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-3">
                 <TabsTrigger value="document" className="flex items-center gap-2">
@@ -301,11 +331,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                   <p className="text-xs text-muted-foreground mb-3">
                     Încarcă PDF, Word, Excel, Text sau imagini (max 10MB)
                   </p>
-                  <FileUpload
-                    onUploadComplete={handleUploadComplete}
-                    category="lesson"
-                    subject={subject}
-                  />
+                  <FileUpload onUploadComplete={handleUploadComplete} category="lesson" subject={subject} />
                 </div>
               </TabsContent>
               
@@ -315,11 +341,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                     <Video className="w-4 h-4" />
                     Încarcă video MP4, WebM, MOV, AVI sau MKV (max 100MB)
                   </p>
-                  <FileUpload
-                    onUploadComplete={handleUploadComplete}
-                    category="lesson"
-                    subject={subject}
-                  />
+                  <FileUpload onUploadComplete={handleUploadComplete} category="lesson" subject={subject} />
                 </div>
               </TabsContent>
               
@@ -329,11 +351,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                     <Presentation className="w-4 h-4" />
                     Încarcă prezentări PowerPoint .ppt sau .pptx (max 10MB)
                   </p>
-                  <FileUpload
-                    onUploadComplete={handleUploadComplete}
-                    category="lesson"
-                    subject={subject}
-                  />
+                  <FileUpload onUploadComplete={handleUploadComplete} category="lesson" subject={subject} />
                 </div>
               </TabsContent>
               
@@ -355,35 +373,29 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             </Tabs>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleClose}
-              className="flex-1"
-            >
+            <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
               Anulează
             </Button>
             <Button 
-              type="submit" 
-              variant="gold"
+              type="submit" variant="gold"
               className="flex-1 gap-2"
               disabled={!title.trim()}
             >
-              {isEditing ? (
-                <>
-                  <Save className="w-4 h-4" />
-                  Salvează modificările
-                </>
-              ) : (
-                'Salvează lecția'
-              )}
+              {isEditing ? (<><Save className="w-4 h-4" />Salvează modificările</>) : 'Salvează lecția'}
             </Button>
           </div>
         </form>
       </div>
     </div>
+
+    <ChapterManagerModal
+      isOpen={isChapterManagerOpen}
+      onClose={() => setIsChapterManagerOpen(false)}
+      subject={subject}
+      subjectName={subjectName || subject}
+    />
+    </>
   );
 };
 
