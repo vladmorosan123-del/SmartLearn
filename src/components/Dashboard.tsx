@@ -100,14 +100,60 @@ const Dashboard = () => {
     return lessons;
   }, [materials]);
 
-  // Filtered lessons based on search
+  // Filtered lessons based on search and chapter
   const filteredLessons = useMemo(() => {
-    if (!searchQuery.trim()) return currentLessons;
-    return currentLessons.filter((lesson) =>
-    lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [currentLessons, searchQuery]);
+    let result = currentLessons;
+    if (chapterFilter !== 'all') {
+      if (chapterFilter === '__none__') {
+        result = result.filter((l) => !l.chapterId && l.status !== 'not-uploaded');
+      } else {
+        result = result.filter((l) => l.chapterId === chapterFilter);
+      }
+    }
+    if (searchQuery.trim()) {
+      result = result.filter((lesson) =>
+        lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return result;
+  }, [currentLessons, searchQuery, chapterFilter]);
+
+  // Group lessons by chapter (only filled lessons - empty slots stay outside)
+  const groupedLessons = useMemo(() => {
+    const filledLessons = filteredLessons.filter((l) => l.status !== 'not-uploaded');
+    const emptyLessons = filteredLessons.filter((l) => l.status === 'not-uploaded');
+    
+    const groups: { chapterId: string | null; chapterName: string; lessons: Lesson[] }[] = [];
+    const groupMap = new Map<string, { chapterName: string; lessons: Lesson[] }>();
+
+    for (const lesson of filledLessons) {
+      const key = lesson.chapterId || '__none__';
+      if (!groupMap.has(key)) {
+        const chapterName = lesson.chapterId
+          ? chapters.find((c) => c.id === lesson.chapterId)?.name || 'Capitol șters'
+          : 'Fără capitol';
+        groupMap.set(key, { chapterName, lessons: [] });
+      }
+      groupMap.get(key)!.lessons.push(lesson);
+    }
+
+    // Order: chapters by their order_index, then "Fără capitol" last
+    const orderedChapterIds = chapters.map((c) => c.id);
+    for (const cid of orderedChapterIds) {
+      if (groupMap.has(cid)) {
+        const g = groupMap.get(cid)!;
+        groups.push({ chapterId: cid, chapterName: g.chapterName, lessons: g.lessons });
+        groupMap.delete(cid);
+      }
+    }
+    // Any remaining (no-chapter or deleted-chapter)
+    for (const [key, g] of groupMap.entries()) {
+      groups.push({ chapterId: key === '__none__' ? null : key, chapterName: g.chapterName, lessons: g.lessons });
+    }
+
+    return { groups, emptyLessons };
+  }, [filteredLessons, chapters]);
 
   // Stats calculations
   const uploadedLessons = currentLessons.filter((l) => l.status !== 'not-uploaded').length;
