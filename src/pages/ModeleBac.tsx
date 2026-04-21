@@ -400,6 +400,15 @@ const ModeleBac = () => {
                               <Eye className="w-4 h-4" />
                               Vezi
                             </Button>
+                            {model.barem_url && (
+                              <Button
+                                variant="outline" size="sm" className="gap-1"
+                                onClick={() => setViewingFile({ url: model.barem_url!, name: model.barem_name || 'Barem', type: model.barem_name?.split('.').pop()?.toLowerCase() || 'pdf' })}
+                              >
+                                <FileText className="w-4 h-4" />
+                                Barem
+                              </Button>
+                            )}
                             <Button
                               variant="outline" size="sm" className="gap-1"
                               onClick={() => setEditingMaterial(model)}
