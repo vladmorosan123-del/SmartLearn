@@ -47,7 +47,8 @@ const EditMaterialModal = ({
   material,
   showYear = false,
   showAnswerKey = false,
-  showTimer = false
+  showTimer = false,
+  showBarem = false
 }: EditMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
