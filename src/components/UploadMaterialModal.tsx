@@ -337,6 +337,43 @@ const UploadMaterialModal = ({
             </Tabs>
           </div>
 
+          {/* Barem upload (optional, for BAC models) */}
+          {showBarem && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-gold" />
+                Barem (opțional)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Încarcă baremul de corectare (PDF/imagine). Elevii îl vor putea consulta.
+              </p>
+              {baremFile ? (
+                <div className="flex items-center justify-between p-3 bg-gold/5 border border-gold/30 rounded-lg">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-5 h-5 text-gold shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{baremFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {baremFile.size >= 1024 * 1024
+                          ? `${(baremFile.size / (1024 * 1024)).toFixed(1)} MB`
+                          : `${(baremFile.size / 1024).toFixed(1)} KB`}
+                      </p>
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setBaremFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <FileUpload
+                  onUploadComplete={(url, name, _type, size) => setBaremFile({ url, name, size })}
+                  category={`${category}_barem`}
+                  subject={showSubjectSelector ? selectedSubject : subject}
+                />
+              )}
+            </div>
+          )}
+
           {/* Answer Key Input for TVC */}
           {showAnswerKey && (
             <div className="space-y-4">
