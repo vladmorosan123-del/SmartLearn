@@ -30,6 +30,9 @@ interface UploadMaterialModalProps {
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
+    baremUrl?: string;
+    baremName?: string;
+    baremSize?: number;
   }) => void;
   title: string;
   category: string;
@@ -79,6 +82,7 @@ const UploadMaterialModal = ({
     type: string;
     size: number;
   }[]>([]);
+  const [baremFile, setBaremFile] = useState<{ url: string; name: string; size: number } | null>(null);
 
   if (!isOpen) return null;
 
@@ -114,6 +118,7 @@ const UploadMaterialModal = ({
     setUploadTab('file');
     setLinkUrl('');
     setUploadedFiles([]);
+    setBaremFile(null);
   };
 
   const handleClose = () => {
@@ -150,6 +155,9 @@ const UploadMaterialModal = ({
         timerMinutes: showTimer ? timerMinutes : undefined,
         subject: showSubjectSelector ? selectedSubject : undefined,
         publishAt,
+        baremUrl: showBarem && baremFile ? baremFile.url : undefined,
+        baremName: showBarem && baremFile ? baremFile.name : undefined,
+        baremSize: showBarem && baremFile ? baremFile.size : undefined,
       });
     } else {
       for (const file of uploadedFiles) {
@@ -167,6 +175,9 @@ const UploadMaterialModal = ({
           timerMinutes: showTimer ? timerMinutes : undefined,
           subject: showSubjectSelector ? selectedSubject : undefined,
           publishAt,
+          baremUrl: showBarem && baremFile ? baremFile.url : undefined,
+          baremName: showBarem && baremFile ? baremFile.name : undefined,
+          baremSize: showBarem && baremFile ? baremFile.size : undefined,
         });
       }
     }
@@ -325,6 +336,43 @@ const UploadMaterialModal = ({
               </TabsContent>
             </Tabs>
           </div>
+
+          {/* Barem upload (optional, for BAC models) */}
+          {showBarem && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-gold" />
+                Barem (opțional)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Încarcă baremul de corectare (PDF/imagine). Elevii îl vor putea consulta.
+              </p>
+              {baremFile ? (
+                <div className="flex items-center justify-between p-3 bg-gold/5 border border-gold/30 rounded-lg">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-5 h-5 text-gold shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{baremFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {baremFile.size >= 1024 * 1024
+                          ? `${(baremFile.size / (1024 * 1024)).toFixed(1)} MB`
+                          : `${(baremFile.size / 1024).toFixed(1)} KB`}
+                      </p>
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setBaremFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <FileUpload
+                  onUploadComplete={(url, name, _type, size) => setBaremFile({ url, name, size })}
+                  category={`${category}_barem`}
+                  subject={showSubjectSelector ? selectedSubject : subject}
+                />
+              )}
+            </div>
+          )}
 
           {/* Answer Key Input for TVC */}
           {showAnswerKey && (
