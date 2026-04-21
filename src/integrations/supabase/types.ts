@@ -350,6 +350,10 @@ export type Database = {
     }
     Functions: {
       get_material_answer_key: { Args: { _material_id: string }; Returns: Json }
+      get_material_options_per_question: {
+        Args: { _material_id: string }
+        Returns: Json
+      }
       get_material_question_count: {
         Args: { _material_id: string }
         Returns: number
