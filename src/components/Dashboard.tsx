@@ -3,13 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Shield, BookOpen, ClipboardList, Settings, LogOut,
   ChevronRight, Plus, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound, Filter } from
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound } from
 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import ChapterManagerModal from '@/components/ChapterManagerModal';
-import { useChapters } from '@/hooks/useChapters';
 import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 import { useApp, Subject } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -54,8 +50,6 @@ const Dashboard = () => {
   const [selectedLessonNumber, setSelectedLessonNumber] = useState<number>(1);
   const [editingLesson, setEditingLesson] = useState<LessonEditData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [chapterFilter, setChapterFilter] = useState<string>('all');
-  const [isChapterManagerOpen, setIsChapterManagerOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<{url: string;name: string;type: string;} | null>(null);
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
@@ -67,8 +61,6 @@ const Dashboard = () => {
     subject: subject || 'informatica',
     category: 'lesson'
   });
-
-  const { chapters } = useChapters(subject || 'informatica');
 
   // Convert materials to lessons for display
   const currentLessons: Lesson[] = useMemo(() => {
@@ -82,8 +74,7 @@ const Dashboard = () => {
       fileType: m.file_type,
       fileSize: m.file_size || undefined,
       status: 'locked' as const,
-      materialId: m.id,
-      chapterId: m.chapter_id || null
+      materialId: m.id
     }));
 
     // Add empty slots up to 10 if less than 10 materials
@@ -100,60 +91,14 @@ const Dashboard = () => {
     return lessons;
   }, [materials]);
 
-  // Filtered lessons based on search and chapter
+  // Filtered lessons based on search
   const filteredLessons = useMemo(() => {
-    let result = currentLessons;
-    if (chapterFilter !== 'all') {
-      if (chapterFilter === '__none__') {
-        result = result.filter((l) => !l.chapterId && l.status !== 'not-uploaded');
-      } else {
-        result = result.filter((l) => l.chapterId === chapterFilter);
-      }
-    }
-    if (searchQuery.trim()) {
-      result = result.filter((lesson) =>
-        lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    return result;
-  }, [currentLessons, searchQuery, chapterFilter]);
-
-  // Group lessons by chapter (only filled lessons - empty slots stay outside)
-  const groupedLessons = useMemo(() => {
-    const filledLessons = filteredLessons.filter((l) => l.status !== 'not-uploaded');
-    const emptyLessons = filteredLessons.filter((l) => l.status === 'not-uploaded');
-    
-    const groups: { chapterId: string | null; chapterName: string; lessons: Lesson[] }[] = [];
-    const groupMap = new Map<string, { chapterName: string; lessons: Lesson[] }>();
-
-    for (const lesson of filledLessons) {
-      const key = lesson.chapterId || '__none__';
-      if (!groupMap.has(key)) {
-        const chapterName = lesson.chapterId
-          ? chapters.find((c) => c.id === lesson.chapterId)?.name || 'Capitol șters'
-          : 'Fără capitol';
-        groupMap.set(key, { chapterName, lessons: [] });
-      }
-      groupMap.get(key)!.lessons.push(lesson);
-    }
-
-    // Order: chapters by their order_index, then "Fără capitol" last
-    const orderedChapterIds = chapters.map((c) => c.id);
-    for (const cid of orderedChapterIds) {
-      if (groupMap.has(cid)) {
-        const g = groupMap.get(cid)!;
-        groups.push({ chapterId: cid, chapterName: g.chapterName, lessons: g.lessons });
-        groupMap.delete(cid);
-      }
-    }
-    // Any remaining (no-chapter or deleted-chapter)
-    for (const [key, g] of groupMap.entries()) {
-      groups.push({ chapterId: key === '__none__' ? null : key, chapterName: g.chapterName, lessons: g.lessons });
-    }
-
-    return { groups, emptyLessons };
-  }, [filteredLessons, chapters]);
+    if (!searchQuery.trim()) return currentLessons;
+    return currentLessons.filter((lesson) =>
+    lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [currentLessons, searchQuery]);
 
   // Stats calculations
   const uploadedLessons = currentLessons.filter((l) => l.status !== 'not-uploaded').length;
@@ -204,8 +149,7 @@ const Dashboard = () => {
       fileUrl: material.file_url,
       fileName: material.file_name,
       fileType: material.file_type,
-      fileSize: material.file_size || 0,
-      chapterId: material.chapter_id || null
+      fileSize: material.file_size || 0
     });
     setIsModalOpen(true);
   };
@@ -224,7 +168,6 @@ const Dashboard = () => {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
-    chapterId?: string | null;
   }) => {
     if (!subject) {
       toast({
@@ -240,8 +183,7 @@ const Dashboard = () => {
       if (editingLesson) {
         const updates: any = {
           title: lessonData.title,
-          description: `${lessonData.duration} - ${lessonData.description}`,
-          chapter_id: lessonData.chapterId ?? null
+          description: `${lessonData.duration} - ${lessonData.description}`
         };
 
         // Only update file info if a new file was uploaded
@@ -277,9 +219,8 @@ const Dashboard = () => {
           lesson_number: selectedLessonNumber,
           author: null,
           genre: null,
-          year: null,
-          chapter_id: lessonData.chapterId ?? null
-        } as any);
+          year: null
+        });
 
         toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
       }
@@ -536,133 +477,57 @@ const Dashboard = () => {
 
         </div>
 
-        {/* Search + Chapter Filter */}
-        <div className="mb-6 animate-fade-up delay-400 flex flex-col md:flex-row gap-3">
-          <div className="flex-1">
-            <SearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Caută lecții după titlu..." />
-          </div>
-          <div className="flex gap-2">
-            <Select value={chapterFilter} onValueChange={setChapterFilter}>
-              <SelectTrigger className="w-full md:w-[220px]">
-                <span className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-gold" />
-                  <SelectValue placeholder="Toate capitolele" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toate capitolele</SelectItem>
-                {chapters.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-                <SelectItem value="__none__">Fără capitol</SelectItem>
-              </SelectContent>
-            </Select>
-            {isProfessor && (
-              <Button
-                type="button" variant="outline"
-                onClick={() => setIsChapterManagerOpen(true)}
-                className="gap-2 whitespace-nowrap"
-                title="Gestionează capitolele"
-              >
-                <BookMarked className="w-4 h-4" />
-                <span className="hidden sm:inline">Capitole</span>
-              </Button>
-            )}
-          </div>
+        {/* Search */}
+        <div className="mb-6 animate-fade-up delay-400">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Caută lecții după titlu..." />
+
         </div>
 
-        {/* Lessons List - Grouped by Chapter */}
+        {/* Lessons List */}
         <section id="lectii" className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
           
-          {isLoading ? (
-            <div className="text-center py-12">
+          {isLoading ?
+          <div className="text-center py-12">
               <p className="text-muted-foreground">Se încarcă...</p>
-            </div>
-          ) : filteredLessons.length === 0 ? (
-            searchQuery || chapterFilter !== 'all' ? (
-              <EmptyState
-                icon={Search}
-                title="Niciun rezultat"
-                description={searchQuery ? `Nu am găsit lecții care să conțină "${searchQuery}"` : 'Nu există lecții în acest capitol.'}
-                actionLabel="Resetează filtrele"
-                onAction={() => { setSearchQuery(''); setChapterFilter('all'); }} />
-            ) : (
-              <EmptyState
-                icon={BookOpen}
-                title="Nicio lecție încă"
-                description="Nu există lecții încărcate pentru această materie."
-                actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
-                onAction={isProfessor ? handleAddNewLesson : undefined} />
-            )
-          ) : (
-            <div className="space-y-4">
-              {/* Grouped by chapter using Accordion */}
-              {groupedLessons.groups.length > 0 && (
-                <Accordion
-                  type="multiple"
-                  defaultValue={groupedLessons.groups.map((g) => g.chapterId || '__none__')}
-                  className="space-y-3"
-                >
-                  {groupedLessons.groups.map((group) => (
-                    <AccordionItem
-                      key={group.chapterId || '__none__'}
-                      value={group.chapterId || '__none__'}
-                      className="bg-card border border-border rounded-xl px-4"
-                    >
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 flex-1">
-                          <BookMarked className="w-5 h-5 text-gold" />
-                          <span className="font-display text-lg text-foreground text-left">
-                            {group.chapterName}
-                          </span>
-                          <span className="text-xs bg-gold/10 text-gold px-2 py-0.5 rounded-full ml-auto mr-2">
-                            {group.lessons.length} {group.lessons.length === 1 ? 'lecție' : 'lecții'}
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-3 pt-2 pb-2">
-                          {group.lessons.map((lesson) => (
-                            <LessonCard
-                              key={lesson.id}
-                              lesson={lesson}
-                              index={currentLessons.findIndex((l) => l.id === lesson.id)}
-                              isProfessor={isProfessor}
-                              onAdd={handleAddLesson}
-                              onEdit={handleEditLesson}
-                              onDelete={handleDeleteLesson}
-                              onViewFile={handleViewFile} />
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              )}
+            </div> :
+          filteredLessons.length === 0 ?
+          searchQuery ?
+          <EmptyState
+            icon={Search}
+            title="Niciun rezultat"
+            description={`Nu am găsit lecții care să conțină "${searchQuery}"`}
+            actionLabel="Șterge căutarea"
+            onAction={() => setSearchQuery('')} /> :
 
-              {/* Empty slots (only when no filters active and is professor) */}
-              {chapterFilter === 'all' && !searchQuery && groupedLessons.emptyLessons.length > 0 && isProfessor && (
-                <div className="space-y-3 pt-2">
-                  <p className="text-sm text-muted-foreground italic">Sloturi disponibile pentru lecții noi:</p>
-                  {groupedLessons.emptyLessons.map((lesson) => (
-                    <LessonCard
-                      key={lesson.id}
-                      lesson={lesson}
-                      index={currentLessons.findIndex((l) => l.id === lesson.id)}
-                      isProfessor={isProfessor}
-                      onAdd={handleAddLesson}
-                      onEdit={handleEditLesson}
-                      onDelete={handleDeleteLesson}
-                      onViewFile={handleViewFile} />
-                  ))}
-                </div>
-              )}
+
+          <EmptyState
+            icon={BookOpen}
+            title="Nicio lecție încă"
+            description="Nu există lecții încărcate pentru această materie."
+            actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
+            onAction={isProfessor ? handleAddNewLesson : undefined} /> :
+
+
+
+          <div className="space-y-4">
+              {filteredLessons.map((lesson, index) =>
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
+              index={currentLessons.findIndex((l) => l.id === lesson.id)}
+              isProfessor={isProfessor}
+              onAdd={handleAddLesson}
+              onEdit={handleEditLesson}
+              onDelete={handleDeleteLesson}
+              onViewFile={handleViewFile} />
+
+            )}
             </div>
-          )}
+          }
         </section>
 
         {/* Add Lesson Modal */}
@@ -675,15 +540,8 @@ const Dashboard = () => {
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonNumber}
           subject={subject || 'informatica'}
-          subjectName={subjectName}
           editData={editingLesson} />
 
-        {/* Chapter Manager Modal */}
-        <ChapterManagerModal
-          isOpen={isChapterManagerOpen}
-          onClose={() => setIsChapterManagerOpen(false)}
-          subject={subject || 'informatica'}
-          subjectName={subjectName} />
 
         {/* File Viewer */}
         {viewingFile &&

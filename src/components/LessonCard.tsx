@@ -12,7 +12,6 @@ export interface Lesson {
   fileSize?: number;
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
   materialId?: string;
-  chapterId?: string | null;
 }
 
 interface LessonCardProps {

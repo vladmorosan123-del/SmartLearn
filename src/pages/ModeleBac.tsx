@@ -129,9 +129,6 @@ const ModeleBac = () => {
     fileType: string;
     fileSize: number;
     publishAt?: string;
-    baremUrl?: string;
-    baremName?: string;
-    baremSize?: number;
   }) => {
     try {
       await addMaterial({
@@ -148,10 +145,7 @@ const ModeleBac = () => {
         genre: null,
         year: data.year || null,
         publish_at: data.publishAt || null,
-        barem_url: data.baremUrl || null,
-        barem_name: data.baremName || null,
-        barem_size: data.baremSize || null,
-      } as any);
+      });
       toast({ title: 'Model salvat', description: 'Modelul BAC a fost salvat cu succes.' });
     } catch (error) {
       console.error('Error saving model:', error);
@@ -171,9 +165,6 @@ const ModeleBac = () => {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
-    baremUrl?: string | null;
-    baremName?: string | null;
-    baremSize?: number | null;
   }) => {
     if (!editingMaterial) return;
     
@@ -190,12 +181,6 @@ const ModeleBac = () => {
         updates.file_name = data.fileName;
         updates.file_type = data.fileType;
         updates.file_size = data.fileSize;
-      }
-
-      if ('baremUrl' in data) {
-        updates.barem_url = data.baremUrl;
-        updates.barem_name = data.baremName;
-        updates.barem_size = data.baremSize;
       }
 
       await updateMaterial(editingMaterial.id, updates);
@@ -400,15 +385,6 @@ const ModeleBac = () => {
                               <Eye className="w-4 h-4" />
                               Vezi
                             </Button>
-                            {model.barem_url && (
-                              <Button
-                                variant="outline" size="sm" className="gap-1"
-                                onClick={() => setViewingFile({ url: model.barem_url!, name: model.barem_name || 'Barem', type: model.barem_name?.split('.').pop()?.toLowerCase() || 'pdf' })}
-                              >
-                                <FileText className="w-4 h-4" />
-                                Barem
-                              </Button>
-                            )}
                             <Button
                               variant="outline" size="sm" className="gap-1"
                               onClick={() => setEditingMaterial(model)}
@@ -433,24 +409,13 @@ const ModeleBac = () => {
                         )
                       ) : (
                         !isEmpty && (
-                          <>
-                            <Button 
-                              variant="gold" size="sm" className="gap-1"
-                              onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
-                            >
-                              <Eye className="w-4 h-4" />
-                              Deschide
-                            </Button>
-                            {model.barem_url && (
-                              <Button
-                                variant="outline" size="sm" className="gap-1"
-                                onClick={() => setViewingFile({ url: model.barem_url!, name: model.barem_name || 'Barem', type: model.barem_name?.split('.').pop()?.toLowerCase() || 'pdf' })}
-                              >
-                                <FileText className="w-4 h-4" />
-                                Barem
-                              </Button>
-                            )}
-                          </>
+                          <Button 
+                            variant="gold" size="sm" className="gap-1"
+                            onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
+                          >
+                            <Eye className="w-4 h-4" />
+                            Deschide
+                          </Button>
                         )
                       )}
                     </div>
@@ -470,7 +435,6 @@ const ModeleBac = () => {
           category="bac_model"
           subject={selectedSubject}
           showYear={true}
-          showBarem={true}
         />
 
         {/* Edit Modal */}
@@ -480,7 +444,6 @@ const ModeleBac = () => {
           onSave={handleEditMaterial}
           material={editingMaterial}
           showYear={true}
-          showBarem={true}
         />
 
         {/* File Viewer */}

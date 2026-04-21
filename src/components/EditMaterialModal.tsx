@@ -29,15 +29,11 @@ interface EditMaterialModalProps {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
-    baremUrl?: string | null;
-    baremName?: string | null;
-    baremSize?: number | null;
   }) => void | Promise<void>;
   material: Material | null;
   showYear?: boolean;
   showAnswerKey?: boolean;
   showTimer?: boolean;
-  showBarem?: boolean;
 }
 
 const EditMaterialModal = ({ 
@@ -47,8 +43,7 @@ const EditMaterialModal = ({
   material,
   showYear = false,
   showAnswerKey = false,
-  showTimer = false,
-  showBarem = false
+  showTimer = false
 }: EditMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -65,10 +60,6 @@ const EditMaterialModal = ({
   const [replacementFile, setReplacementFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
   const [isOriginalFileRemoved, setIsOriginalFileRemoved] = useState(false);
 
-  // Barem state
-  const [baremFile, setBaremFile] = useState<{ url: string; name: string; size: number } | null>(null);
-  const [isBaremRemoved, setIsBaremRemoved] = useState(false);
-
   // Populate form when material changes
   useEffect(() => {
     if (material) {
@@ -79,8 +70,6 @@ const EditMaterialModal = ({
       setTimerMinutes(material.timer_minutes || 180);
       setReplacementFile(null);
       setIsOriginalFileRemoved(false);
-      setBaremFile(null);
-      setIsBaremRemoved(false);
       
       // Properly restore answer key with correct question count
       const rawKey = material.answer_key;
@@ -166,14 +155,6 @@ const EditMaterialModal = ({
           fileType: replacementFile.type,
           fileSize: replacementFile.size,
         } : {}),
-        // Barem updates
-        ...(showBarem ? (
-          baremFile
-            ? { baremUrl: baremFile.url, baremName: baremFile.name, baremSize: baremFile.size }
-            : isBaremRemoved
-              ? { baremUrl: null, baremName: null, baremSize: null }
-              : {}
-        ) : {}),
       });
       onClose();
     } catch (error) {
@@ -325,61 +306,6 @@ const EditMaterialModal = ({
               </div>
             )}
           </div>
-
-          {/* Barem section */}
-          {showBarem && (
-            <div className="space-y-2 pt-2 border-t border-border">
-              <Label className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-gold" />
-                Barem (opțional)
-              </Label>
-              {baremFile ? (
-                <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-5 h-5 text-emerald-500 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{baremFile.name}</p>
-                      <p className="text-xs text-muted-foreground">Barem nou (va înlocui cel existent)</p>
-                    </div>
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setBaremFile(null)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : material.barem_url && !isBaremRemoved ? (
-                <div className="flex items-center justify-between p-3 bg-gold/5 border border-gold/30 rounded-lg">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-5 h-5 text-gold shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{material.barem_name || 'Barem'}</p>
-                      <p className="text-xs text-muted-foreground">Barem curent</p>
-                    </div>
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setIsBaremRemoved(true)} className="text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {isBaremRemoved && (
-                    <div className="flex items-center justify-between p-2 bg-destructive/10 border border-destructive/30 rounded-lg mb-2">
-                      <p className="text-xs text-destructive">Baremul existent va fi șters</p>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setIsBaremRemoved(false)} className="text-xs h-6">
-                        Anulează
-                      </Button>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground mb-2">Încarcă barem (PDF/imagine):</p>
-                  <FileUpload
-                    onUploadComplete={(url, name, _type, size) => setBaremFile({ url, name, size })}
-                    category={`${material.category}_barem`}
-                    subject={material.subject}
-                    multiple={false}
-                  />
-                </>
-              )}
-            </div>
-          )}
 
           {/* Answer Key Section with question count selector */}
           {showAnswerKey && (

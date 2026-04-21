@@ -5,7 +5,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { apiClient as supabase } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
-import { optionsUpTo } from '@/lib/quizOptions';
 
 interface TVCQuizInterfaceProps {
   answerKey: string[];
@@ -23,8 +22,7 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
   const startTimeRef = useRef<Date>(new Date());
   const { toast } = useToast();
 
-  // Determine widest letter range across the answer key (for non-grader display)
-  const maxLetter = answerKey.reduce((acc, l) => (l && l > acc ? l : acc), 'D');
+  const options = ['A', 'B', 'C', 'D'];
 
   // Timer effect
   useEffect(() => {
@@ -190,10 +188,10 @@ const TVCQuizInterface = ({ answerKey, materialId, onComplete }: TVCQuizInterfac
               <RadioGroup
                 value={userAnswer}
                 onValueChange={(answer) => handleAnswerChange(index, answer)}
-                className="flex flex-wrap gap-2 sm:gap-4 flex-1"
+                className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
                 disabled={isSubmitted}
               >
-                {optionsUpTo(correctAnswer && correctAnswer > 'D' ? correctAnswer : maxLetter).map((option) => {
+                {options.map((option) => {
                   const isUserChoice = userAnswer === option;
                   const isCorrectChoice = correctAnswer === option;
                   
