@@ -279,10 +279,10 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
                   <RadioGroup
                     value={userAnswer}
                     onValueChange={(answer) => handleAnswerChange(activeSubject, index, answer)}
-                    className="flex gap-3 flex-1"
+                    className="flex flex-wrap gap-3 flex-1"
                     disabled={isSubmitted || isTimeUp}
                   >
-                    {options.map((option) => {
+                    {optionsUpTo(optionsPerSubject[activeSubject]?.[index]).map((option) => {
                       const isUserChoice = userAnswer === option;
                       const isCorrectChoice = correctAnswer === option;
                       
