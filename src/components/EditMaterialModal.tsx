@@ -65,6 +65,10 @@ const EditMaterialModal = ({
   const [replacementFile, setReplacementFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
   const [isOriginalFileRemoved, setIsOriginalFileRemoved] = useState(false);
 
+  // Barem state
+  const [baremFile, setBaremFile] = useState<{ url: string; name: string; size: number } | null>(null);
+  const [isBaremRemoved, setIsBaremRemoved] = useState(false);
+
   // Populate form when material changes
   useEffect(() => {
     if (material) {
