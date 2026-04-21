@@ -155,6 +155,9 @@ const UploadMaterialModal = ({
         timerMinutes: showTimer ? timerMinutes : undefined,
         subject: showSubjectSelector ? selectedSubject : undefined,
         publishAt,
+        baremUrl: showBarem && baremFile ? baremFile.url : undefined,
+        baremName: showBarem && baremFile ? baremFile.name : undefined,
+        baremSize: showBarem && baremFile ? baremFile.size : undefined,
       });
     } else {
       for (const file of uploadedFiles) {
@@ -172,6 +175,9 @@ const UploadMaterialModal = ({
           timerMinutes: showTimer ? timerMinutes : undefined,
           subject: showSubjectSelector ? selectedSubject : undefined,
           publishAt,
+          baremUrl: showBarem && baremFile ? baremFile.url : undefined,
+          baremName: showBarem && baremFile ? baremFile.name : undefined,
+          baremSize: showBarem && baremFile ? baremFile.size : undefined,
         });
       }
     }
