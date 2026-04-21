@@ -166,6 +166,14 @@ const EditMaterialModal = ({
           fileType: replacementFile.type,
           fileSize: replacementFile.size,
         } : {}),
+        // Barem updates
+        ...(showBarem ? (
+          baremFile
+            ? { baremUrl: baremFile.url, baremName: baremFile.name, baremSize: baremFile.size }
+            : isBaremRemoved
+              ? { baremUrl: null, baremName: null, baremSize: null }
+              : {}
+        ) : {}),
       });
       onClose();
     } catch (error) {
