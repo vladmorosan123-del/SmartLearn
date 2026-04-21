@@ -433,13 +433,24 @@ const ModeleBac = () => {
                         )
                       ) : (
                         !isEmpty && (
-                          <Button 
-                            variant="gold" size="sm" className="gap-1"
-                            onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Deschide
-                          </Button>
+                          <>
+                            <Button 
+                              variant="gold" size="sm" className="gap-1"
+                              onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Deschide
+                            </Button>
+                            {model.barem_url && (
+                              <Button
+                                variant="outline" size="sm" className="gap-1"
+                                onClick={() => setViewingFile({ url: model.barem_url!, name: model.barem_name || 'Barem', type: model.barem_name?.split('.').pop()?.toLowerCase() || 'pdf' })}
+                              >
+                                <FileText className="w-4 h-4" />
+                                Barem
+                              </Button>
+                            )}
+                          </>
                         )
                       )}
                     </div>
