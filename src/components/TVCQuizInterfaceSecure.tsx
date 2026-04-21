@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { apiClient as supabase } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { optionsUpTo } from '@/lib/quizOptions';
 
 interface QuizResult {
   questionIndex: number;
@@ -39,8 +40,24 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
   const startTimeRef = useRef<Date>(new Date());
   const hasAutoSubmitted = useRef(false);
   const { toast } = useToast();
+  const [optionsPerQuestion, setOptionsPerQuestion] = useState<string[]>([]);
 
-  const options = ['A', 'B', 'C', 'D'];
+  // Fetch per-question option ranges (A-D up to A-F) from server
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('get_material_options_per_question', { _material_id: materialId });
+        if (cancelled) return;
+        if (Array.isArray(data)) {
+          setOptionsPerQuestion(data as string[]);
+        }
+      } catch (e) {
+        console.error('Failed to fetch option ranges:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [materialId]);
 
   // Timer effect
   useEffect(() => {
@@ -231,10 +248,10 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
               <RadioGroup
                 value={userAnswer}
                 onValueChange={(answer) => handleAnswerChange(index, answer)}
-                className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
+                className="flex flex-wrap gap-2 sm:gap-4 flex-1"
                 disabled={isSubmitted}
               >
-                {options.map((option) => {
+                {optionsUpTo(optionsPerQuestion[index]).map((option) => {
                   const isUserChoice = userAnswer === option;
                   const isCorrectChoice = correctAnswer === option;
                   

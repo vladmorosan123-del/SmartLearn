@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { apiClient as supabase } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { optionsUpTo } from '@/lib/quizOptions';
 
 interface QuizResult {
   questionIndex: number;
@@ -33,8 +34,18 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
     const [results, setResults] = useState<QuizResult[]>([]);
     const [score, setScore] = useState(0);
     const { toast } = useToast();
+    const [optionsPerQuestion, setOptionsPerQuestion] = useState<string[]>([]);
 
-    const options = ['A', 'B', 'C', 'D'];
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const { data } = await supabase.rpc('get_material_options_per_question', { _material_id: materialId });
+          if (!cancelled && Array.isArray(data)) setOptionsPerQuestion(data as string[]);
+        } catch (e) { console.error(e); }
+      })();
+      return () => { cancelled = true; };
+    }, [materialId]);
 
     const formatTime = (seconds: number): string => {
       const mins = Math.floor(seconds / 60);
@@ -181,10 +192,10 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
                 <RadioGroup
                   value={userAnswer}
                   onValueChange={(answer) => handleAnswerChange(index, answer)}
-                  className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
+                  className="flex flex-wrap gap-2 sm:gap-4 flex-1"
                   disabled={isSubmitted || isTimeUp}
                 >
-                  {options.map((option) => {
+                  {optionsUpTo(optionsPerQuestion[index]).map((option) => {
                     const isUserChoice = userAnswer === option;
                     const isCorrectChoice = correctAnswer === option;
                     

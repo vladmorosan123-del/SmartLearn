@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { apiClient as supabase } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { optionsUpTo } from '@/lib/quizOptions';
 
 interface SubjectConfig {
   questionCount: number;
@@ -53,8 +54,6 @@ const subjectMeta: Record<string, { label: string; icon: typeof Calculator; colo
   fizica: { label: 'Fizică', icon: Atom, color: 'text-violet-500', weight: 0.2 },
 };
 
-const options = ['A', 'B', 'C', 'D'];
-
 const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubjectProps>(
   ({ materialId, subjectConfig, isTimeUp, elapsedSeconds, onComplete, onActiveSubjectChange }, ref) => {
     const subjects = Object.keys(subjectConfig);
@@ -71,6 +70,20 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
     const [subjectResults, setSubjectResults] = useState<SubjectResult[]>([]);
     const [weightedAverage, setWeightedAverage] = useState(0);
     const { toast } = useToast();
+    const [optionsPerSubject, setOptionsPerSubject] = useState<Record<string, string[]>>({});
+
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const { data } = await supabase.rpc('get_material_options_per_question', { _material_id: materialId });
+          if (!cancelled && data && typeof data === 'object' && !Array.isArray(data)) {
+            setOptionsPerSubject(data as Record<string, string[]>);
+          }
+        } catch (e) { console.error(e); }
+      })();
+      return () => { cancelled = true; };
+    }, [materialId]);
 
     const handleSubjectChange = (subject: string) => {
       setActiveSubject(subject);
@@ -266,10 +279,10 @@ const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubje
                   <RadioGroup
                     value={userAnswer}
                     onValueChange={(answer) => handleAnswerChange(activeSubject, index, answer)}
-                    className="flex gap-3 flex-1"
+                    className="flex flex-wrap gap-3 flex-1"
                     disabled={isSubmitted || isTimeUp}
                   >
-                    {options.map((option) => {
+                    {optionsUpTo(optionsPerSubject[activeSubject]?.[index]).map((option) => {
                       const isUserChoice = userAnswer === option;
                       const isCorrectChoice = correctAnswer === option;
                       
