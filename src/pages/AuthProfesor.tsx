@@ -110,13 +110,18 @@ const AuthProfesor = () => {
           });
           return;
         }
+
+        // Set role in AppContext and navigate immediately
+        if (role === 'profesor' || role === 'admin') {
+          setRole(role as 'profesor' | 'admin');
+        }
       }
 
       toast({
         title: "Autentificare reușită",
         description: "Bine ai venit!",
       });
-      // Role will be set by the useEffect when authRole changes
+      navigate('/materii');
     } catch (err) {
       toast({
         title: "Eroare",
