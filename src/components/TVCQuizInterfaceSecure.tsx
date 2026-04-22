@@ -40,7 +40,7 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
   const hasAutoSubmitted = useRef(false);
   const { toast } = useToast();
 
-  const options = ['A', 'B', 'C', 'D'];
+  const options = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   // Timer effect
   useEffect(() => {
@@ -231,7 +231,7 @@ const TVCQuizInterfaceSecure = forwardRef<TVCQuizInterfaceRef, TVCQuizInterfaceS
               <RadioGroup
                 value={userAnswer}
                 onValueChange={(answer) => handleAnswerChange(index, answer)}
-                className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
+                className="grid grid-cols-6 gap-1 sm:flex sm:gap-3 flex-1"
                 disabled={isSubmitted}
               >
                 {options.map((option) => {
