@@ -53,6 +53,33 @@ export type Database = {
         }
         Relationships: []
       }
+      chapters: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invitation_codes: {
         Row: {
           code: string
@@ -128,7 +155,11 @@ export type Database = {
         Row: {
           answer_key: Json | null
           author: string | null
+          barem_name: string | null
+          barem_size: number | null
+          barem_url: string | null
           category: string
+          chapter_id: string | null
           created_at: string
           description: string | null
           file_name: string
@@ -151,7 +182,11 @@ export type Database = {
         Insert: {
           answer_key?: Json | null
           author?: string | null
+          barem_name?: string | null
+          barem_size?: number | null
+          barem_url?: string | null
           category: string
+          chapter_id?: string | null
           created_at?: string
           description?: string | null
           file_name: string
@@ -174,7 +209,11 @@ export type Database = {
         Update: {
           answer_key?: Json | null
           author?: string | null
+          barem_name?: string | null
+          barem_size?: number | null
+          barem_url?: string | null
           category?: string
+          chapter_id?: string | null
           created_at?: string
           description?: string | null
           file_name?: string
@@ -194,7 +233,15 @@ export type Database = {
           updated_at?: string
           year?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "materials_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -303,6 +350,10 @@ export type Database = {
     }
     Functions: {
       get_material_answer_key: { Args: { _material_id: string }; Returns: Json }
+      get_material_options_per_question: {
+        Args: { _material_id: string }
+        Returns: Json
+      }
       get_material_question_count: {
         Args: { _material_id: string }
         Returns: number
@@ -311,7 +362,11 @@ export type Database = {
         Args: never
         Returns: {
           author: string
+          barem_name: string
+          barem_size: number
+          barem_url: string
           category: string
+          chapter_id: string
           created_at: string
           description: string
           file_name: string
