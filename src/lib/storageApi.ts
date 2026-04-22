@@ -12,10 +12,17 @@
 import { supabase } from '@/integrations/supabase/client';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL as string | undefined;
+let customServerEnabled = !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
 
 /** Whether a custom server is configured */
 export const isCustomServerEnabled = (): boolean => {
-  return !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
+  return customServerEnabled && !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
+};
+
+const disableCustomServer = (reason?: unknown) => {
+  if (!customServerEnabled) return;
+  customServerEnabled = false;
+  console.warn('Custom storage server unavailable, falling back to Lovable Cloud.', reason);
 };
 
 /**
@@ -59,26 +66,32 @@ export const uploadFile = async (
   contentType: string,
 ): Promise<UploadResult> => {
   if (isCustomServerEnabled()) {
-    // ── Custom server upload ──
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bucket', bucket);
-    formData.append('path', filePath);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', bucket);
+      formData.append('path', filePath);
 
-    const authHeaders = await getAuthHeaders();
-    const res = await fetch(`${SERVER_URL}/api/storage/upload`, {
-      method: 'POST',
-      headers: { ...authHeaders },
-      body: formData,
-    });
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${SERVER_URL}/api/storage/upload`, {
+        method: 'POST',
+        headers: { ...authHeaders },
+        body: formData,
+      });
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Upload failed: ${res.status} – ${body}`);
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Upload failed: ${res.status} – ${body}`);
+      }
+
+      const data = await res.json();
+      return { url: data.url, path: data.path ?? filePath };
+    } catch (error: any) {
+      if (!/Failed to fetch|NetworkError|Load failed/i.test(String(error?.message ?? ''))) {
+        throw error;
+      }
+      disableCustomServer(error);
     }
-
-    const data = await res.json();
-    return { url: data.url, path: data.path ?? filePath };
   }
 
   // ── Supabase Storage (default) ──
@@ -110,16 +123,24 @@ export const getAccessibleFileUrl = async (
   expiresIn = 3600,
 ): Promise<string> => {
   if (isCustomServerEnabled()) {
-    const authHeaders = await getAuthHeaders();
-    const res = await fetch(
-      `${SERVER_URL}/api/storage/signed-url?` +
-        new URLSearchParams({ url: fileUrl, expires: String(expiresIn) }),
-      { headers: authHeaders },
-    );
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(
+        `${SERVER_URL}/api/storage/signed-url?` +
+          new URLSearchParams({ url: fileUrl, expires: String(expiresIn) }),
+        { headers: authHeaders },
+      );
 
-    if (!res.ok) return fileUrl; // fallback
-    const data = await res.json();
-    return data.signedUrl ?? fileUrl;
+      if (!res.ok) return fileUrl;
+      const data = await res.json();
+      return data.signedUrl ?? fileUrl;
+    } catch (error: any) {
+      if (/Failed to fetch|NetworkError|Load failed/i.test(String(error?.message ?? ''))) {
+        disableCustomServer(error);
+      } else {
+        throw error;
+      }
+    }
   }
 
   // ── Supabase signed URL (default) ──
@@ -147,18 +168,25 @@ export const deleteFile = async (
   filePath: string,
 ): Promise<void> => {
   if (isCustomServerEnabled()) {
-    const authHeaders = await getAuthHeaders();
-    const res = await fetch(`${SERVER_URL}/api/storage/delete`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', ...authHeaders },
-      body: JSON.stringify({ bucket, path: filePath }),
-    });
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${SERVER_URL}/api/storage/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ bucket, path: filePath }),
+      });
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Delete failed: ${res.status} – ${body}`);
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Delete failed: ${res.status} – ${body}`);
+      }
+      return;
+    } catch (error: any) {
+      if (!/Failed to fetch|NetworkError|Load failed/i.test(String(error?.message ?? ''))) {
+        throw error;
+      }
+      disableCustomServer(error);
     }
-    return;
   }
 
   // ── Supabase Storage (default) ──
