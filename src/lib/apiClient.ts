@@ -1,40 +1,48 @@
 /**
  * API Client Abstraction Layer
- * 
+ *
  * This module provides a unified interface that mirrors the Supabase SDK.
- * When VITE_SERVER_URL is set, all calls go to your Express server.
- * When not set, calls go through the standard Supabase client.
- * 
+ * When VITE_SERVER_URL is set, calls may go to your Express server.
+ * If that server is unavailable, calls automatically fall back to Lovable Cloud.
+ *
  * IMPORTANT: This file does NOT replace src/integrations/supabase/client.ts
  * (which is auto-generated). Instead, components should gradually migrate
  * to use this apiClient for new features or during refactoring.
- * 
- * Usage:
- *   import { apiClient } from '@/lib/apiClient';
- *   
- *   // Auth
- *   const { data, error } = await apiClient.auth.signInWithPassword({ email, password });
- *   
- *   // Database
- *   const { data, error } = await apiClient.from('materials').select('*').eq('category', 'lectie');
- *   
- *   // RPC
- *   const { data } = await apiClient.rpc('get_user_role', { _user_id: '...' });
- *   
- *   // Edge Functions
- *   const { data } = await apiClient.functions.invoke('admin-management', { body: { action: '...' } });
- *   
- *   // Storage
- *   const { data } = await apiClient.storage.from('materials').upload(path, file);
  */
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL as string | undefined;
 
-/** Whether the custom server is being used */
-export const isCustomServer = (): boolean => {
+const hasConfiguredCustomServer = (): boolean => {
   return !!SERVER_URL && SERVER_URL.trim().length > 0 && SERVER_URL !== 'undefined';
+};
+
+let customServerEnabled = hasConfiguredCustomServer();
+
+/** Whether the custom server is currently active */
+export const isCustomServer = (): boolean => {
+  return customServerEnabled && hasConfiguredCustomServer();
+};
+
+export const disableCustomServer = (reason?: unknown) => {
+  if (!customServerEnabled) return;
+  customServerEnabled = false;
+  console.warn('Custom server unavailable, falling back to Lovable Cloud.', reason);
+};
+
+const isNetworkFailure = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false;
+  const message = 'message' in error ? String((error as any).message ?? '') : '';
+  const name = 'name' in error ? String((error as any).name ?? '') : '';
+  return (
+    name === 'TypeError' ||
+    /Failed to fetch|Load failed|NetworkError|fetch/i.test(message)
+  );
+};
+
+const shouldFallbackToCloud = (error: any): boolean => {
+  return Boolean(error?.isNetworkFailure);
 };
 
 // ─── Token Management ──────────────────────────────────────
@@ -63,23 +71,47 @@ const authHeaders = (): Record<string, string> => {
 };
 
 const serverFetch = async (path: string, options: RequestInit = {}) => {
-  const res = await fetch(`${SERVER_URL}${path}`, {
-    ...options,
-    headers: { ...authHeaders(), ...options.headers },
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    return { data: null, error: { message: data.error || 'Server error', status: res.status } };
+  try {
+    const res = await fetch(`${SERVER_URL}${path}`, {
+      ...options,
+      headers: { ...authHeaders(), ...options.headers },
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { data: null, error: { message: data.error || 'Server error', status: res.status } };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    if (isNetworkFailure(error)) {
+      disableCustomServer(error);
+      return {
+        data: null,
+        error: {
+          message: 'Custom server unavailable',
+          status: 0,
+          isNetworkFailure: true,
+        },
+      };
+    }
+
+    throw error;
   }
-  return { data, error: null };
 };
 
 // ─── Query Builder (mirrors Supabase's chained API) ────────
 
+type QueryFilter = {
+  op: 'eq' | 'neq' | 'in';
+  column: string;
+  value: any;
+};
+
 class ServerQueryBuilder {
   private table: string;
   private _select = '*';
-  private _filters: Record<string, string> = {};
+  private _filters: QueryFilter[] = [];
   private _order: string | null = null;
   private _ascending = false;
   private _limit: number | null = null;
@@ -99,17 +131,17 @@ class ServerQueryBuilder {
   }
 
   eq(column: string, value: any) {
-    this._filters[`eq.${column}`] = String(value);
+    this._filters.push({ op: 'eq', column, value });
     return this;
   }
 
   neq(column: string, value: any) {
-    this._filters[`neq.${column}`] = String(value);
+    this._filters.push({ op: 'neq', column, value });
     return this;
   }
 
   in(column: string, values: any[]) {
-    this._filters[`in.${column}`] = values.join(',');
+    this._filters.push({ op: 'in', column, value: values });
     return this;
   }
 
@@ -134,37 +166,103 @@ class ServerQueryBuilder {
     return this;
   }
 
-  async then(resolve: (value: any) => void) {
-    const result = await this._execute();
-    resolve(result);
+  async then(resolve: (value: any) => void, reject?: (reason: any) => void) {
+    try {
+      const result = await this._execute();
+      resolve(result);
+    } catch (error) {
+      reject?.(error);
+    }
   }
 
-  private async _execute() {
-    const params = new URLSearchParams({
-      select: this._select,
-      ...this._filters,
-    });
-    if (this._order) {
-      params.set('order', this._order);
-      params.set('ascending', String(this._ascending));
+  private buildCloudQuery() {
+    let query: any = cloudClient
+      .from(this.table as any)
+      .select(this._select as any, {
+        count: this._count ?? undefined,
+        head: this._head,
+      });
+
+    for (const filter of this._filters) {
+      if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
+      if (filter.op === 'neq') query = query.neq(filter.column, filter.value);
+      if (filter.op === 'in') query = query.in(filter.column, filter.value);
     }
-    if (this._limit) params.set('limit', String(this._limit));
 
-    const { data, error } = await serverFetch(`/api/db/${this.table}?${params}`);
+    if (this._order) {
+      query = query.order(this._order, { ascending: this._ascending });
+    }
 
-    if (error) return { data: null, error, count: null };
-
-    const rows = data?.data || [];
-
-    if (this._head && this._count === 'exact') {
-      return { data: null, error: null, count: data?.count || rows.length };
+    if (this._limit) {
+      query = query.limit(this._limit);
     }
 
     if (this._single) {
-      return { data: rows[0] || null, error: null };
+      query = query.maybeSingle();
     }
 
-    return { data: rows, error: null, count: rows.length };
+    return query;
+  }
+
+  private async executeWithCloud() {
+    const { data, error, count } = await this.buildCloudQuery();
+
+    if (error) return { data: null, error, count: null };
+
+    if (this._head && this._count === 'exact') {
+      return { data: null, error: null, count: count ?? 0 };
+    }
+
+    if (this._single) {
+      return { data: data ?? null, error: null };
+    }
+
+    return {
+      data: Array.isArray(data) ? data : data ? [data] : [],
+      error: null,
+      count: count ?? (Array.isArray(data) ? data.length : data ? 1 : 0),
+    };
+  }
+
+  private async _execute() {
+    if (isCustomServer()) {
+      const params = new URLSearchParams({ select: this._select });
+
+      for (const filter of this._filters) {
+        const value = filter.op === 'in' && Array.isArray(filter.value)
+          ? filter.value.join(',')
+          : String(filter.value);
+        params.set(`${filter.op}.${filter.column}`, value);
+      }
+
+      if (this._order) {
+        params.set('order', this._order);
+        params.set('ascending', String(this._ascending));
+      }
+      if (this._limit) params.set('limit', String(this._limit));
+
+      const { data, error } = await serverFetch(`/api/db/${this.table}?${params}`);
+
+      if (!error) {
+        const rows = data?.data || [];
+
+        if (this._head && this._count === 'exact') {
+          return { data: null, error: null, count: data?.count || rows.length };
+        }
+
+        if (this._single) {
+          return { data: rows[0] || null, error: null };
+        }
+
+        return { data: rows, error: null, count: rows.length };
+      }
+
+      if (!shouldFallbackToCloud(error)) {
+        return { data: null, error, count: null };
+      }
+    }
+
+    return this.executeWithCloud();
   }
 }
 
@@ -174,6 +272,7 @@ class ServerInsertBuilder {
   private table: string;
   private records: any[];
   private _returnSelect = false;
+  private _single = false;
 
   constructor(table: string, records: any[]) {
     this.table = table;
@@ -186,16 +285,49 @@ class ServerInsertBuilder {
   }
 
   single() {
+    this._single = true;
     return this;
   }
 
-  async then(resolve: (value: any) => void) {
-    const body = this.records.length === 1 ? this.records[0] : this.records;
-    const { data, error } = await serverFetch(`/api/db/${this.table}`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    resolve({ data: data?.data || null, error });
+  async then(resolve: (value: any) => void, reject?: (reason: any) => void) {
+    try {
+      const result = await this._execute();
+      resolve(result);
+    } catch (error) {
+      reject?.(error);
+    }
+  }
+
+  private async _execute() {
+    if (isCustomServer()) {
+      const body = this.records.length === 1 ? this.records[0] : this.records;
+      const { data, error } = await serverFetch(`/api/db/${this.table}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+
+      if (!error) {
+        const payload = data?.data || null;
+        const normalized = this._single && Array.isArray(payload) ? (payload[0] ?? null) : payload;
+        return { data: normalized, error: null };
+      }
+
+      if (!shouldFallbackToCloud(error)) {
+        return { data: null, error };
+      }
+    }
+
+    let query: any = cloudClient.from(this.table as any).insert(this.records as any);
+    if (this._returnSelect) query = query.select();
+    const { data, error } = await query;
+
+    if (error) return { data: null, error };
+
+    const normalized = this._single
+      ? (Array.isArray(data) ? (data[0] ?? null) : (data ?? null))
+      : (data ?? null);
+
+    return { data: normalized, error: null };
   }
 }
 
@@ -204,6 +336,7 @@ class ServerUpdateBuilder {
   private updates: any;
   private _filters: Record<string, any> = {};
   private _returnSelect = false;
+  private _single = false;
 
   constructor(table: string, updates: any) {
     this.table = table;
@@ -221,20 +354,54 @@ class ServerUpdateBuilder {
   }
 
   single() {
+    this._single = true;
     return this;
   }
 
   maybeSingle() {
+    this._single = true;
     return this;
   }
 
-  async then(resolve: (value: any) => void) {
-    const { data, error } = await serverFetch(`/api/db/${this.table}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...this.updates, _filters: this._filters }),
-    });
-    const rows = data?.data || [];
-    resolve({ data: rows.length === 1 ? rows[0] : rows, error });
+  async then(resolve: (value: any) => void, reject?: (reason: any) => void) {
+    try {
+      const result = await this._execute();
+      resolve(result);
+    } catch (error) {
+      reject?.(error);
+    }
+  }
+
+  private async _execute() {
+    if (isCustomServer()) {
+      const { data, error } = await serverFetch(`/api/db/${this.table}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...this.updates, _filters: this._filters }),
+      });
+
+      if (!error) {
+        const rows = data?.data || [];
+        const normalized = this._single
+          ? (Array.isArray(rows) ? (rows[0] ?? null) : (rows ?? null))
+          : rows;
+        return { data: normalized, error: null };
+      }
+
+      if (!shouldFallbackToCloud(error)) {
+        return { data: null, error };
+      }
+    }
+
+    let query: any = cloudClient.from(this.table as any).update(this.updates as any);
+    for (const [column, value] of Object.entries(this._filters)) {
+      query = query.eq(column, value);
+    }
+    if (this._returnSelect) query = query.select();
+    if (this._single) query = query.maybeSingle();
+
+    const { data, error } = await query;
+    if (error) return { data: null, error };
+    return { data: data ?? null, error: null };
   }
 }
 
@@ -251,12 +418,38 @@ class ServerDeleteBuilder {
     return this;
   }
 
-  async then(resolve: (value: any) => void) {
-    const { data, error } = await serverFetch(`/api/db/${this.table}`, {
-      method: 'DELETE',
-      body: JSON.stringify(this._filters),
-    });
-    resolve({ data, error });
+  async then(resolve: (value: any) => void, reject?: (reason: any) => void) {
+    try {
+      const result = await this._execute();
+      resolve(result);
+    } catch (error) {
+      reject?.(error);
+    }
+  }
+
+  private async _execute() {
+    if (isCustomServer()) {
+      const { data, error } = await serverFetch(`/api/db/${this.table}`, {
+        method: 'DELETE',
+        body: JSON.stringify(this._filters),
+      });
+
+      if (!error) {
+        return { data, error: null };
+      }
+
+      if (!shouldFallbackToCloud(error)) {
+        return { data: null, error };
+      }
+    }
+
+    let query: any = cloudClient.from(this.table as any).delete();
+    for (const [column, value] of Object.entries(this._filters)) {
+      query = query.eq(column, value);
+    }
+
+    const { data, error } = await query;
+    return { data: data ?? null, error };
   }
 }
 
@@ -295,7 +488,6 @@ const serverAuth = {
 
   onAuthStateChange(callback: (event: string, session: any) => void) {
     serverAuth._listeners.push(callback);
-    // Check for existing token
     const token = getToken();
     if (token) {
       setTimeout(() => callback('SIGNED_IN', { access_token: token, user: null }), 0);
@@ -314,10 +506,10 @@ const serverAuth = {
   async getSession() {
     const token = getToken();
     if (!token) return { data: { session: null }, error: null };
-    
+
     const { data, error } = await serverFetch('/api/auth/me');
     if (error) return { data: { session: null }, error };
-    
+
     return {
       data: {
         session: {
@@ -333,10 +525,10 @@ const serverAuth = {
   async getUser() {
     const token = getToken();
     if (!token) return { data: { user: null }, error: null };
-    
+
     const { data, error } = await serverFetch('/api/auth/me');
     if (error) return { data: { user: null }, error };
-    
+
     return { data: { user: data.user }, error: null };
   },
 
@@ -355,7 +547,6 @@ const serverAuth = {
       user: data.user,
     };
 
-    // Notify listeners
     serverAuth._listeners.forEach(l => l('SIGNED_IN', session));
 
     return { data: { session, user: data.user }, error: null };
@@ -364,7 +555,7 @@ const serverAuth = {
   async signUp({ email, password, options }: { email: string; password: string; options?: any }) {
     const { data, error } = await serverFetch('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, options }),
     });
 
     if (error) return { data: { user: null }, error };
@@ -393,78 +584,179 @@ const serverAuth = {
   },
 };
 
+const hybridAuth = {
+  onAuthStateChange(callback: (event: string, session: any) => void) {
+    return isCustomServer()
+      ? serverAuth.onAuthStateChange(callback)
+      : cloudClient.auth.onAuthStateChange(callback);
+  },
+
+  async getSession() {
+    if (isCustomServer()) {
+      const result = await serverAuth.getSession();
+      if (!shouldFallbackToCloud(result.error)) return result;
+    }
+    return cloudClient.auth.getSession();
+  },
+
+  async getUser() {
+    if (isCustomServer()) {
+      const result = await serverAuth.getUser();
+      if (!shouldFallbackToCloud(result.error)) return result;
+    }
+    return cloudClient.auth.getUser();
+  },
+
+  async signInWithPassword(credentials: { email: string; password: string }) {
+    if (isCustomServer()) {
+      const result = await serverAuth.signInWithPassword(credentials);
+      if (!shouldFallbackToCloud(result.error)) return result;
+    }
+    return cloudClient.auth.signInWithPassword(credentials);
+  },
+
+  async signUp(credentials: { email: string; password: string; options?: any }) {
+    if (isCustomServer()) {
+      const result = await serverAuth.signUp(credentials);
+      if (!shouldFallbackToCloud(result.error)) return result;
+    }
+    return cloudClient.auth.signUp(credentials);
+  },
+
+  async signOut(opts?: any) {
+    if (isCustomServer()) {
+      await serverAuth.signOut(opts);
+    }
+    return cloudClient.auth.signOut(opts);
+  },
+
+  async updateUser(payload: { password: string }) {
+    if (isCustomServer()) {
+      const result = await serverAuth.updateUser(payload);
+      if (!shouldFallbackToCloud(result.error)) return result;
+    }
+    return cloudClient.auth.updateUser(payload);
+  },
+
+  async setSession(session: { access_token: string; refresh_token: string }) {
+    if (isCustomServer()) {
+      return serverAuth.setSession(session);
+    }
+    return cloudClient.auth.setSession(session);
+  },
+};
+
 // ─── RPC Interface ─────────────────────────────────────────
 
-const serverRpc = async (functionName: string, params: any) => {
-  const { data, error } = await serverFetch(`/api/rpc/${functionName}`, {
-    method: 'POST',
-    body: JSON.stringify(params),
-  });
+const hybridRpc = async (functionName: string, params: any) => {
+  if (isCustomServer()) {
+    const { data, error } = await serverFetch(`/api/rpc/${functionName}`, {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
 
-  if (error) return { data: null, error };
-  return { data: data?.data ?? data, error: null };
+    if (!error) return { data: data?.data ?? data, error: null };
+    if (!shouldFallbackToCloud(error)) return { data: null, error };
+  }
+
+  return cloudClient.rpc(functionName as any, params);
 };
 
 // ─── Functions Interface ───────────────────────────────────
 
-const serverFunctions = {
+const hybridFunctions = {
   async invoke(functionName: string, options?: { body?: any }) {
-    const { data, error } = await serverFetch(`/api/functions/${functionName}`, {
-      method: 'POST',
-      body: JSON.stringify(options?.body || {}),
-    });
-    return { data, error };
+    if (isCustomServer()) {
+      const { data, error } = await serverFetch(`/api/functions/${functionName}`, {
+        method: 'POST',
+        body: JSON.stringify(options?.body || {}),
+      });
+
+      if (!error) return { data, error: null };
+      if (!shouldFallbackToCloud(error)) return { data: null, error };
+    }
+
+    return cloudClient.functions.invoke(functionName, options);
   },
 };
 
 // ─── Storage Interface ─────────────────────────────────────
 
-const serverStorage = {
+const hybridStorage = {
   from(bucket: string) {
     return {
       async upload(filePath: string, file: File, options?: { contentType?: string; upsert?: boolean }) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('bucket', bucket);
-        formData.append('path', filePath);
+        if (isCustomServer()) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('bucket', bucket);
+          formData.append('path', filePath);
 
-        const token = getToken();
-        const headers: Record<string, string> = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+          try {
+            const token = getToken();
+            const headers: Record<string, string> = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const res = await fetch(`${SERVER_URL}/api/storage/upload`, {
-          method: 'POST',
-          headers,
-          body: formData,
-        });
+            const res = await fetch(`${SERVER_URL}/api/storage/upload`, {
+              method: 'POST',
+              headers,
+              body: formData,
+            });
 
-        const data = await res.json();
-        if (!res.ok) return { data: null, error: { message: data.error } };
-        return { data: { path: data.path || filePath }, error: null };
+            const data = await res.json();
+            if (!res.ok) return { data: null, error: { message: data.error } };
+            return { data: { path: data.path || filePath }, error: null };
+          } catch (error) {
+            if (!isNetworkFailure(error)) throw error;
+            disableCustomServer(error);
+          }
+        }
+
+        return cloudClient.storage.from(bucket).upload(filePath, file, options);
       },
 
       getPublicUrl(filePath: string) {
-        return {
-          data: { publicUrl: `${SERVER_URL}/files/${bucket}/${filePath}` },
-        };
+        if (isCustomServer()) {
+          return {
+            data: { publicUrl: `${SERVER_URL}/files/${bucket}/${filePath}` },
+          };
+        }
+
+        return cloudClient.storage.from(bucket).getPublicUrl(filePath);
       },
 
       async createSignedUrl(filePath: string, expiresIn: number) {
-        const { data, error } = await serverFetch(
-          `/api/storage/signed-url?url=${encodeURIComponent(filePath)}&expires=${expiresIn}`
-        );
-        if (error) return { data: null, error };
-        return { data: { signedUrl: data.signedUrl }, error: null };
+        if (isCustomServer()) {
+          const { data, error } = await serverFetch(
+            `/api/storage/signed-url?url=${encodeURIComponent(filePath)}&expires=${expiresIn}`
+          );
+
+          if (!error) return { data: { signedUrl: data.signedUrl }, error: null };
+          if (!shouldFallbackToCloud(error)) return { data: null, error };
+        }
+
+        return cloudClient.storage.from(bucket).createSignedUrl(filePath, expiresIn);
       },
 
       async remove(filePaths: string[]) {
-        for (const filePath of filePaths) {
-          await serverFetch('/api/storage/delete', {
-            method: 'DELETE',
-            body: JSON.stringify({ bucket, path: filePath }),
-          });
+        if (isCustomServer()) {
+          for (const filePath of filePaths) {
+            const { error } = await serverFetch('/api/storage/delete', {
+              method: 'DELETE',
+              body: JSON.stringify({ bucket, path: filePath }),
+            });
+
+            if (error && !shouldFallbackToCloud(error)) {
+              return { data: null, error };
+            }
+          }
+
+          if (isCustomServer()) {
+            return { data: null, error: null };
+          }
         }
-        return { data: null, error: null };
+
+        return cloudClient.storage.from(bucket).remove(filePaths);
       },
     };
   },
@@ -473,37 +765,25 @@ const serverStorage = {
 // ─── Unified Client ────────────────────────────────────────
 
 interface ApiClient {
-  auth: typeof serverAuth;
-  from: (table: string) => ServerTable | ReturnType<typeof supabase.from>;
+  auth: typeof hybridAuth;
+  from: (table: string) => ServerTable | ReturnType<typeof cloudClient.from>;
   rpc: (fn: string, params?: any) => any;
-  functions: typeof serverFunctions;
-  storage: typeof serverStorage;
+  functions: typeof hybridFunctions;
+  storage: typeof hybridStorage;
 }
-
-const createServerClient = (): ApiClient => ({
-  auth: serverAuth,
-  from: (table: string) => new ServerTable(table),
-  rpc: serverRpc,
-  functions: serverFunctions,
-  storage: serverStorage,
-});
-
-const createSupabaseClient = (): ApiClient => ({
-  auth: supabase.auth as any,
-  from: (table: string) => supabase.from(table as any) as any,
-  rpc: (fn: string, params?: any) => supabase.rpc(fn as any, params) as any,
-  functions: supabase.functions as any,
-  storage: supabase.storage as any,
-});
 
 /**
  * The unified API client.
- * Automatically routes to your Express server (if VITE_SERVER_URL is set)
- * or falls back to Supabase.
+ * Automatically tries the custom server first (if configured)
+ * and falls back to Lovable Cloud when that server is unreachable.
  */
-export const apiClient: ApiClient = isCustomServer()
-  ? createServerClient()
-  : createSupabaseClient();
+export const apiClient: ApiClient = {
+  auth: hybridAuth,
+  from: (table: string) => (isCustomServer() ? new ServerTable(table) : (cloudClient.from(table as any) as any)),
+  rpc: hybridRpc,
+  functions: hybridFunctions,
+  storage: hybridStorage,
+};
 
 /**
  * Helper to check which backend is active.
