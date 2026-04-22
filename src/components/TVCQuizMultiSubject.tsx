@@ -53,7 +53,7 @@ const subjectMeta: Record<string, { label: string; icon: typeof Calculator; colo
   fizica: { label: 'Fizică', icon: Atom, color: 'text-violet-500', weight: 0.2 },
 };
 
-const options = ['A', 'B', 'C', 'D'];
+const options = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 const TVCQuizMultiSubject = forwardRef<TVCQuizMultiSubjectRef, TVCQuizMultiSubjectProps>(
   ({ materialId, subjectConfig, isTimeUp, elapsedSeconds, onComplete, onActiveSubjectChange }, ref) => {

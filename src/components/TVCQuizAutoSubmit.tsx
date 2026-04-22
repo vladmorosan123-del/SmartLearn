@@ -34,7 +34,7 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
     const [score, setScore] = useState(0);
     const { toast } = useToast();
 
-    const options = ['A', 'B', 'C', 'D'];
+    const options = ['A', 'B', 'C', 'D', 'E', 'F'];
 
     const formatTime = (seconds: number): string => {
       const mins = Math.floor(seconds / 60);
@@ -181,7 +181,7 @@ const TVCQuizAutoSubmit = forwardRef<TVCQuizAutoSubmitRef, TVCQuizAutoSubmitProp
                 <RadioGroup
                   value={userAnswer}
                   onValueChange={(answer) => handleAnswerChange(index, answer)}
-                  className="grid grid-cols-4 gap-2 sm:flex sm:gap-4 flex-1"
+                  className="grid grid-cols-6 gap-1 sm:flex sm:gap-3 flex-1"
                   disabled={isSubmitted || isTimeUp}
                 >
                   {options.map((option) => {
