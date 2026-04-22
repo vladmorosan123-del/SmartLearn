@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
@@ -36,8 +36,28 @@ const TVCAnswerKeyInput = ({
   onItemPointsChange,
   showItemPoints = false,
 }: TVCAnswerKeyInputProps) => {
-  const [globalMax, setGlobalMax] = useState<string>('D');
+  // Auto-detect highest letter used in existing answers so E/F values aren't hidden when re-opening
+  const detectMax = (): string => {
+    let maxIdx = ALL_OPTIONS.indexOf('D');
+    for (const a of value) {
+      const idx = ALL_OPTIONS.indexOf(a as any);
+      if (idx > maxIdx) maxIdx = idx;
+    }
+    return ALL_OPTIONS[maxIdx];
+  };
+  const [globalMax, setGlobalMax] = useState<string>(detectMax());
   const [perQuestionMax, setPerQuestionMax] = useState<Record<number, string>>({});
+
+  // Re-sync globalMax when value changes externally (e.g. modal re-opens with different material)
+  useEffect(() => {
+    setGlobalMax(prev => {
+      const detected = detectMax();
+      const prevIdx = ALL_OPTIONS.indexOf(prev as any);
+      const detIdx = ALL_OPTIONS.indexOf(detected as any);
+      return detIdx > prevIdx ? detected : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.join('|')]);
 
   const getMaxForQuestion = (index: number) => perQuestionMax[index] ?? globalMax;
 
