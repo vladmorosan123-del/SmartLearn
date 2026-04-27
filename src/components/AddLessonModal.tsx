@@ -289,6 +289,31 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label>Clase (opțional, selectează una sau mai multe)</Label>
+            <div className="flex flex-wrap gap-2">
+              {CLASS_OPTIONS.map((cls) => {
+                const active = studyClasses.includes(cls);
+                return (
+                  <button
+                    key={cls}
+                    type="button"
+                    onClick={() => toggleClass(cls)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-all ${
+                      active
+                        ? 'bg-blue-700 text-white border-blue-700 shadow-sm'
+                        : 'bg-background text-foreground border-border hover:border-blue-700/50'
+                    }`}
+                  >
+                    Clasa {cls}
+                  </button>
+                );
+              })}
+            </div>
+            {studyClasses.length === 0 && (
+              <p className="text-xs text-muted-foreground">Dacă nu selectezi nimic, lecția va fi vizibilă fără etichetă de clasă.</p>
+            )}
+
           {/* File Upload Section with Tabs */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-base font-semibold">
