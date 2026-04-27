@@ -140,6 +140,12 @@ const UploadMaterialModal = ({
       publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
     }
 
+    const baremPayload = showBarem && baremFile ? {
+      baremUrl: baremFile.url,
+      baremName: baremFile.name,
+      baremSize: baremFile.size,
+    } : {};
+
     if (hasLink) {
       onSave({
         title: title.trim(),
@@ -155,6 +161,7 @@ const UploadMaterialModal = ({
         timerMinutes: showTimer ? timerMinutes : undefined,
         subject: showSubjectSelector ? selectedSubject : undefined,
         publishAt,
+        ...baremPayload,
       });
     } else {
       for (const file of uploadedFiles) {
@@ -172,6 +179,7 @@ const UploadMaterialModal = ({
           timerMinutes: showTimer ? timerMinutes : undefined,
           subject: showSubjectSelector ? selectedSubject : undefined,
           publishAt,
+          ...baremPayload,
         });
       }
     }
