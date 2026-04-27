@@ -120,6 +120,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     if (title.trim()) {
       const hasLink = activeTab === 'link' && linkUrl.trim();
       const resolvedChapterId = chapterId === 'none' ? null : chapterId;
+      const resolvedClasses = studyClasses.length > 0 ? studyClasses : null;
 
       if (hasLink) {
         onSave({
@@ -131,6 +132,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           fileType: 'link',
           fileSize: 0,
           chapterId: resolvedChapterId,
+          studyClasses: resolvedClasses,
         });
       } else if (uploadedFiles.length > 0) {
         // Save each uploaded file as a separate entry
@@ -144,6 +146,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             fileType: file.type,
             fileSize: file.size,
             chapterId: resolvedChapterId,
+            studyClasses: resolvedClasses,
           });
         }
       } else {
@@ -153,6 +156,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           duration: duration.trim() || '',
           description: description.trim(),
           chapterId: resolvedChapterId,
+          studyClasses: resolvedClasses,
         });
       }
       resetForm();
