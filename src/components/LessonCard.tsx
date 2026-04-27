@@ -115,6 +115,18 @@ const LessonCard = ({ lesson, index, isProfessor, onAdd, onEdit, onDelete, onVie
                       {getFileTypeLabel(lesson.fileType)} atașat
                     </span>
                   )}
+                  {lesson.studyClasses && lesson.studyClasses.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {lesson.studyClasses.map((cls) => (
+                        <span
+                          key={cls}
+                          className="text-xs px-2 py-0.5 rounded bg-blue-700/10 text-blue-700 font-semibold border border-blue-700/30"
+                        >
+                          Clasa {cls}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
