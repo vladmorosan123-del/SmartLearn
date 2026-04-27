@@ -550,7 +550,7 @@ const Dashboard = () => {
 
         {/* Lessons List grouped by chapter */}
         <section id="lectii" className="animate-fade-up delay-400">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-blue-500 mb-6 drop-shadow-[0_2px_8px_hsl(217_91%_60%/0.35)]">Lecții</h2>
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-blue-700 mb-6 drop-shadow-[0_2px_8px_hsl(217_91%_45%/0.35)]">Lecții</h2>
 
           {isLoading ?
           <div className="text-center py-12">
@@ -581,7 +581,7 @@ const Dashboard = () => {
               {groupedLessons.map((group) => (
                 <div key={group.chapterId ?? 'uncat'} className="space-y-3">
                   <div className="flex items-center gap-2 border-b border-border pb-2">
-                    <h3 className="font-display text-xl text-foreground">{group.chapterName}</h3>
+                    <h3 className="font-display text-xl md:text-2xl font-semibold text-blue-700 drop-shadow-[0_1px_4px_hsl(217_91%_45%/0.25)]">{group.chapterName}</h3>
                     <span className="text-xs text-muted-foreground">({group.lessons.length})</span>
                   </div>
                   <div className="space-y-4">

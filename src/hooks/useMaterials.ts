@@ -25,6 +25,10 @@ export interface Material {
   timer_minutes?: number | null;
   has_answer_key?: boolean;
   publish_at?: string | null;
+  chapter_id?: string | null;
+  barem_url?: string | null;
+  barem_name?: string | null;
+  barem_size?: number | null;
   subject_config?: Record<string, { questionCount: number; answerKey: string[]; oficiu: number; files?: Array<{ url: string; name: string; type: string; size: number }>; fileUrl?: string; fileName?: string; fileType?: string; fileSize?: number }> | null;
   created_at: string;
   updated_at: string;

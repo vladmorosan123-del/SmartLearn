@@ -129,6 +129,9 @@ const ModeleBac = () => {
     fileType: string;
     fileSize: number;
     publishAt?: string;
+    baremUrl?: string;
+    baremName?: string;
+    baremSize?: number;
   }) => {
     try {
       await addMaterial({
@@ -145,7 +148,10 @@ const ModeleBac = () => {
         genre: null,
         year: data.year || null,
         publish_at: data.publishAt || null,
-      });
+        barem_url: data.baremUrl || null,
+        barem_name: data.baremName || null,
+        barem_size: data.baremSize ?? null,
+      } as any);
       toast({ title: 'Model salvat', description: 'Modelul BAC a fost salvat cu succes.' });
     } catch (error) {
       console.error('Error saving model:', error);
@@ -165,9 +171,12 @@ const ModeleBac = () => {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
+    baremUrl?: string | null;
+    baremName?: string | null;
+    baremSize?: number | null;
   }) => {
     if (!editingMaterial) return;
-    
+
     try {
       const updates: Record<string, any> = {
         title: data.title,
@@ -182,6 +191,10 @@ const ModeleBac = () => {
         updates.file_type = data.fileType;
         updates.file_size = data.fileSize;
       }
+
+      if (data.baremUrl !== undefined) updates.barem_url = data.baremUrl;
+      if (data.baremName !== undefined) updates.barem_name = data.baremName;
+      if (data.baremSize !== undefined) updates.barem_size = data.baremSize;
 
       await updateMaterial(editingMaterial.id, updates);
       toast({ title: 'Model actualizat', description: 'Modificările au fost salvate cu succes.' });
@@ -303,7 +316,7 @@ const ModeleBac = () => {
         {/* Models List */}
         <div className="space-y-4 animate-fade-up delay-300">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-2xl text-foreground">
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-blue-700 drop-shadow-[0_2px_8px_hsl(217_91%_45%/0.3)]">
               Modele BAC - {subjectNames[selectedSubject]}
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -358,6 +371,12 @@ const ModeleBac = () => {
                                 {getFileIcon(model.file_type)}
                                 {getFileTypeLabel(model.file_type)}
                               </span>
+                              {model.barem_url && (
+                                <span className="text-xs bg-blue-700/10 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
+                                  Barem disponibil
+                                </span>
+                              )}
                             </div>
                           </>
                         )}
@@ -399,6 +418,16 @@ const ModeleBac = () => {
                               <Download className="w-4 h-4" />
                               Descarcă
                             </Button>
+                            {model.barem_url && (
+                              <Button
+                                variant="outline" size="sm"
+                                className="gap-1 border-blue-700/40 text-blue-700 hover:bg-blue-700/10"
+                                onClick={() => downloadFile(model.barem_url!, model.barem_name || 'barem')}
+                              >
+                                <Download className="w-4 h-4" />
+                                Barem
+                              </Button>
+                            )}
                             <Button
                               variant="ghost" size="icon" className="text-destructive"
                               onClick={() => handleDeleteMaterial(model)}
@@ -409,13 +438,25 @@ const ModeleBac = () => {
                         )
                       ) : (
                         !isEmpty && (
-                          <Button 
-                            variant="gold" size="sm" className="gap-1"
-                            onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Deschide
-                          </Button>
+                          <>
+                            <Button
+                              variant="gold" size="sm" className="gap-1"
+                              onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Deschide
+                            </Button>
+                            {model.barem_url && (
+                              <Button
+                                variant="outline" size="sm"
+                                className="gap-1 border-blue-700/40 text-blue-700 hover:bg-blue-700/10"
+                                onClick={() => downloadFile(model.barem_url!, model.barem_name || 'barem')}
+                              >
+                                <Download className="w-4 h-4" />
+                                Barem
+                              </Button>
+                            )}
+                          </>
                         )
                       )}
                     </div>
@@ -435,6 +476,7 @@ const ModeleBac = () => {
           category="bac_model"
           subject={selectedSubject}
           showYear={true}
+          showBarem={true}
         />
 
         {/* Edit Modal */}
@@ -444,6 +486,7 @@ const ModeleBac = () => {
           onSave={handleEditMaterial}
           material={editingMaterial}
           showYear={true}
+          showBarem={true}
         />
 
         {/* File Viewer */}
