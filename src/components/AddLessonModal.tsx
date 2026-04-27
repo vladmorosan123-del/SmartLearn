@@ -49,7 +49,7 @@ interface AddLessonModalProps {
   defaultChapterId?: string | null;
 }
 
-const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData }: AddLessonModalProps) => {
+const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData, chapters = [], defaultChapterId = null }: AddLessonModalProps) => {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
@@ -61,6 +61,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   }[]>([]);
   const [activeTab, setActiveTab] = useState('document');
   const [linkUrl, setLinkUrl] = useState('');
+  const [chapterId, setChapterId] = useState<string>('none');
 
   const isEditing = !!editData;
 
@@ -72,6 +73,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     setUploadedFiles([]);
     setActiveTab('document');
     setLinkUrl('');
+    setChapterId(defaultChapterId || 'none');
   };
 
   // Populate form with existing data when editing
@@ -86,11 +88,16 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
         type: editData.fileType,
         size: editData.fileSize,
       }]);
+      setChapterId(editData.chapterId || 'none');
+    } else if (isOpen && !editData) {
+      // Fresh open for adding
+      setChapterId(defaultChapterId || 'none');
     } else if (!isOpen) {
       // Reset when modal closes
       resetForm();
     }
-  }, [editData, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editData, isOpen, defaultChapterId]);
 
   if (!isOpen) return null;
 
@@ -98,36 +105,40 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     e.preventDefault();
     if (title.trim()) {
       const hasLink = activeTab === 'link' && linkUrl.trim();
-      
+      const resolvedChapterId = chapterId === 'none' ? null : chapterId;
+
       if (hasLink) {
-        onSave({ 
-          title: title.trim(), 
-          duration: duration.trim() || '', 
+        onSave({
+          title: title.trim(),
+          duration: duration.trim() || '',
           description: description.trim(),
           fileUrl: linkUrl.trim(),
           fileName: linkUrl.trim(),
           fileType: 'link',
           fileSize: 0,
+          chapterId: resolvedChapterId,
         });
       } else if (uploadedFiles.length > 0) {
         // Save each uploaded file as a separate entry
         for (const file of uploadedFiles) {
-          onSave({ 
-            title: uploadedFiles.length > 1 ? `${title.trim()} - ${file.name}` : title.trim(), 
-            duration: duration.trim() || '', 
+          onSave({
+            title: uploadedFiles.length > 1 ? `${title.trim()} - ${file.name}` : title.trim(),
+            duration: duration.trim() || '',
             description: description.trim(),
             fileUrl: file.url,
             fileName: file.name,
             fileType: file.type,
             fileSize: file.size,
+            chapterId: resolvedChapterId,
           });
         }
       } else {
         // No file, just metadata
-        onSave({ 
-          title: title.trim(), 
-          duration: duration.trim() || '', 
+        onSave({
+          title: title.trim(),
+          duration: duration.trim() || '',
           description: description.trim(),
+          chapterId: resolvedChapterId,
         });
       }
       resetForm();
