@@ -438,13 +438,25 @@ const ModeleBac = () => {
                         )
                       ) : (
                         !isEmpty && (
-                          <Button 
-                            variant="gold" size="sm" className="gap-1"
-                            onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Deschide
-                          </Button>
+                          <>
+                            <Button
+                              variant="gold" size="sm" className="gap-1"
+                              onClick={() => setViewingFile({ url: model.file_url, name: model.file_name, type: model.file_type })}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Deschide
+                            </Button>
+                            {model.barem_url && (
+                              <Button
+                                variant="outline" size="sm"
+                                className="gap-1 border-blue-700/40 text-blue-700 hover:bg-blue-700/10"
+                                onClick={() => downloadFile(model.barem_url!, model.barem_name || 'barem')}
+                              >
+                                <Download className="w-4 h-4" />
+                                Barem
+                              </Button>
+                            )}
+                          </>
                         )
                       )}
                     </div>
