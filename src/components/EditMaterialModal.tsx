@@ -333,6 +333,68 @@ const EditMaterialModal = ({
             )}
           </div>
 
+          {/* Barem (optional) */}
+          {showBarem && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-700" />
+                Barem (opțional)
+              </Label>
+
+              {baremFile ? (
+                <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <FileText className="w-5 h-5 text-blue-700" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{baremFile.name}</p>
+                    <p className="text-xs text-muted-foreground">Barem nou (va înlocui pe cel existent)</p>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setBaremFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : material.barem_url && !isBaremRemoved ? (
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <FileText className="w-5 h-5 text-blue-700" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate max-w-[250px]">{material.barem_name}</p>
+                    <p className="text-xs text-muted-foreground">Barem curent</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsBaremRemoved(true)}
+                    className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : isBaremRemoved ? (
+                <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <Trash2 className="w-5 h-5 text-destructive" />
+                  <p className="text-sm text-destructive flex-1">Baremul va fi șters</p>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setIsBaremRemoved(false)} className="text-xs">
+                    Anulează
+                  </Button>
+                </div>
+              ) : null}
+
+              {!baremFile && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {material.barem_url && !isBaremRemoved ? 'Încarcă un nou barem pentru a-l înlocui:' : 'Încarcă un fișier de barem:'}
+                  </p>
+                  <FileUpload
+                    onUploadComplete={(url, name, type, size) => setBaremFile({ url, name, type, size })}
+                    category={material.category}
+                    subject={material.subject}
+                    multiple={false}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Answer Key Section with question count selector */}
           {showAnswerKey && (
             <div className="pt-2 border-t border-border space-y-4">
