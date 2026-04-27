@@ -5,7 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import FileUpload from '@/components/FileUpload';
+import type { Chapter } from '@/hooks/useChapters';
 
 // Data for an existing lesson when editing
 export interface LessonEditData {
@@ -17,24 +25,28 @@ export interface LessonEditData {
   fileName: string;
   fileType: string;
   fileSize: number;
+  chapterId?: string | null;
 }
 
 interface AddLessonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (lesson: { 
-    title: string; 
-    duration: string; 
-    description: string; 
+  onSave: (lesson: {
+    title: string;
+    duration: string;
+    description: string;
     fileUrl?: string;
     fileName?: string;
     fileType?: string;
     fileSize?: number;
+    chapterId?: string | null;
   }) => void;
   lessonNumber: number;
   subject: string;
   // Optional: if provided, we're editing an existing lesson
   editData?: LessonEditData | null;
+  chapters?: Chapter[];
+  defaultChapterId?: string | null;
 }
 
 const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData }: AddLessonModalProps) => {
