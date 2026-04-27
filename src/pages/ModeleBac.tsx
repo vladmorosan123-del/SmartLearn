@@ -316,7 +316,7 @@ const ModeleBac = () => {
         {/* Models List */}
         <div className="space-y-4 animate-fade-up delay-300">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-2xl text-foreground">
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-blue-700 drop-shadow-[0_2px_8px_hsl(217_91%_45%/0.3)]">
               Modele BAC - {subjectNames[selectedSubject]}
             </h2>
             <p className="text-sm text-muted-foreground">
