@@ -26,6 +26,7 @@ export interface LessonEditData {
   fileType: string;
   fileSize: number;
   chapterId?: string | null;
+  studyClasses?: string[] | null;
 }
 
 interface AddLessonModalProps {
@@ -40,6 +41,7 @@ interface AddLessonModalProps {
     fileType?: string;
     fileSize?: number;
     chapterId?: string | null;
+    studyClasses?: string[] | null;
   }) => void;
   lessonNumber: number;
   subject: string;
@@ -48,6 +50,8 @@ interface AddLessonModalProps {
   chapters?: Chapter[];
   defaultChapterId?: string | null;
 }
+
+const CLASS_OPTIONS = ['IX', 'X', 'XI', 'XII'];
 
 const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData, chapters = [], defaultChapterId = null }: AddLessonModalProps) => {
   const [title, setTitle] = useState('');
@@ -62,6 +66,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   const [activeTab, setActiveTab] = useState('document');
   const [linkUrl, setLinkUrl] = useState('');
   const [chapterId, setChapterId] = useState<string>('none');
+  const [studyClasses, setStudyClasses] = useState<string[]>([]);
 
   const isEditing = !!editData;
 
@@ -74,6 +79,13 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     setActiveTab('document');
     setLinkUrl('');
     setChapterId(defaultChapterId || 'none');
+    setStudyClasses([]);
+  };
+
+  const toggleClass = (cls: string) => {
+    setStudyClasses((prev) =>
+      prev.includes(cls) ? prev.filter((c) => c !== cls) : [...prev, cls]
+    );
   };
 
   // Populate form with existing data when editing
@@ -89,9 +101,11 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
         size: editData.fileSize,
       }]);
       setChapterId(editData.chapterId || 'none');
+      setStudyClasses(editData.studyClasses || []);
     } else if (isOpen && !editData) {
       // Fresh open for adding
       setChapterId(defaultChapterId || 'none');
+      setStudyClasses([]);
     } else if (!isOpen) {
       // Reset when modal closes
       resetForm();
@@ -106,6 +120,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     if (title.trim()) {
       const hasLink = activeTab === 'link' && linkUrl.trim();
       const resolvedChapterId = chapterId === 'none' ? null : chapterId;
+      const resolvedClasses = studyClasses.length > 0 ? studyClasses : null;
 
       if (hasLink) {
         onSave({
@@ -117,6 +132,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           fileType: 'link',
           fileSize: 0,
           chapterId: resolvedChapterId,
+          studyClasses: resolvedClasses,
         });
       } else if (uploadedFiles.length > 0) {
         // Save each uploaded file as a separate entry
@@ -130,6 +146,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             fileType: file.type,
             fileSize: file.size,
             chapterId: resolvedChapterId,
+            studyClasses: resolvedClasses,
           });
         }
       } else {
@@ -139,6 +156,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
           duration: duration.trim() || '',
           description: description.trim(),
           chapterId: resolvedChapterId,
+          studyClasses: resolvedClasses,
         });
       }
       resetForm();
@@ -269,6 +287,32 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Clase (opțional, selectează una sau mai multe)</Label>
+            <div className="flex flex-wrap gap-2">
+              {CLASS_OPTIONS.map((cls) => {
+                const active = studyClasses.includes(cls);
+                return (
+                  <button
+                    key={cls}
+                    type="button"
+                    onClick={() => toggleClass(cls)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-all ${
+                      active
+                        ? 'bg-blue-700 text-white border-blue-700 shadow-sm'
+                        : 'bg-background text-foreground border-border hover:border-blue-700/50'
+                    }`}
+                  >
+                    Clasa {cls}
+                  </button>
+                );
+              })}
+            </div>
+            {studyClasses.length === 0 && (
+              <p className="text-xs text-muted-foreground">Dacă nu selectezi nimic, lecția va fi vizibilă fără etichetă de clasă.</p>
+            )}
           </div>
 
           {/* File Upload Section with Tabs */}
