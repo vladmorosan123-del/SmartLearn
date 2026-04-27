@@ -66,6 +66,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
   const [activeTab, setActiveTab] = useState('document');
   const [linkUrl, setLinkUrl] = useState('');
   const [chapterId, setChapterId] = useState<string>('none');
+  const [studyClasses, setStudyClasses] = useState<string[]>([]);
 
   const isEditing = !!editData;
 
@@ -78,6 +79,13 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
     setActiveTab('document');
     setLinkUrl('');
     setChapterId(defaultChapterId || 'none');
+    setStudyClasses([]);
+  };
+
+  const toggleClass = (cls: string) => {
+    setStudyClasses((prev) =>
+      prev.includes(cls) ? prev.filter((c) => c !== cls) : [...prev, cls]
+    );
   };
 
   // Populate form with existing data when editing
@@ -93,9 +101,11 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
         size: editData.fileSize,
       }]);
       setChapterId(editData.chapterId || 'none');
+      setStudyClasses(editData.studyClasses || []);
     } else if (isOpen && !editData) {
       // Fresh open for adding
       setChapterId(defaultChapterId || 'none');
+      setStudyClasses([]);
     } else if (!isOpen) {
       // Reset when modal closes
       resetForm();
