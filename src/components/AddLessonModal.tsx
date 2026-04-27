@@ -26,6 +26,7 @@ export interface LessonEditData {
   fileType: string;
   fileSize: number;
   chapterId?: string | null;
+  studyClasses?: string[] | null;
 }
 
 interface AddLessonModalProps {
@@ -40,6 +41,7 @@ interface AddLessonModalProps {
     fileType?: string;
     fileSize?: number;
     chapterId?: string | null;
+    studyClasses?: string[] | null;
   }) => void;
   lessonNumber: number;
   subject: string;
@@ -48,6 +50,8 @@ interface AddLessonModalProps {
   chapters?: Chapter[];
   defaultChapterId?: string | null;
 }
+
+const CLASS_OPTIONS = ['IX', 'X', 'XI', 'XII'];
 
 const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editData, chapters = [], defaultChapterId = null }: AddLessonModalProps) => {
   const [title, setTitle] = useState('');
