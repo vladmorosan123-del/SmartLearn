@@ -550,7 +550,7 @@ const Dashboard = () => {
 
         {/* Lessons List grouped by chapter */}
         <section id="lectii" className="animate-fade-up delay-400">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-blue-500 mb-6 drop-shadow-[0_2px_8px_hsl(217_91%_60%/0.35)]">Lecții</h2>
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-blue-700 mb-6 drop-shadow-[0_2px_8px_hsl(217_91%_45%/0.35)]">Lecții</h2>
 
           {isLoading ?
           <div className="text-center py-12">
