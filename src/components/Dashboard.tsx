@@ -81,6 +81,7 @@ const Dashboard = () => {
       status: 'locked' as const,
       materialId: m.id,
       chapterId: (m as any).chapter_id ?? null,
+      studyClasses: (m as any).study_classes ?? null,
     }));
   }, [materials]);
 
