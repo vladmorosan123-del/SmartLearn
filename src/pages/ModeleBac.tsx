@@ -418,6 +418,16 @@ const ModeleBac = () => {
                               <Download className="w-4 h-4" />
                               Descarcă
                             </Button>
+                            {model.barem_url && (
+                              <Button
+                                variant="outline" size="sm"
+                                className="gap-1 border-blue-700/40 text-blue-700 hover:bg-blue-700/10"
+                                onClick={() => downloadFile(model.barem_url!, model.barem_name || 'barem')}
+                              >
+                                <Download className="w-4 h-4" />
+                                Barem
+                              </Button>
+                            )}
                             <Button
                               variant="ghost" size="icon" className="text-destructive"
                               onClick={() => handleDeleteMaterial(model)}
