@@ -65,6 +65,8 @@ const Dashboard = () => {
     category: 'lesson'
   });
 
+  const { chapters, addChapter, renameChapter, deleteChapter } = useChapters(subject || undefined);
+
   // Convert materials to lessons for display
   const currentLessons: Lesson[] = useMemo(() => {
     const lessons: Lesson[] = materials.map((m, index) => ({
