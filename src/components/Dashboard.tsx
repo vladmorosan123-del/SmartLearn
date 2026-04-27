@@ -581,7 +581,7 @@ const Dashboard = () => {
               {groupedLessons.map((group) => (
                 <div key={group.chapterId ?? 'uncat'} className="space-y-3">
                   <div className="flex items-center gap-2 border-b border-border pb-2">
-                    <h3 className="font-display text-xl text-foreground">{group.chapterName}</h3>
+                    <h3 className="font-display text-xl md:text-2xl font-semibold text-blue-700 drop-shadow-[0_1px_4px_hsl(217_91%_45%/0.25)]">{group.chapterName}</h3>
                     <span className="text-xs text-muted-foreground">({group.lessons.length})</span>
                   </div>
                   <div className="space-y-4">
