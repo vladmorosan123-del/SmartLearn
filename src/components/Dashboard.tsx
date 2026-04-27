@@ -17,6 +17,8 @@ import SearchInput from '@/components/SearchInput';
 import EmptyState from '@/components/EmptyState';
 import FileViewer from '@/components/FileViewer';
 import { useMaterials, Material } from '@/hooks/useMaterials';
+import { useChapters } from '@/hooks/useChapters';
+import ChapterBar, { ChapterFilter } from '@/components/ChapterBar';
 
 const subjectIcons = {
   informatica: Code,
@@ -51,6 +53,7 @@ const Dashboard = () => {
   const [editingLesson, setEditingLesson] = useState<LessonEditData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingFile, setViewingFile] = useState<{url: string;name: string;type: string;} | null>(null);
+  const [chapterFilter, setChapterFilter] = useState<ChapterFilter>('all');
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
@@ -62,9 +65,11 @@ const Dashboard = () => {
     category: 'lesson'
   });
 
-  // Convert materials to lessons for display
+  const { chapters, addChapter, renameChapter, deleteChapter } = useChapters(subject || undefined);
+
+  // Convert materials to lessons for display (no padding — only real lessons)
   const currentLessons: Lesson[] = useMemo(() => {
-    const lessons: Lesson[] = materials.map((m, index) => ({
+    return materials.map((m, index) => ({
       id: index + 1,
       title: m.title,
       duration: m.description?.match(/\d+ min/)?.[0] || '45 min',
@@ -74,31 +79,72 @@ const Dashboard = () => {
       fileType: m.file_type,
       fileSize: m.file_size || undefined,
       status: 'locked' as const,
-      materialId: m.id
+      materialId: m.id,
+      chapterId: (m as any).chapter_id ?? null,
     }));
-
-    // Add empty slots up to 10 if less than 10 materials
-    const emptySlots = Math.max(0, 10 - lessons.length);
-    for (let i = 0; i < emptySlots; i++) {
-      lessons.push({
-        id: lessons.length + 1,
-        title: null,
-        duration: null,
-        status: 'not-uploaded' as const
-      });
-    }
-
-    return lessons;
   }, [materials]);
 
-  // Filtered lessons based on search
+  // Counts per chapter (for ChapterBar badges)
+  const chapterCountMap = useMemo(() => {
+    const counts: Record<string, number> = { uncategorized: 0 };
+    for (const m of materials) {
+      const cid = (m as any).chapter_id ?? null;
+      if (!cid) counts.uncategorized = (counts.uncategorized || 0) + 1;
+      else counts[cid] = (counts[cid] || 0) + 1;
+    }
+    return counts;
+  }, [materials]);
+
+  // Filtered lessons based on search + chapter filter
   const filteredLessons = useMemo(() => {
-    if (!searchQuery.trim()) return currentLessons;
-    return currentLessons.filter((lesson) =>
-    lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [currentLessons, searchQuery]);
+    let list = currentLessons;
+    if (chapterFilter === 'uncategorized') {
+      list = list.filter((l) => !l.chapterId);
+    } else if (chapterFilter !== 'all') {
+      list = list.filter((l) => l.chapterId === chapterFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (lesson) =>
+          lesson.title?.toLowerCase().includes(q) ||
+          lesson.description?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [currentLessons, searchQuery, chapterFilter]);
+
+  // Group filtered lessons by chapter (for "all" view we want grouped lists)
+  const groupedLessons = useMemo(() => {
+    const groups: { chapterId: string | null; chapterName: string; lessons: Lesson[] }[] = [];
+    const map = new Map<string, { chapterId: string | null; chapterName: string; lessons: Lesson[] }>();
+    const keyFor = (cid: string | null) => cid || '__uncat__';
+
+    // Seed in chapter order so groups stay stable
+    for (const c of chapters) {
+      map.set(keyFor(c.id), { chapterId: c.id, chapterName: c.name, lessons: [] });
+    }
+    map.set('__uncat__', { chapterId: null, chapterName: 'Necategorisit', lessons: [] });
+
+    for (const l of filteredLessons) {
+      const k = keyFor(l.chapterId || null);
+      if (!map.has(k)) {
+        // chapter no longer exists — fallback to uncategorized
+        map.get('__uncat__')!.lessons.push(l);
+      } else {
+        map.get(k)!.lessons.push(l);
+      }
+    }
+
+    for (const c of chapters) {
+      const g = map.get(keyFor(c.id))!;
+      if (g.lessons.length > 0) groups.push(g);
+    }
+    const uncat = map.get('__uncat__')!;
+    if (uncat.lessons.length > 0) groups.push(uncat);
+
+    return groups;
+  }, [filteredLessons, chapters]);
 
   // Stats calculations
   const uploadedLessons = currentLessons.filter((l) => l.status !== 'not-uploaded').length;
@@ -149,7 +195,8 @@ const Dashboard = () => {
       fileUrl: material.file_url,
       fileName: material.file_name,
       fileType: material.file_type,
-      fileSize: material.file_size || 0
+      fileSize: material.file_size || 0,
+      chapterId: (material as any).chapter_id ?? null
     });
     setIsModalOpen(true);
   };
@@ -168,6 +215,7 @@ const Dashboard = () => {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
+    chapterId?: string | null;
   }) => {
     if (!subject) {
       toast({
@@ -183,7 +231,8 @@ const Dashboard = () => {
       if (editingLesson) {
         const updates: any = {
           title: lessonData.title,
-          description: `${lessonData.duration} - ${lessonData.description}`
+          description: `${lessonData.duration} - ${lessonData.description}`,
+          chapter_id: lessonData.chapterId ?? null
         };
 
         // Only update file info if a new file was uploaded
@@ -219,8 +268,9 @@ const Dashboard = () => {
           lesson_number: selectedLessonNumber,
           author: null,
           genre: null,
-          year: null
-        });
+          year: null,
+          chapter_id: lessonData.chapterId ?? null
+        } as any);
 
         toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
       }
@@ -486,10 +536,22 @@ const Dashboard = () => {
 
         </div>
 
-        {/* Lessons List */}
+        {/* Chapters */}
+        <ChapterBar
+          chapters={chapters}
+          selected={chapterFilter}
+          onSelect={setChapterFilter}
+          isProfessor={isProfessor}
+          onAdd={addChapter}
+          onRename={renameChapter}
+          onDelete={deleteChapter}
+          countMap={chapterCountMap}
+        />
+
+        {/* Lessons List grouped by chapter */}
         <section id="lectii" className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
-          
+
           {isLoading ?
           <div className="text-center py-12">
               <p className="text-muted-foreground">Se încarcă...</p>
@@ -507,25 +569,36 @@ const Dashboard = () => {
           <EmptyState
             icon={BookOpen}
             title="Nicio lecție încă"
-            description="Nu există lecții încărcate pentru această materie."
+            description={chapterFilter === 'all'
+              ? "Nu există lecții încărcate pentru această materie."
+              : "Nu există lecții în această secțiune."}
             actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
             onAction={isProfessor ? handleAddNewLesson : undefined} /> :
 
 
 
-          <div className="space-y-4">
-              {filteredLessons.map((lesson, index) =>
-            <LessonCard
-              key={lesson.id}
-              lesson={lesson}
-              index={currentLessons.findIndex((l) => l.id === lesson.id)}
-              isProfessor={isProfessor}
-              onAdd={handleAddLesson}
-              onEdit={handleEditLesson}
-              onDelete={handleDeleteLesson}
-              onViewFile={handleViewFile} />
-
-            )}
+          <div className="space-y-8">
+              {groupedLessons.map((group) => (
+                <div key={group.chapterId ?? 'uncat'} className="space-y-3">
+                  <div className="flex items-center gap-2 border-b border-border pb-2">
+                    <h3 className="font-display text-xl text-foreground">{group.chapterName}</h3>
+                    <span className="text-xs text-muted-foreground">({group.lessons.length})</span>
+                  </div>
+                  <div className="space-y-4">
+                    {group.lessons.map((lesson) => (
+                      <LessonCard
+                        key={lesson.id}
+                        lesson={lesson}
+                        index={currentLessons.findIndex((l) => l.id === lesson.id)}
+                        isProfessor={isProfessor}
+                        onAdd={handleAddLesson}
+                        onEdit={handleEditLesson}
+                        onDelete={handleDeleteLesson}
+                        onViewFile={handleViewFile} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           }
         </section>
@@ -540,7 +613,9 @@ const Dashboard = () => {
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonNumber}
           subject={subject || 'informatica'}
-          editData={editingLesson} />
+          editData={editingLesson}
+          chapters={chapters}
+          defaultChapterId={chapterFilter !== 'all' && chapterFilter !== 'uncategorized' ? chapterFilter : null} />
 
 
         {/* File Viewer */}
