@@ -371,6 +371,12 @@ const ModeleBac = () => {
                                 {getFileIcon(model.file_type)}
                                 {getFileTypeLabel(model.file_type)}
                               </span>
+                              {model.barem_url && (
+                                <span className="text-xs bg-blue-700/10 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
+                                  Barem disponibil
+                                </span>
+                              )}
                             </div>
                           </>
                         )}
