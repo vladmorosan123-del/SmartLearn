@@ -29,11 +29,15 @@ interface EditMaterialModalProps {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
+    baremUrl?: string | null;
+    baremName?: string | null;
+    baremSize?: number | null;
   }) => void | Promise<void>;
   material: Material | null;
   showYear?: boolean;
   showAnswerKey?: boolean;
   showTimer?: boolean;
+  showBarem?: boolean;
 }
 
 const EditMaterialModal = ({ 
