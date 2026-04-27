@@ -95,14 +95,56 @@ const Dashboard = () => {
     return counts;
   }, [materials]);
 
-  // Filtered lessons based on search
+  // Filtered lessons based on search + chapter filter
   const filteredLessons = useMemo(() => {
-    if (!searchQuery.trim()) return currentLessons;
-    return currentLessons.filter((lesson) =>
-    lesson.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lesson.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [currentLessons, searchQuery]);
+    let list = currentLessons;
+    if (chapterFilter === 'uncategorized') {
+      list = list.filter((l) => !l.chapterId);
+    } else if (chapterFilter !== 'all') {
+      list = list.filter((l) => l.chapterId === chapterFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (lesson) =>
+          lesson.title?.toLowerCase().includes(q) ||
+          lesson.description?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [currentLessons, searchQuery, chapterFilter]);
+
+  // Group filtered lessons by chapter (for "all" view we want grouped lists)
+  const groupedLessons = useMemo(() => {
+    const groups: { chapterId: string | null; chapterName: string; lessons: Lesson[] }[] = [];
+    const map = new Map<string, { chapterId: string | null; chapterName: string; lessons: Lesson[] }>();
+    const keyFor = (cid: string | null) => cid || '__uncat__';
+
+    // Seed in chapter order so groups stay stable
+    for (const c of chapters) {
+      map.set(keyFor(c.id), { chapterId: c.id, chapterName: c.name, lessons: [] });
+    }
+    map.set('__uncat__', { chapterId: null, chapterName: 'Necategorisit', lessons: [] });
+
+    for (const l of filteredLessons) {
+      const k = keyFor(l.chapterId || null);
+      if (!map.has(k)) {
+        // chapter no longer exists — fallback to uncategorized
+        map.get('__uncat__')!.lessons.push(l);
+      } else {
+        map.get(k)!.lessons.push(l);
+      }
+    }
+
+    for (const c of chapters) {
+      const g = map.get(keyFor(c.id))!;
+      if (g.lessons.length > 0) groups.push(g);
+    }
+    const uncat = map.get('__uncat__')!;
+    if (uncat.lessons.length > 0) groups.push(uncat);
+
+    return groups;
+  }, [filteredLessons, chapters]);
 
   // Stats calculations
   const uploadedLessons = currentLessons.filter((l) => l.status !== 'not-uploaded').length;
