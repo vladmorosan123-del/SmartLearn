@@ -339,6 +339,42 @@ const UploadMaterialModal = ({
             </Tabs>
           </div>
 
+          {/* Barem Upload (optional, for BAC models) */}
+          {showBarem && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-700" />
+                Barem (opțional)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Încarcă fișierul cu baremul de corectare. Va putea fi descărcat separat de elevi.
+              </p>
+              {baremFile ? (
+                <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <FileText className="w-5 h-5 text-blue-700" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{baremFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getFileTypeLabel(baremFile.type)} • {baremFile.size >= 1024 * 1024
+                        ? `${(baremFile.size / (1024 * 1024)).toFixed(1)} MB`
+                        : `${(baremFile.size / 1024).toFixed(1)} KB`}
+                    </p>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setBaremFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <FileUpload
+                  onUploadComplete={(url, name, type, size) => setBaremFile({ url, name, type, size })}
+                  category={category}
+                  subject={showSubjectSelector ? selectedSubject : subject}
+                  multiple={false}
+                />
+              )}
+            </div>
+          )}
+
           {/* Answer Key Input for TVC */}
           {showAnswerKey && (
             <div className="space-y-4">
