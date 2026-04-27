@@ -40,14 +40,15 @@ interface EditMaterialModalProps {
   showBarem?: boolean;
 }
 
-const EditMaterialModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
+const EditMaterialModal = ({
+  isOpen,
+  onClose,
+  onSave,
   material,
   showYear = false,
   showAnswerKey = false,
-  showTimer = false
+  showTimer = false,
+  showBarem = false
 }: EditMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -59,10 +60,14 @@ const EditMaterialModal = ({
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
   const [publishTime, setPublishTime] = useState<string>('');
-  
+
   // File replacement state
   const [replacementFile, setReplacementFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
   const [isOriginalFileRemoved, setIsOriginalFileRemoved] = useState(false);
+
+  // Barem state
+  const [baremFile, setBaremFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
+  const [isBaremRemoved, setIsBaremRemoved] = useState(false);
 
   // Populate form when material changes
   useEffect(() => {
