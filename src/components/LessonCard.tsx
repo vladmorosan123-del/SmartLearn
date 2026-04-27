@@ -15,9 +15,6 @@ export interface Lesson {
   chapterId?: string | null;
 }
 
-// keep legacy export shape
-type _shim = unknown;
-
 interface LessonCardProps {
   lesson: Lesson;
   index: number;
