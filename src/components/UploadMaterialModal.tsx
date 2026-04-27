@@ -30,6 +30,9 @@ interface UploadMaterialModalProps {
     timerMinutes?: number;
     subject?: string;
     publishAt?: string;
+    baremUrl?: string;
+    baremName?: string;
+    baremSize?: number;
   }) => void;
   title: string;
   category: string;
@@ -38,6 +41,7 @@ interface UploadMaterialModalProps {
   showAnswerKey?: boolean;
   showTimer?: boolean;
   showSubjectSelector?: boolean;
+  showBarem?: boolean;
 }
 
 const tvcSubjectOptions = [
