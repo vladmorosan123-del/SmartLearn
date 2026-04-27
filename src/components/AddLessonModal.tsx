@@ -313,6 +313,7 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             {studyClasses.length === 0 && (
               <p className="text-xs text-muted-foreground">Dacă nu selectezi nimic, lecția va fi vizibilă fără etichetă de clasă.</p>
             )}
+          </div>
 
           {/* File Upload Section with Tabs */}
           <div className="space-y-3">
