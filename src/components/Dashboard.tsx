@@ -585,9 +585,22 @@ const Dashboard = () => {
           <div className="space-y-8">
               {groupedLessons.map((group) => (
                 <div key={group.chapterId ?? 'uncat'} className="space-y-3">
-                  <div className="flex items-center gap-2 border-b border-border pb-2">
+                  <div className="flex items-center gap-2 border-b border-border pb-2 flex-wrap">
                     <h3 className="font-display text-xl md:text-2xl font-semibold text-blue-700 drop-shadow-[0_1px_4px_hsl(217_91%_45%/0.25)]">{group.chapterName}</h3>
                     <span className="text-xs text-muted-foreground">({group.lessons.length})</span>
+                    {(() => {
+                      const cls = Array.from(new Set(group.lessons.flatMap((l) => l.studyClasses || []))).sort();
+                      if (cls.length === 0) return null;
+                      return (
+                        <div className="flex items-center gap-1 ml-1 flex-wrap">
+                          {cls.map((c) => (
+                            <span key={c} className="text-[11px] px-1.5 py-0.5 rounded bg-blue-700/10 text-blue-700 font-semibold border border-blue-700/30">
+                              Clasa {c}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="space-y-4">
                     {group.lessons.map((lesson) => (
