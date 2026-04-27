@@ -197,7 +197,8 @@ const Dashboard = () => {
       fileName: material.file_name,
       fileType: material.file_type,
       fileSize: material.file_size || 0,
-      chapterId: (material as any).chapter_id ?? null
+      chapterId: (material as any).chapter_id ?? null,
+      studyClasses: (material as any).study_classes ?? null
     });
     setIsModalOpen(true);
   };
