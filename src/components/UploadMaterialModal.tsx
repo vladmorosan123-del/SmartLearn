@@ -50,17 +50,18 @@ const tvcSubjectOptions = [
   { value: 'fizica', label: 'Fizică' },
 ];
 
-const UploadMaterialModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
+const UploadMaterialModal = ({
+  isOpen,
+  onClose,
+  onSave,
   title: modalTitle,
   category,
   subject,
   showYear = false,
   showAnswerKey = false,
   showTimer = false,
-  showSubjectSelector = false
+  showSubjectSelector = false,
+  showBarem = false
 }: UploadMaterialModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -81,6 +82,7 @@ const UploadMaterialModal = ({
     type: string;
     size: number;
   }[]>([]);
+  const [baremFile, setBaremFile] = useState<{ url: string; name: string; type: string; size: number } | null>(null);
 
   if (!isOpen) return null;
 
