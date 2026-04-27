@@ -17,6 +17,8 @@ import SearchInput from '@/components/SearchInput';
 import EmptyState from '@/components/EmptyState';
 import FileViewer from '@/components/FileViewer';
 import { useMaterials, Material } from '@/hooks/useMaterials';
+import { useChapters } from '@/hooks/useChapters';
+import ChapterBar, { ChapterFilter } from '@/components/ChapterBar';
 
 const subjectIcons = {
   informatica: Code,
