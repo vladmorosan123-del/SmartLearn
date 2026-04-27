@@ -150,6 +150,20 @@ const EditMaterialModal = ({
         publishAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
       }
 
+      // Compute barem patch only if changed in this session
+      let baremPatch: any = {};
+      if (showBarem) {
+        if (baremFile) {
+          baremPatch = {
+            baremUrl: baremFile.url,
+            baremName: baremFile.name,
+            baremSize: baremFile.size,
+          };
+        } else if (isBaremRemoved) {
+          baremPatch = { baremUrl: null, baremName: null, baremSize: null };
+        }
+      }
+
       await onSave({
         title: title.trim(),
         description: description.trim(),
@@ -166,6 +180,7 @@ const EditMaterialModal = ({
           fileType: replacementFile.type,
           fileSize: replacementFile.size,
         } : {}),
+        ...baremPatch,
       });
       onClose();
     } catch (error) {
