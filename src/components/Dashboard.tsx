@@ -67,9 +67,9 @@ const Dashboard = () => {
 
   const { chapters, addChapter, renameChapter, deleteChapter } = useChapters(subject || undefined);
 
-  // Convert materials to lessons for display
+  // Convert materials to lessons for display (no padding — only real lessons)
   const currentLessons: Lesson[] = useMemo(() => {
-    const lessons: Lesson[] = materials.map((m, index) => ({
+    return materials.map((m, index) => ({
       id: index + 1,
       title: m.title,
       duration: m.description?.match(/\d+ min/)?.[0] || '45 min',
@@ -79,21 +79,20 @@ const Dashboard = () => {
       fileType: m.file_type,
       fileSize: m.file_size || undefined,
       status: 'locked' as const,
-      materialId: m.id
+      materialId: m.id,
+      chapterId: (m as any).chapter_id ?? null,
     }));
+  }, [materials]);
 
-    // Add empty slots up to 10 if less than 10 materials
-    const emptySlots = Math.max(0, 10 - lessons.length);
-    for (let i = 0; i < emptySlots; i++) {
-      lessons.push({
-        id: lessons.length + 1,
-        title: null,
-        duration: null,
-        status: 'not-uploaded' as const
-      });
+  // Counts per chapter (for ChapterBar badges)
+  const chapterCountMap = useMemo(() => {
+    const counts: Record<string, number> = { uncategorized: 0 };
+    for (const m of materials) {
+      const cid = (m as any).chapter_id ?? null;
+      if (!cid) counts.uncategorized = (counts.uncategorized || 0) + 1;
+      else counts[cid] = (counts[cid] || 0) + 1;
     }
-
-    return lessons;
+    return counts;
   }, [materials]);
 
   // Filtered lessons based on search
