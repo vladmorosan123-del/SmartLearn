@@ -129,6 +129,9 @@ const ModeleBac = () => {
     fileType: string;
     fileSize: number;
     publishAt?: string;
+    baremUrl?: string;
+    baremName?: string;
+    baremSize?: number;
   }) => {
     try {
       await addMaterial({
@@ -145,7 +148,10 @@ const ModeleBac = () => {
         genre: null,
         year: data.year || null,
         publish_at: data.publishAt || null,
-      });
+        barem_url: data.baremUrl || null,
+        barem_name: data.baremName || null,
+        barem_size: data.baremSize ?? null,
+      } as any);
       toast({ title: 'Model salvat', description: 'Modelul BAC a fost salvat cu succes.' });
     } catch (error) {
       console.error('Error saving model:', error);
@@ -165,9 +171,12 @@ const ModeleBac = () => {
     fileName?: string;
     fileType?: string;
     fileSize?: number;
+    baremUrl?: string | null;
+    baremName?: string | null;
+    baremSize?: number | null;
   }) => {
     if (!editingMaterial) return;
-    
+
     try {
       const updates: Record<string, any> = {
         title: data.title,
@@ -182,6 +191,10 @@ const ModeleBac = () => {
         updates.file_type = data.fileType;
         updates.file_size = data.fileSize;
       }
+
+      if (data.baremUrl !== undefined) updates.barem_url = data.baremUrl;
+      if (data.baremName !== undefined) updates.barem_name = data.baremName;
+      if (data.baremSize !== undefined) updates.barem_size = data.baremSize;
 
       await updateMaterial(editingMaterial.id, updates);
       toast({ title: 'Model actualizat', description: 'Modificările au fost salvate cu succes.' });
