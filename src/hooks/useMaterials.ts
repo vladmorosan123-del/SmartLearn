@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient as supabase } from '@/lib/apiClient';
 import { deleteFile } from '@/lib/storageApi';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { logActivity } from '@/lib/activityLogger';
@@ -216,55 +217,72 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
   };
 
   const deleteMaterial = async (id: string, fileUrl: string) => {
-    try {
-      // Get material info before deleting for logging
-      const materialToDelete = materials.find(m => m.id === id);
-      
-      // Delete file from storage (works with both cloud and custom server)
-      const urlParts = fileUrl.split('/materials/');
-      if (urlParts.length > 1) {
-        const filePath = decodeURIComponent(urlParts[1]);
-        await deleteFile('materials', filePath);
-      }
+    const materialToDelete = materials.find(m => m.id === id);
+    if (!materialToDelete) return;
 
-      const { error } = await supabase
-        .from('materials')
-        .delete()
-        .eq('id', id);
+    // Optimistic remove from UI
+    setMaterials(prev => prev.filter(m => m.id !== id));
 
-      if (error) throw error;
-      
-      // Log activity
-      const user = (await supabase.auth.getUser()).data.user;
-      if (user && materialToDelete) {
-        const { data: profile } = await supabase.from('profiles').select('username').eq('user_id', user.id).single();
-        logActivity({
-          userId: user.id,
-          username: profile?.username || 'unknown',
-          action: 'delete',
-          entityType: 'material',
-          entityTitle: materialToDelete.title,
-          entitySubject: materialToDelete.subject,
-          entityCategory: materialToDelete.category,
-          details: { fileName: materialToDelete.file_name },
+    let undone = false;
+    const UNDO_MS = 10000;
+
+    const performDelete = async () => {
+      if (undone) return;
+      try {
+        const urlParts = fileUrl.split('/materials/');
+        if (urlParts.length > 1) {
+          const filePath = decodeURIComponent(urlParts[1]);
+          await deleteFile('materials', filePath);
+        }
+
+        const { error } = await supabase
+          .from('materials')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('username').eq('user_id', user.id).single();
+          logActivity({
+            userId: user.id,
+            username: profile?.username || 'unknown',
+            action: 'delete',
+            entityType: 'material',
+            entityTitle: materialToDelete.title,
+            entitySubject: materialToDelete.subject,
+            entityCategory: materialToDelete.category,
+            details: { fileName: materialToDelete.file_name },
+          });
+        }
+      } catch (error: any) {
+        console.error('Error deleting material:', error);
+        // Restore on failure
+        setMaterials(prev => prev.some(m => m.id === id) ? prev : [...prev, materialToDelete]);
+        toast({
+          title: 'Eroare',
+          description: 'Nu s-a putut șterge materialul.',
+          variant: 'destructive',
         });
       }
-      
-      setMaterials(prev => prev.filter(m => m.id !== id));
-      
-      toast({
-        title: 'Șters',
-        description: 'Materialul a fost șters cu succes.',
-      });
-    } catch (error: any) {
-      console.error('Error deleting material:', error);
-      toast({
-        title: 'Eroare',
-        description: 'Nu s-a putut șterge materialul.',
-        variant: 'destructive',
-      });
-      throw error;
-    }
+    };
+
+    const timeoutId = window.setTimeout(performDelete, UNDO_MS);
+
+    sonnerToast(`Material șters: ${materialToDelete.title}`, {
+      description: 'Vei putea anula timp de 10 secunde.',
+      duration: UNDO_MS,
+      action: {
+        label: 'Anulează',
+        onClick: () => {
+          undone = true;
+          window.clearTimeout(timeoutId);
+          setMaterials(prev => prev.some(m => m.id === id) ? prev : [...prev, materialToDelete]);
+          sonnerToast.success('Ștergere anulată');
+        },
+      },
+    });
   };
 
   return {
