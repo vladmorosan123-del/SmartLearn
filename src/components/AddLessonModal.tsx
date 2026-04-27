@@ -254,6 +254,23 @@ const AddLessonModal = ({ isOpen, onClose, onSave, lessonNumber, subject, editDa
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="chapter">Capitol (opțional)</Label>
+            <Select value={chapterId} onValueChange={setChapterId}>
+              <SelectTrigger id="chapter" className="bg-background">
+                <SelectValue placeholder="Necategorisit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Necategorisit</SelectItem>
+                {chapters.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* File Upload Section with Tabs */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-base font-semibold">
