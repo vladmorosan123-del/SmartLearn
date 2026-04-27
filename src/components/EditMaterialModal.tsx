@@ -79,6 +79,8 @@ const EditMaterialModal = ({
       setTimerMinutes(material.timer_minutes || 180);
       setReplacementFile(null);
       setIsOriginalFileRemoved(false);
+      setBaremFile(null);
+      setIsBaremRemoved(false);
       
       // Properly restore answer key with correct question count
       const rawKey = material.answer_key;
