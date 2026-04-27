@@ -378,6 +378,7 @@ export type Database = {
           lesson_number: number
           oficiu: number
           publish_at: string
+          study_classes: string[]
           subject: string
           subject_config: Json
           timer_minutes: number
