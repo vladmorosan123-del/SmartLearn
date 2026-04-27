@@ -53,6 +53,7 @@ const Dashboard = () => {
   const [editingLesson, setEditingLesson] = useState<LessonEditData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingFile, setViewingFile] = useState<{url: string;name: string;type: string;} | null>(null);
+  const [chapterFilter, setChapterFilter] = useState<ChapterFilter>('all');
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
   const SubjectIcon = subject ? subjectIcons[subject] : BookOpen;
