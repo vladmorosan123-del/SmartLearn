@@ -13,6 +13,7 @@ export interface Lesson {
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
   materialId?: string;
   chapterId?: string | null;
+  studyClasses?: string[] | null;
 }
 
 interface LessonCardProps {
