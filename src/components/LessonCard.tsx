@@ -12,7 +12,11 @@ export interface Lesson {
   fileSize?: number;
   status: 'completed' | 'in-progress' | 'locked' | 'not-uploaded';
   materialId?: string;
+  chapterId?: string | null;
 }
+
+// keep legacy export shape
+type _shim = unknown;
 
 interface LessonCardProps {
   lesson: Lesson;
