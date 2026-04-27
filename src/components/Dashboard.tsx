@@ -536,10 +536,22 @@ const Dashboard = () => {
 
         </div>
 
-        {/* Lessons List */}
+        {/* Chapters */}
+        <ChapterBar
+          chapters={chapters}
+          selected={chapterFilter}
+          onSelect={setChapterFilter}
+          isProfessor={isProfessor}
+          onAdd={addChapter}
+          onRename={renameChapter}
+          onDelete={deleteChapter}
+          countMap={chapterCountMap}
+        />
+
+        {/* Lessons List grouped by chapter */}
         <section id="lectii" className="animate-fade-up delay-400">
           <h2 className="font-display text-2xl text-foreground mb-6">Lecții</h2>
-          
+
           {isLoading ?
           <div className="text-center py-12">
               <p className="text-muted-foreground">Se încarcă...</p>
@@ -557,25 +569,36 @@ const Dashboard = () => {
           <EmptyState
             icon={BookOpen}
             title="Nicio lecție încă"
-            description="Nu există lecții încărcate pentru această materie."
+            description={chapterFilter === 'all'
+              ? "Nu există lecții încărcate pentru această materie."
+              : "Nu există lecții în această secțiune."}
             actionLabel={isProfessor ? "Adaugă prima lecție" : undefined}
             onAction={isProfessor ? handleAddNewLesson : undefined} /> :
 
 
 
-          <div className="space-y-4">
-              {filteredLessons.map((lesson, index) =>
-            <LessonCard
-              key={lesson.id}
-              lesson={lesson}
-              index={currentLessons.findIndex((l) => l.id === lesson.id)}
-              isProfessor={isProfessor}
-              onAdd={handleAddLesson}
-              onEdit={handleEditLesson}
-              onDelete={handleDeleteLesson}
-              onViewFile={handleViewFile} />
-
-            )}
+          <div className="space-y-8">
+              {groupedLessons.map((group) => (
+                <div key={group.chapterId ?? 'uncat'} className="space-y-3">
+                  <div className="flex items-center gap-2 border-b border-border pb-2">
+                    <h3 className="font-display text-xl text-foreground">{group.chapterName}</h3>
+                    <span className="text-xs text-muted-foreground">({group.lessons.length})</span>
+                  </div>
+                  <div className="space-y-4">
+                    {group.lessons.map((lesson) => (
+                      <LessonCard
+                        key={lesson.id}
+                        lesson={lesson}
+                        index={currentLessons.findIndex((l) => l.id === lesson.id)}
+                        isProfessor={isProfessor}
+                        onAdd={handleAddLesson}
+                        onEdit={handleEditLesson}
+                        onDelete={handleDeleteLesson}
+                        onViewFile={handleViewFile} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           }
         </section>
@@ -590,7 +613,9 @@ const Dashboard = () => {
           onSave={handleSaveLesson}
           lessonNumber={selectedLessonNumber}
           subject={subject || 'informatica'}
-          editData={editingLesson} />
+          editData={editingLesson}
+          chapters={chapters}
+          defaultChapterId={chapterFilter !== 'all' && chapterFilter !== 'uncategorized' ? chapterFilter : null} />
 
 
         {/* File Viewer */}
