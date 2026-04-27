@@ -448,6 +448,7 @@ const ModeleBac = () => {
           category="bac_model"
           subject={selectedSubject}
           showYear={true}
+          showBarem={true}
         />
 
         {/* Edit Modal */}
@@ -457,6 +458,7 @@ const ModeleBac = () => {
           onSave={handleEditMaterial}
           material={editingMaterial}
           showYear={true}
+          showBarem={true}
         />
 
         {/* File Viewer */}
