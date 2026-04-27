@@ -218,6 +218,7 @@ const Dashboard = () => {
     fileType?: string;
     fileSize?: number;
     chapterId?: string | null;
+    studyClasses?: string[] | null;
   }) => {
     if (!subject) {
       toast({
@@ -234,7 +235,8 @@ const Dashboard = () => {
         const updates: any = {
           title: lessonData.title,
           description: `${lessonData.duration} - ${lessonData.description}`,
-          chapter_id: lessonData.chapterId ?? null
+          chapter_id: lessonData.chapterId ?? null,
+          study_classes: lessonData.studyClasses ?? null
         };
 
         // Only update file info if a new file was uploaded
@@ -271,7 +273,8 @@ const Dashboard = () => {
           author: null,
           genre: null,
           year: null,
-          chapter_id: lessonData.chapterId ?? null
+          chapter_id: lessonData.chapterId ?? null,
+          study_classes: lessonData.studyClasses ?? null
         } as any);
 
         toast({ title: 'Lecție salvată', description: 'Lecția a fost salvată cu succes.' });
