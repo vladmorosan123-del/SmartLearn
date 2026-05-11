@@ -10,6 +10,7 @@ const dbRoutes = require('./routes/db');
 const rpcRoutes = require('./routes/rpc');
 const functionsRoutes = require('./routes/functions');
 const storageRoutes = require('./routes/storage');
+const migrateRoutes = require('./routes/migrate');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -41,9 +42,14 @@ app.use('/api/db', dbRoutes);
 app.use('/api/rpc', rpcRoutes);
 app.use('/api/functions', functionsRoutes);
 app.use('/api/storage', storageRoutes);
+app.use('/api/migrate', migrateRoutes);
 
 // ─── Serve uploaded files statically ───────────────────────
 app.use('/files', express.static(storagePath));
+
+// ─── Migration UI ─────────────────────────────────────────
+app.use('/migrate', express.static(path.join(__dirname, 'public')));
+app.get('/migrate', (req, res) => res.sendFile(path.join(__dirname, 'public', 'migrate.html')));
 
 // ─── Error handler ─────────────────────────────────────────
 app.use((err, req, res, next) => {
