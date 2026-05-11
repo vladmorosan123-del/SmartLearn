@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8" />
+<title>SmartLearning · Migrare DB</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --primary: #3b82f6;
+    --ok: #22c55e; --warn: #f59e0b; --err: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, system-ui, sans-serif;
+         background: var(--bg); color: var(--text); padding: 24px; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 24px; font-size: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--border);
+          border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type="text"], input[type="password"], input[type="file"] {
+    width: 100%; padding: 10px 12px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; font-size: 14px; margin-bottom: 12px;
+  }
+  button { background: var(--primary); color: white; border: 0;
+           padding: 10px 18px; border-radius: 8px; font-size: 14px;
+           font-weight: 600; cursor: pointer; margin-right: 8px; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { background: var(--border); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; }
+  .status .cell { background: var(--bg); padding: 8px 12px; border-radius: 6px;
+                  border: 1px solid var(--border); }
+  .status .cell b { color: var(--primary); }
+  .log { background: #020617; border: 1px solid var(--border); border-radius: 8px;
+         padding: 12px; font-family: ui-monospace, monospace; font-size: 13px;
+         height: 360px; overflow-y: auto; white-space: pre-wrap; }
+  .log .l-info { color: var(--muted); }
+  .log .l-ok { color: var(--ok); }
+  .log .l-warn { color: var(--warn); }
+  .log .l-error { color: var(--err); }
+  .log .l-count { color: #60a5fa; }
+  .log .l-done { color: var(--ok); font-weight: 700; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px;
+          font-size: 11px; font-weight: 600; }
+  .pill.yes { background: rgba(34,197,94,.2); color: var(--ok); }
+  .pill.no { background: rgba(239,68,68,.2); color: var(--err); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🗄️ Migrare SmartLearning DB</h1>
+  <div class="sub">Importă schema + utilizatori + date din Supabase în Postgres-ul local.</div>
+
+  <div class="card">
+    <h2>1. Token de migrare</h2>
+    <label>MIGRATE_TOKEN (din <code>server/.env</code>)</label>
+    <input type="password" id="token" placeholder="Lipește tokenul..." autocomplete="off" />
+    <button onclick="checkStatus()">Verifică conexiunea</button>
+  </div>
+
+  <div class="card">
+    <h2>2. Stare bază de date</h2>
+    <div id="status" class="status"><div class="cell">—</div></div>
+    <div style="margin-top: 10px; font-size: 12px; color: var(--muted);">
+      Fișiere încărcate:
+      <span id="f-schema" class="pill no">schema.sql</span>
+      <span id="f-users" class="pill no">users.sql</span>
+      <span id="f-data" class="pill no">data.sql</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Încarcă fișiere SQL</h2>
+    <div class="grid">
+      <div>
+        <label><code>schema.sql</code></label>
+        <input type="file" id="schema-file" accept=".sql" />
+      </div>
+      <div>
+        <label><code>users.sql</code> (auth.users → public.users)</label>
+        <input type="file" id="users-file" accept=".sql" />
+      </div>
+      <div>
+        <label><code>data.sql</code></label>
+        <input type="file" id="data-file" accept=".sql" />
+      </div>
+    </div>
+    <button onclick="uploadFiles()">Încarcă fișierele</button>
+    <span style="margin-left:8px; font-size:12px; color: var(--muted);">
+      Cele 3 fișiere sunt opționale individual — încarci doar ce ai nevoie.
+    </span>
+  </div>
+
+  <div class="card">
+    <h2>4. Rulează migrarea</h2>
+    <div style="margin-bottom: 12px;">
+      <label style="display:inline-block; margin-right:16px;">
+        <input type="checkbox" id="run-schema" checked /> schema
+      </label>
+      <label style="display:inline-block; margin-right:16px;">
+        <input type="checkbox" id="run-users" checked /> users
+      </label>
+      <label style="display:inline-block;">
+        <input type="checkbox" id="run-data" checked /> data
+      </label>
+    </div>
+    <button id="run-btn" onclick="runMigration()">▶ Pornește migrarea</button>
+    <button class="secondary" onclick="document.getElementById('log').innerHTML=''">Curăță log</button>
+  </div>
+
+  <div class="card">
+    <h2>5. Log în timp real</h2>
+    <div id="log" class="log"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const tokenInput = $('token');
+tokenInput.value = sessionStorage.getItem('migrateToken') || '';
+tokenInput.addEventListener('input', () => sessionStorage.setItem('migrateToken', tokenInput.value));
+
+function log(type, msg) {
+  const el = $('log');
+  const line = document.createElement('div');
+  line.className = 'l-' + type;
+  const time = new Date().toLocaleTimeString();
+  line.textContent = `[${time}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function checkStatus() {
+  const token = tokenInput.value.trim();
+  if (!token) { alert('Introdu tokenul'); return; }
+  try {
+    const r = await fetch('/api/migrate/status?token=' + encodeURIComponent(token));
+    const j = await r.json();
+    if (!r.ok) { log('error', j.error || 'Eroare'); return; }
+    const html = Object.entries(j.counts).map(([k, v]) =>
+      `<div class="cell">${k}: <b>${v === null ? '—' : v}</b></div>`
+    ).join('');
+    $('status').innerHTML = html;
+    for (const key of ['schema', 'users', 'data']) {
+      const p = $('f-' + key);
+      p.className = 'pill ' + (j.files[key] ? 'yes' : 'no');
+    }
+    log('ok', 'Conexiune OK.');
+  } catch (e) {
+    log('error', 'Eroare rețea: ' + e.message);
+  }
+}
+
+async function uploadFiles() {
+  const token = tokenInput.value.trim();
+  if (!token) { alert('Introdu tokenul'); return; }
+  const fd = new FormData();
+  let any = false;
+  for (const key of ['schema', 'users', 'data']) {
+    const f = $(key + '-file').files[0];
+    if (f) { fd.append(key, f); any = true; }
+  }
+  if (!any) { alert('Selectează cel puțin un fișier'); return; }
+  log('info', 'Încărcare fișiere...');
+  try {
+    const r = await fetch('/api/migrate/upload?token=' + encodeURIComponent(token), {
+      method: 'POST', body: fd,
+    });
+    const j = await r.json();
+    if (!r.ok) { log('error', j.error || 'Eroare'); return; }
+    log('ok', 'Încărcate: ' + j.uploaded.join(', '));
+    checkStatus();
+  } catch (e) {
+    log('error', 'Upload eșuat: ' + e.message);
+  }
+}
+
+function runMigration() {
+  const token = tokenInput.value.trim();
+  if (!token) { alert('Introdu tokenul'); return; }
+  const steps = [];
+  if ($('run-schema').checked) steps.push('schema');
+  if ($('run-users').checked) steps.push('users');
+  if ($('run-data').checked) steps.push('data');
+  if (!steps.length) { alert('Selectează cel puțin un pas'); return; }
+
+  $('run-btn').disabled = true;
+  log('info', 'Pornesc migrarea: ' + steps.join(' → '));
+
+  const url = `/api/migrate/run?token=${encodeURIComponent(token)}&steps=${steps.join(',')}`;
+  const es = new EventSource(url);
+  es.onmessage = (ev) => {
+    try {
+      const { type, msg } = JSON.parse(ev.data);
+      log(type, msg);
+      if (type === 'done') { es.close(); $('run-btn').disabled = false; checkStatus(); }
+    } catch (e) { log('error', ev.data); }
+  };
+  es.onerror = () => {
+    log('error', 'Conexiune SSE închisă.');
+    es.close();
+    $('run-btn').disabled = false;
+  };
+}
+</script>
+</body>
+</html>
