@@ -349,13 +349,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      export_auth_passwords: {
-        Args: never
-        Returns: {
-          encrypted_password: string
-          id: string
-        }[]
-      }
       get_material_answer_key: { Args: { _material_id: string }; Returns: Json }
       get_material_options_per_question: {
         Args: { _material_id: string }
