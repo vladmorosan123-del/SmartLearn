@@ -1,2 +1,0 @@
-[functions.export-users-sql]
-verify_jwt = false
