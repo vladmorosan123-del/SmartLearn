@@ -172,6 +172,7 @@ export type Database = {
           lesson_number: number | null
           oficiu: number | null
           publish_at: string | null
+          study_classes: string[] | null
           subject: string
           subject_config: Json | null
           timer_minutes: number | null
@@ -199,6 +200,7 @@ export type Database = {
           lesson_number?: number | null
           oficiu?: number | null
           publish_at?: string | null
+          study_classes?: string[] | null
           subject: string
           subject_config?: Json | null
           timer_minutes?: number | null
@@ -226,6 +228,7 @@ export type Database = {
           lesson_number?: number | null
           oficiu?: number | null
           publish_at?: string | null
+          study_classes?: string[] | null
           subject?: string
           subject_config?: Json | null
           timer_minutes?: number | null
