@@ -1,1 +1,0 @@
-DROP FUNCTION IF EXISTS public.export_auth_passwords();
