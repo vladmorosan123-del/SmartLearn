@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient as supabase } from '@/lib/apiClient';
+import { apiClient as supabase, isCustomServer } from '@/lib/apiClient';
 import { deleteFile } from '@/lib/storageApi';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
