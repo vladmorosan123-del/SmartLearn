@@ -101,34 +101,39 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         if (error) throw error;
         setMaterials((data || []).map(d => mapToMaterial(d, false)));
       } else {
-        // Students use a backend function that returns materials WITHOUT answer_key
-        // (prevents exposing answer_key while keeping the base table SELECT locked down)
-        const { data, error } = await supabase.rpc('get_materials_for_students');
+        // Students: fetch directly from materials table.
+        // Backend (Express /api/db/materials or Supabase RLS) already filters
+        // by publish_at and strips answer_key for non-privileged users.
+        let query = supabase
+          .from('materials')
+          .select('*')
+          .eq('category', category);
+
+        if (subject) {
+          query = query.eq('subject', subject);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
 
-        const filtered = (data || [])
-          .filter((m: any) => m.category === category)
-          .filter((m: any) => (subject ? m.subject === subject : true))
-          .sort((a: any, b: any) => (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        const mapped = (data || []).map((material: any) => {
+          // Compute question count locally from subject_config (answer_key is hidden for students)
+          let questionCount = 0;
+          if (material.subject_config && typeof material.subject_config === 'object') {
+            for (const cfg of Object.values(material.subject_config as Record<string, any>)) {
+              questionCount += Number((cfg as any)?.questionCount) || 0;
+            }
+          }
 
-        // For students, also fetch question count securely via RPC
-        const materialsWithQuestionCount = await Promise.all(
-          filtered.map(async (material: any) => {
-            const { data: questionCount } = await supabase
-              .rpc('get_material_question_count', { _material_id: material.id });
-            
-            // subject_config is returned from RPC (with answerKey stripped for security)
-            // but we need to keep it so TVCTimerComplet knows about multi-subject structure
-            return {
-              ...material,
-              answer_key: null,
-              subject_config: material.subject_config || null,
-              has_answer_key: (questionCount || 0) > 0,
-            };
-          })
-        );
+          return {
+            ...material,
+            answer_key: null,
+            subject_config: material.subject_config || null,
+            has_answer_key: questionCount > 0,
+          };
+        });
 
-        setMaterials(materialsWithQuestionCount as Material[]);
+        setMaterials(mapped as Material[]);
       }
     } catch (error: any) {
       console.error('Error fetching materials:', error);
