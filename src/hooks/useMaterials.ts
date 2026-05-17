@@ -100,10 +100,9 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
         if (error) throw error;
         setMaterials((data || []).map(d => mapToMaterial(d, false)));
-      } else {
-        // Students: fetch directly from materials table.
-        // Backend (Express /api/db/materials or Supabase RLS) already filters
-        // by publish_at and strips answer_key for non-privileged users.
+      } else if (isCustomServer()) {
+        // Students on custom Express server: /api/db/materials already filters
+        // publish_at and strips answer_key for non-privileged users.
         let query = supabase
           .from('materials')
           .select('*')
@@ -117,14 +116,12 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         if (error) throw error;
 
         const mapped = (data || []).map((material: any) => {
-          // Compute question count locally from subject_config (answer_key is hidden for students)
           let questionCount = 0;
           if (material.subject_config && typeof material.subject_config === 'object') {
             for (const cfg of Object.values(material.subject_config as Record<string, any>)) {
               questionCount += Number((cfg as any)?.questionCount) || 0;
             }
           }
-
           return {
             ...material,
             answer_key: null,
@@ -134,6 +131,31 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         });
 
         setMaterials(mapped as Material[]);
+      } else {
+        // Students on Supabase Cloud: use the SECURITY DEFINER RPC
+        // (table-level RLS doesn't allow direct SELECT for students).
+        const { data, error } = await supabase.rpc('get_materials_for_students');
+        if (error) throw error;
+
+        const filtered = (data || [])
+          .filter((m: any) => m.category === category)
+          .filter((m: any) => (subject ? m.subject === subject : true))
+          .sort((a: any, b: any) => (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+
+        const materialsWithQuestionCount = await Promise.all(
+          filtered.map(async (material: any) => {
+            const { data: questionCount } = await supabase
+              .rpc('get_material_question_count', { _material_id: material.id });
+            return {
+              ...material,
+              answer_key: null,
+              subject_config: material.subject_config || null,
+              has_answer_key: (questionCount || 0) > 0,
+            };
+          })
+        );
+
+        setMaterials(materialsWithQuestionCount as Material[]);
       }
     } catch (error: any) {
       console.error('Error fetching materials:', error);
