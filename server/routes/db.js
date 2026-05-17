@@ -27,7 +27,7 @@ router.get('/:table', requireAuth, validateTable, async (req, res) => {
     let idx = 1;
 
     // Apply role-based filtering
-    if (req.user.role === 'student') {
+    if (req.user.role === 'elev') {
       if (['tvc_submissions', 'lesson_views'].includes(table)) {
         conditions.push(`user_id = $${idx++}`);
         values.push(req.user.id);
@@ -68,7 +68,7 @@ router.get('/:table', requireAuth, validateTable, async (req, res) => {
 
     // For students requesting materials, strip answer_key
     let selectCols = select;
-    if (table === 'materials' && req.user.role === 'student') {
+    if (table === 'materials' && req.user.role === 'elev') {
       selectCols = 'id, title, description, file_name, file_type, file_url, file_size, subject, category, lesson_number, author, genre, year, oficiu, timer_minutes, created_at, updated_at, publish_at, subject_config';
     }
 
@@ -89,14 +89,14 @@ router.post('/:table', requireAuth, validateTable, async (req, res) => {
     const records = Array.isArray(req.body) ? req.body : [req.body];
 
     // Permission checks
-    if (['materials'].includes(table) && req.user.role === 'student') {
+    if (['materials'].includes(table) && req.user.role === 'elev') {
       return res.status(403).json({ error: 'Acces interzis' });
     }
 
     if (['tvc_submissions', 'lesson_views'].includes(table)) {
       // Students can only insert their own records
       for (const record of records) {
-        if (record.user_id && record.user_id !== req.user.id && req.user.role === 'student') {
+        if (record.user_id && record.user_id !== req.user.id && req.user.role === 'elev') {
           return res.status(403).json({ error: 'Nu poți insera date pentru alt utilizator' });
         }
         record.user_id = record.user_id || req.user.id;
@@ -134,7 +134,7 @@ router.put('/:table', requireAuth, validateTable, async (req, res) => {
     }
 
     // Permission checks
-    if (req.user.role === 'student') {
+    if (req.user.role === 'elev') {
       if (['materials', 'user_roles', 'invitation_codes'].includes(table)) {
         return res.status(403).json({ error: 'Acces interzis' });
       }
@@ -178,7 +178,7 @@ router.delete('/:table', requireAuth, validateTable, async (req, res) => {
     const filters = req.body;
 
     // Only professors and admins can delete materials
-    if (['materials', 'invitation_codes'].includes(table) && req.user.role === 'student') {
+    if (['materials', 'invitation_codes'].includes(table) && req.user.role === 'elev') {
       return res.status(403).json({ error: 'Acces interzis' });
     }
 

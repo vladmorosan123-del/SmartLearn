@@ -111,6 +111,7 @@ router.post('/get_materials_for_students', requireAuth, async (req, res) => {
         id, title, description, file_name, file_type, file_url, file_size,
         subject, category, lesson_number, author, genre, year, oficiu,
         timer_minutes, created_at, updated_at, publish_at,
+        chapter_id, barem_url, barem_name, barem_size, study_classes,
         CASE 
           WHEN subject_config IS NOT NULL THEN (
             SELECT jsonb_object_agg(
