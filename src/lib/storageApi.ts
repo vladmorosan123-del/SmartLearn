@@ -22,7 +22,7 @@ export const isCustomServerEnabled = (): boolean => {
 const disableCustomServer = (reason?: unknown) => {
   if (!customServerEnabled) return;
   customServerEnabled = false;
-  console.warn('Custom storage server unavailable, falling back to Lovable Cloud.', reason);
+  console.warn('Custom storage server unavailable, falling back to Supabase.', reason);
 };
 
 /**

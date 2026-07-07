@@ -3,7 +3,7 @@
 ## Prezentare generală
 
 Aplicația SmartLearning poate funcționa în două moduri:
-1. **Lovable Cloud** — modul curent, fără configurare suplimentară
+1. **Supabase Cloud** — modul curent, fără configurare suplimentară
 2. **Server propriu (Express.js + PostgreSQL)** — independență completă
 
 Această documentație descrie configurarea modului 2.
@@ -70,7 +70,7 @@ Completează:
 - `DB_PASSWORD` — parola PostgreSQL
 - `STORAGE_PATH` — calea absolută pentru fișiere (ex: `/var/data/smartlearning/uploads`)
 - `SERVER_PUBLIC_URL` — URL-ul public al serverului (ex: `https://api.scoala-ta.ro`)
-- `CORS_ORIGINS` — URL-ul frontend-ului (ex: `https://smartlearningtvc.lovable.app`)
+- `CORS_ORIGINS` — URL-ul frontend-ului (ex: `https://smartlearning.ro`)
 
 ### 4. Creează directorul de stocare
 

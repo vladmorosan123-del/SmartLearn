@@ -1,73 +1,71 @@
-# Welcome to your Lovable project
+# SmartLearning
 
-## Project info
+Platformă de învățare pentru BAC (Colegiul Național Militar „Ștefan cel Mare"), cu **tutor AI** care răspunde din materialele încărcate pe platformă.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Frontend: React + Vite + TypeScript + Tailwind/shadcn. Backend de date: Supabase.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 1. Pornire frontend (local)
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Site-ul pornește pe `http://localhost:8080` (sau portul dat cu `--port`).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Variabile de mediu (în `.env`):
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` — conexiunea la Supabase (datele reale)
+- `VITE_AI_URL` — adresa serverului AI (ex. `http://localhost:3030` local, sau URL-ul public în producție)
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 2. Tutorul AI
 
-## What technologies are used for this project?
+Serverul AI e separat, în `server/ai-rag.js` (Node + Express, port **3030**).
 
-This project is built with:
+Ce face:
+- Citește materialele din Supabase prin RPC-ul public `get_materials_for_students` (nu are nevoie de parola bazei)
+- Extrage textul (PDF, DOCX, PPTX; OCR cu Gemini pentru imagini/PDF scanate)
+- Face embeddings și le ține într-un index local (`rag-index.json`)
+- La întrebare: caută bucățile relevante și răspunde cu **Gemini**, pe înțelesul elevilor, cu memorie de conversație
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Pornire server AI
 
-## How can I deploy this project?
+```bash
+cd server
+node ai-rag.js
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Pe Windows există și scurtătura **„Pornire AI SmartLearn.bat"** (pornește serverul AI + site-ul dintr-un dublu-click).
 
-## Can I connect a custom domain to my Lovable project?
+### Configurare (server/.env)
+- `GEMINI_API_KEY` — cheia Gemini (Google AI Studio)
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY` — pentru citirea materialelor
 
-Yes, you can!
+### Schimbarea cheii Gemini
+Când vrei altă cheie (ex. una cu facturare, fără limită gratuită):
+1. Deschide `server/.env`
+2. Înlocuiește valoarea de la `GEMINI_API_KEY=`
+3. Repornește serverul AI
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Fără modificări de cod. (Modelul se schimbă tot dintr-o linie: `CHAT_MODEL` în `ai-rag.js`.)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Reindexarea materialelor
+Când adaugi/schimbi materiale pe platformă, actualizează indexul AI:
+
+```bash
+curl -X POST http://localhost:3030/api/ai/index-local
+```
+
+Indexarea e incrementală (adaugă doar ce lipsește). Pentru refacere completă: trimite `{"reindex":true}` în corp.
+
+---
+
+## 3. Deploy
+
+- **Frontend**: build cu `npm run build` (folderul `dist/`), publicat de pe GitHub pe orice hosting static.
+- **Server AI**: rulează pe orice host Node (VPS sau cloud gratuit tip Render/Railway). Setează `VITE_AI_URL` în frontend să arate spre URL-ul lui public.
+
+> Notă: planul gratuit Gemini are o limită zilnică — suficient pentru testare, dar pentru mulți utilizatori simultan e nevoie de o cheie cu facturare activată.

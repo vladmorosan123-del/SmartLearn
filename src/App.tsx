@@ -18,6 +18,7 @@ import PortofoliuFormule from "./pages/PortofoliuFormule";
 import Subiect2BAC from "./pages/Subiect2BAC";
 import EseuriBAC from "./pages/EseuriBAC";
 import NotFound from "./pages/NotFound";
+import FloatingAITutor from "@/components/FloatingAITutor";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/eseuri-bac" element={<EseuriBAC />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <FloatingAITutor />
           </BrowserRouter>
         </TooltipProvider>
       </AppProvider>

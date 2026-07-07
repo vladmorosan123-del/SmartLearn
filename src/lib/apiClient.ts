@@ -3,7 +3,7 @@
  *
  * This module provides a unified interface that mirrors the Supabase SDK.
  * When VITE_SERVER_URL is set, calls may go to your Express server.
- * If that server is unavailable, calls automatically fall back to Lovable Cloud.
+ * If that server is unavailable, calls automatically fall back to Supabase.
  *
  * IMPORTANT: This file does NOT replace src/integrations/supabase/client.ts
  * (which is auto-generated). Instead, components should gradually migrate
@@ -28,7 +28,7 @@ export const isCustomServer = (): boolean => {
 export const disableCustomServer = (reason?: unknown) => {
   if (!customServerEnabled) return;
   customServerEnabled = false;
-  console.warn('Custom server unavailable, falling back to Lovable Cloud.', reason);
+  console.warn('Custom server unavailable, falling back to Supabase.', reason);
 };
 
 const isNetworkFailure = (error: unknown): boolean => {
@@ -775,7 +775,7 @@ interface ApiClient {
 /**
  * The unified API client.
  * Automatically tries the custom server first (if configured)
- * and falls back to Lovable Cloud when that server is unreachable.
+ * and falls back to Supabase when that server is unreachable.
  */
 export const apiClient: ApiClient = {
   auth: hybridAuth,
