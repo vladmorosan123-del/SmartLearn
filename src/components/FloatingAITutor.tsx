@@ -79,7 +79,7 @@ const H0 = 580;
 
 export default function FloatingAITutor() {
   // Contul curent: conversatiile se salveaza separat pentru fiecare user.
-  const { user } = useAuthContext();
+  const { user, isAuthenticated } = useAuthContext();
   const userKey = user?.user_id || user?.id || user?.username || null;
   const keyRef = useRef<string | null>(userKey);
   keyRef.current = userKey;
@@ -417,6 +417,9 @@ export default function FloatingAITutor() {
     </Rnd>
     </div>
   );
+
+  // AI-ul apare DOAR dupa autentificare (nu pe pagina de login/landing)
+  if (!isAuthenticated) return null;
 
   return createPortal(
     <>
