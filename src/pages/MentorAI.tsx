@@ -17,13 +17,25 @@ import { supabase } from '@/integrations/supabase/client';
 const AI_URL = (import.meta.env.VITE_AI_URL || import.meta.env.VITE_SERVER_URL) as string | undefined;
 
 async function askMentor(payload: unknown) {
-  const res = await fetch(`${AI_URL}/api/ai/mentor`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Serverul mentor nu a raspuns');
-  return res.json();
+  let lastErr: unknown;
+  // Serverul (Render gratuit) poate fi „adormit" — reincercam cateva minute ca sa-l lasam sa se trezeasca.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const res = await fetch(`${AI_URL}/api/ai/mentor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return await res.json();
+      // 5xx / 429 = serverul porneste sau e ocupat -> mai incercam; altceva = eroare reala
+      if (res.status < 500 && res.status !== 429) throw new Error(`Serverul mentor a raspuns ${res.status}`);
+      lastErr = new Error(`server ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  throw lastErr;
 }
 
 // Design-only. Fara logica AI — se va integra ulterior.
