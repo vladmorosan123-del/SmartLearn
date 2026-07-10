@@ -4,7 +4,7 @@ import {
   ArrowLeft, Brain, Sparkles, Send, CheckCircle2, Circle,
   BookOpen, Target, TrendingUp, Lightbulb, ClipboardList,
   Calculator, Code, Atom, Globe, BookMarked,
-  Zap, Clock, CalendarDays, ListChecks, Loader2,
+  Zap, Clock, CalendarDays, ListChecks, Loader2, Plus, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -342,6 +342,23 @@ export default function MentorAI() {
       [activeSubject]: prev[activeSubject].map((c) =>
         c.id === id ? { ...c, done: !c.done } : c
       ),
+    }));
+  };
+
+  const [newChapter, setNewChapter] = useState('');
+  const addChapter = () => {
+    const label = newChapter.trim();
+    if (!label) return;
+    setChaptersBySubject((prev) => ({
+      ...prev,
+      [activeSubject]: [...prev[activeSubject], { id: `c-${Date.now()}`, label, done: false }],
+    }));
+    setNewChapter('');
+  };
+  const removeChapter = (id: string) => {
+    setChaptersBySubject((prev) => ({
+      ...prev,
+      [activeSubject]: prev[activeSubject].filter((c) => c.id !== id),
     }));
   };
 
@@ -748,11 +765,11 @@ export default function MentorAI() {
 
             <ul className="space-y-1">
               {chapters.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => toggleChapter(c.id)}
-                    className="w-full flex items-center gap-3 p-2 rounded-md text-left hover:bg-muted transition-colors"
+                    className="flex-1 min-w-0 flex items-center gap-3 p-2 rounded-md text-left hover:bg-muted transition-colors"
                   >
                     {c.done ? (
                       <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
@@ -769,9 +786,41 @@ export default function MentorAI() {
                       {c.label}
                     </span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => removeChapter(c.id)}
+                    title="Șterge capitolul"
+                    aria-label="Șterge capitolul"
+                    className="shrink-0 p-1.5 rounded-md text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </li>
               ))}
             </ul>
+
+            {/* Adauga capitol propriu */}
+            <div className="flex items-center gap-2 mt-3">
+              <input
+                type="text"
+                value={newChapter}
+                onChange={(e) => setNewChapter(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addChapter(); } }}
+                placeholder="Adaugă un capitol…"
+                className="flex-1 min-w-0 h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-sky-300 dark:focus:ring-sky-900"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addChapter}
+                disabled={!newChapter.trim()}
+                className="shrink-0 h-9"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Adaugă
+              </Button>
+            </div>
           </Card>
 
           {/* Puncte forte — observate de AI */}
