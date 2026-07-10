@@ -17,6 +17,7 @@ import AdminPanel from "./pages/AdminPanel";
 import PortofoliuFormule from "./pages/PortofoliuFormule";
 import Subiect2BAC from "./pages/Subiect2BAC";
 import EseuriBAC from "./pages/EseuriBAC";
+import MentorAI from "./pages/MentorAI";
 import NotFound from "./pages/NotFound";
 import FloatingAITutor from "@/components/FloatingAITutor";
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/portofoliu-formule" element={<PortofoliuFormule />} />
               <Route path="/subiect2-bac" element={<Subiect2BAC />} />
               <Route path="/eseuri-bac" element={<EseuriBAC />} />
+              <Route path="/mentor-ai" element={<MentorAI />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <FloatingAITutor />
