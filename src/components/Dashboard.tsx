@@ -399,7 +399,7 @@ const Dashboard = () => {
                 <span>TVC Complet</span>
               </a>
             }
-            {subject !== 'romana' &&
+            {subject !== 'romana' && !isProfessor &&
             <a
               onClick={() => navigate('/mentor-ai')}
               className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
