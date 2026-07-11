@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import FileViewer from '@/components/FileViewer';
+import { useToast } from '@/hooks/use-toast';
 
 const AI_URL = (import.meta.env.VITE_AI_URL || import.meta.env.VITE_SERVER_URL) as string | undefined;
 
@@ -212,6 +214,7 @@ type Recommendation = {
   type: string;
   title: string;
   reason: string;
+  materialId?: string | null;
 };
 
 type ChatMessage = {
@@ -262,6 +265,46 @@ export default function MentorAI() {
   const [workLog, setWorkLog] = useState<WorkLogEntry[]>(() => loadSaved()?.workLog ?? []);
   const [exams, setExams] = useState<ExamEntry[]>(() => loadSaved()?.exams ?? []);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  // Materialele reale de pe platforma (pentru a deschide recomandarile).
+  type MatLite = { id: string; title: string; file_url: string; file_name: string; file_type: string };
+  const [allMaterials, setAllMaterials] = useState<MatLite[]>([]);
+  const [viewingFile, setViewingFile] = useState<{ url: string; name: string; type: string } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_materials_for_students');
+        if (!error && Array.isArray(data)) {
+          setAllMaterials(
+            (data as Record<string, unknown>[]).map((m) => ({
+              id: String(m.id),
+              title: String(m.title || ''),
+              file_url: String(m.file_url || ''),
+              file_name: String(m.file_name || ''),
+              file_type: String(m.file_type || ''),
+            })),
+          );
+        }
+      } catch { /* noop */ }
+    })();
+  }, []);
+
+  const openRecommendation = (rec: Recommendation) => {
+    const norm = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    let mat = rec.materialId ? allMaterials.find((m) => m.id === String(rec.materialId)) : undefined;
+    if (!mat) mat = allMaterials.find((m) => norm(m.title) === norm(rec.title));
+    if (mat && mat.file_url) {
+      setViewingFile({ url: mat.file_url, name: mat.file_name, type: mat.file_type });
+    } else {
+      toast({
+        title: 'Încă nu e încărcat',
+        description: 'Acest document nu e încărcat încă pe platformă.',
+      });
+    }
+  };
+
   const [messagesBySubject, setMessagesBySubject] = useState<Record<SubjectKey, ChatMessage[]>>(() => {
     const saved = loadSaved()?.messagesBySubject as Record<SubjectKey, ChatMessage[]> | undefined;
     if (saved) return saved;
@@ -439,6 +482,7 @@ export default function MentorAI() {
         type: r.type || 'Recomandare',
         title: r.title || '',
         reason: r.reason || '',
+        materialId: r.materialId || null,
       }));
       setActiveMessages((m) => [...m, {
         id: `a-${Date.now()}`, role: 'assistant', ts: Date.now(),
@@ -573,7 +617,7 @@ export default function MentorAI() {
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble key={msg.id} message={msg} onOpenRec={openRecommendation} />
               ))}
             </div>
 
@@ -930,11 +974,21 @@ export default function MentorAI() {
           </Card>
         </div>
       </div>
+
+      {viewingFile && (
+        <FileViewer
+          isOpen={true}
+          onClose={() => setViewingFile(null)}
+          fileUrl={viewingFile.url}
+          fileName={viewingFile.name}
+          fileType={viewingFile.type}
+        />
+      )}
     </div>
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ message, onOpenRec }: { message: ChatMessage; onOpenRec: (r: Recommendation) => void }) {
   const isUser = message.role === 'user';
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -967,7 +1021,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               Recomandări
             </div>
             {message.recommendations.map((r, i) => (
-              <RecommendationRow key={i} rec={r} />
+              <RecommendationRow key={i} rec={r} onOpen={onOpenRec} />
             ))}
           </div>
         )}
@@ -976,11 +1030,17 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-function RecommendationRow({ rec }: { rec: Recommendation }) {
+function RecommendationRow({ rec, onOpen }: { rec: Recommendation; onOpen: (r: Recommendation) => void }) {
   const Icon =
     rec.icon === 'target' ? Target : rec.icon === 'book' ? BookOpen : ClipboardList;
   return (
-    <div className="flex gap-3 p-3 rounded-lg border bg-background hover:bg-muted/40 transition-colors cursor-pointer">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(rec)}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(rec); }}
+      title="Deschide materialul"
+      className="flex gap-3 p-3 rounded-lg border bg-background hover:bg-muted/40 hover:border-primary/40 transition-colors cursor-pointer">
       <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4" />
       </div>
