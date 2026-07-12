@@ -264,6 +264,7 @@ export default function MentorAI() {
   const [strengths, setStrengths] = useState<Strength[]>(() => loadSaved()?.strengths ?? []);
   const [workLog, setWorkLog] = useState<WorkLogEntry[]>(() => loadSaved()?.workLog ?? []);
   const [exams, setExams] = useState<ExamEntry[]>(() => loadSaved()?.exams ?? []);
+  const [testsDone, setTestsDone] = useState<number>(() => loadSaved()?.testsDone ?? 0);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -354,6 +355,7 @@ export default function MentorAI() {
           if (s.strengths) setStrengths(s.strengths as Strength[]);
           if (s.workLog) setWorkLog(s.workLog as WorkLogEntry[]);
           if (s.exams) setExams(s.exams as ExamEntry[]);
+          if (typeof s.testsDone === 'number') setTestsDone(s.testsDone as number);
           if (s.messagesBySubject) setMessagesBySubject(s.messagesBySubject as Record<SubjectKey, ChatMessage[]>);
         }
       } catch { /* tabelul poate lipsi inca — ramanem pe localStorage */ }
@@ -364,7 +366,7 @@ export default function MentorAI() {
 
   // Persistenta pe cont — localStorage instant + sincronizare in baza de date (debounce)
   useEffect(() => {
-    const payload = { chaptersBySubject, todos, strengths, workLog, exams, messagesBySubject };
+    const payload = { chaptersBySubject, todos, strengths, workLog, exams, testsDone, messagesBySubject };
     try {
       localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch { /* noop */ }
@@ -377,7 +379,7 @@ export default function MentorAI() {
           .then(() => {}, () => {});
       }, 800);
     }
-  }, [storageKey, chaptersBySubject, todos, strengths, workLog, exams, messagesBySubject, uid]);
+  }, [storageKey, chaptersBySubject, todos, strengths, workLog, exams, testsDone, messagesBySubject, uid]);
 
   const toggleChapter = (id: string) => {
     setChaptersBySubject((prev) => ({
@@ -460,6 +462,9 @@ export default function MentorAI() {
         plan: Array.isArray(e.plan) ? e.plan : [],
       }));
       setExams((prev) => [...added, ...prev]);
+    }
+    if (actions.testsDone && Number(actions.testsDone) > 0) {
+      setTestsDone((n) => n + Number(actions.testsDone));
     }
   };
 
@@ -793,7 +798,7 @@ export default function MentorAI() {
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <MiniStat label="Sesiuni" value={String(sessionCount)} tint="sky" />
-              <MiniStat label="Teste" value={String(exams.length)} tint="violet" />
+              <MiniStat label="Teste" value={String(testsDone)} tint="violet" />
               <MiniStat label="Zile activ" value={String(activeDays)} tint="emerald" />
             </div>
           </Card>
