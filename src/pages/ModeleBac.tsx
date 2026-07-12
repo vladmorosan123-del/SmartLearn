@@ -57,6 +57,8 @@ const ModeleBac = () => {
   const [viewingMultiFiles, setViewingMultiFiles] = useState<{ title: string; subjectFiles: Record<string, any[]> } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const BAC_SECTIONS = ['Subiectul I', 'Subiectul II', 'Subiectul III', 'Variante întregi'];
 
   const isProfessor = role === 'profesor' || authRole === 'admin';
 
@@ -86,15 +88,16 @@ const ModeleBac = () => {
         model.year?.toString().includes(searchQuery);
       
       const matchesYear = !selectedYear || model.year === selectedYear;
-      
-      return matchesSearch && matchesYear;
+      const matchesSection = !selectedSection || model.genre === selectedSection;
+
+      return matchesSearch && matchesYear && matchesSection;
     });
-  }, [materials, searchQuery, selectedYear]);
+  }, [materials, searchQuery, selectedYear, selectedSection]);
 
   // Add empty slots to show
   const displayModels = useMemo(() => {
     const models = [...filteredModels];
-    if (!searchQuery && !selectedYear && isProfessor) {
+    if (!searchQuery && !selectedYear && !selectedSection && isProfessor) {
       const emptySlots = Math.max(0, 10 - materials.length);
       for (let i = 0; i < emptySlots; i++) {
         models.push({
@@ -118,7 +121,24 @@ const ModeleBac = () => {
       }
     }
     return models;
-  }, [filteredModels, searchQuery, selectedYear, isProfessor, materials.length, selectedSubject]);
+  }, [filteredModels, searchQuery, selectedYear, selectedSection, isProfessor, materials.length, selectedSubject]);
+
+  // Atribuie o sectiune (genre) tuturor modelelor curent filtrate (profesor autentificat).
+  const [assigning, setAssigning] = useState(false);
+  const assignSectionToFiltered = async (section: string) => {
+    const targets = filteredModels.filter((m) => m.id && !m.id.startsWith('empty-') && !(m as Material & { _isEmpty?: boolean })._isEmpty);
+    if (!targets.length) { toast({ title: 'Nimic de mutat', description: 'Filtrează întâi modelele (caută / alege anul).' }); return; }
+    if (!window.confirm(`Muți ${targets.length} modele la secțiunea „${section}"?`)) return;
+    setAssigning(true);
+    try {
+      for (const m of targets) {
+        await updateMaterial(m.id, { genre: section });
+      }
+      toast({ title: 'Gata', description: `${targets.length} modele mutate la „${section}".` });
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const handleSaveMaterial = async (data: {
     title: string;
@@ -249,6 +269,19 @@ const ModeleBac = () => {
           ))}
         </div>
 
+        {/* Secțiuni BAC */}
+        <div className="flex flex-wrap gap-2 mb-4 animate-fade-up delay-100">
+          {[{ label: 'Toate', value: null as string | null }, ...BAC_SECTIONS.map((s) => ({ label: s, value: s as string | null }))].map((sec) => (
+            <button
+              key={sec.label}
+              onClick={() => setSelectedSection(sec.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedSection === sec.value ? 'bg-gold text-navy-dark' : 'bg-card border border-border text-foreground hover:bg-muted'}`}
+            >
+              {sec.label}
+            </button>
+          ))}
+        </div>
+
         {/* Actions Bar */}
         <div className="flex flex-col md:flex-row gap-4 mb-8 animate-fade-up delay-200">
           <div className="relative flex-1">
@@ -305,6 +338,18 @@ const ModeleBac = () => {
               </div>
             </PopoverContent>
           </Popover>
+          {isProfessor && (
+            <select
+              value=""
+              disabled={assigning}
+              onChange={(e) => { const v = e.target.value; e.currentTarget.value = ''; if (v) assignSectionToFiltered(v); }}
+              className="w-full md:w-[240px] px-4 py-3 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold text-sm"
+              title="Mută modelele filtrate într-o secțiune"
+            >
+              <option value="">{assigning ? 'Se mută…' : 'Mută rezultatele la secțiune…'}</option>
+              {BAC_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
           {isProfessor && (
             <Button variant="gold" className="gap-2" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="w-4 h-4" />
