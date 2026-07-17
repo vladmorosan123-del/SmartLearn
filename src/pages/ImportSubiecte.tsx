@@ -18,6 +18,8 @@ const LOCAL_URL = 'http://localhost:3040';
 const IMPORT_BASES = Array.from(new Set([HOSTED_URL, LOCAL_URL]));
 // Semnatura unei surse pe care serverul N-A putut-o citi (blocaj) -> merita reincercat pe alt server.
 const SOURCE_BLOCKED = /fetch failed|->\s*[45]\d\d|timeout|connect|sursa nu r|n-am putut (citi|extrage)|nu am g[ăa]sit fi[șs]iere/i;
+// Mesaj cand nici serverul online, nici cel local nu pot citi sursa (ex. subiecte.edu.ro/pbinfo blocate).
+const BLOCKED_MSG = '⚠️ Sursa asta nu poate fi citită de pe serverul online (unele surse oficiale, ca subiecte.edu.ro sau pbinfo, blochează serverele de hosting). Pentru ea e nevoie de serverul local pornit — pornește-l dacă ești administrator, sau contactează administratorul platformei.';
 
 // Trimite o cerere de CITIRE (filter/chat/list) incercand serverele in ordine; cade pe urmatorul
 // daca sursa e blocata pe cel gazduit. Intoarce si `base` (serverul care a reusit) pt publicare/preview.
@@ -118,7 +120,7 @@ export default function ImportSubiecte() {
       if (data.error && !(data.materials || []).length) throw new Error(data.error);
       setMessages((m) => [...m, { role: 'assistant', content: data.reply, materials: data.materials, session: data.session, base }]);
     } catch (e) {
-      setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${e instanceof Error ? e.message : 'Eroare'}. Dacă e o sursă oficială (subiecte.edu.ro/pbinfo), pornește serverul local — doar el o poate citi.` }]);
+      setMessages((m) => [...m, { role: 'assistant', content: BLOCKED_MSG }]);
     } finally {
       setLoading(false);
     }
@@ -154,7 +156,7 @@ export default function ImportSubiecte() {
       if (data.error) setBrowseInfo(`⚠️ ${data.error}`);
       else if (!(data.items || []).length) setBrowseInfo('Nimic de descărcat aici.');
     } catch {
-      setBrowseInfo('⚠️ Nu am putut citi pagina (nici găzduit, nici local). Dacă e sursă oficială, pornește serverul local.');
+      setBrowseInfo(BLOCKED_MSG);
       setBrowseItems([]);
     } finally {
       setBrowseLoading(false);
@@ -238,7 +240,7 @@ export default function ImportSubiecte() {
       if (data.error && !(data.materials || []).length) throw new Error(data.error);
       setMessages((m) => [...m, { role: 'assistant', content: data.reply, materials: data.materials, session: data.session, base }]);
     } catch (e) {
-      setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${e instanceof Error ? e.message : 'Eroare'}. Dacă e o sursă oficială (subiecte.edu.ro/pbinfo), pornește serverul local.` }]);
+      setMessages((m) => [...m, { role: 'assistant', content: BLOCKED_MSG }]);
     } finally {
       setLoading(false);
     }
