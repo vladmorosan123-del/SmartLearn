@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Shield, BookOpen, ClipboardList, Settings, LogOut,
   ChevronRight, Plus, Users, Award,
-  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound, Brain } from
+  Code, BookText, Calculator, Atom, Menu, X, BookMarked, Search, Timer, KeyRound, Brain, Download } from
 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChangePasswordDialog from '@/components/ChangePasswordDialog';
@@ -433,6 +433,15 @@ const Dashboard = () => {
 
                 <Settings className="w-5 h-5" />
                 <span>Administrare</span>
+              </a>
+            }
+            {isProfessor &&
+            <a
+              onClick={() => navigate('/import-subiecte')}
+              className="flex items-center gap-3 p-3 rounded-lg text-primary-foreground/70 hover:bg-sidebar-accent hover:text-primary-foreground transition-colors cursor-pointer">
+
+                <Download className="w-5 h-5" />
+                <span>Import subiecte</span>
               </a>
             }
           </nav>
