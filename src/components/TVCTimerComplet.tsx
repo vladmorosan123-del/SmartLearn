@@ -7,6 +7,7 @@ import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { apiClient as supabase } from '@/lib/apiClient';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
+import { aiGate } from '@/lib/aiGate';
 
 interface SubjectFileInfo {
   url: string;
@@ -43,6 +44,8 @@ interface TVCTimerCompletProps {
   materialId?: string;
   timerMinutes?: number;
   subjectConfig?: Record<string, SubjectConfig> | null;
+  /** Daca profesorul a permis AI-ul in timpul testului (implicit da). */
+  aiAllowed?: boolean;
 }
 
 const getPdfViewerUrl = (url: string) => {
@@ -66,9 +69,10 @@ const TVCTimerComplet = ({
   materialId,
   timerMinutes = 1,
   subjectConfig,
+  aiAllowed = true,
 }: TVCTimerCompletProps) => {
   const INITIAL_TIME = timerMinutes * 60;
-  
+
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -77,6 +81,12 @@ const TVCTimerComplet = ({
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showTimeUpWarning, setShowTimeUpWarning] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // Ascunde tutorul AI cat timp testul e pornit, daca profesorul nu a permis AI.
+  useEffect(() => {
+    aiGate.setBlocked(aiAllowed === false && hasStarted && !hasSubmitted);
+    return () => aiGate.setBlocked(false);
+  }, [aiAllowed, hasStarted, hasSubmitted]);
   
   // Track active subject for file switching in multi-subject mode
   const [activeViewSubject, setActiveViewSubject] = useState<string>('matematica');

@@ -441,7 +441,8 @@ const TVCComplet = () => {
           materialId={timerMaterial.id}
           timerMinutes={timerMaterial.timer_minutes || 180}
           subjectConfig={timerMaterial.subject_config}
-          onClose={() => setTimerMaterial(null)} 
+          aiAllowed={timerMaterial.ai_allowed !== false}
+          onClose={() => setTimerMaterial(null)}
         />
       )}
     </div>

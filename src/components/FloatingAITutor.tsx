@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Rnd } from "react-rnd";
 import ReactMarkdown from "react-markdown";
@@ -14,6 +14,7 @@ import {
 import { useAITutor } from "@/hooks/useAITutor";
 import type { AIMessage } from "@/hooks/useAITutor";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { aiGate } from "@/lib/aiGate";
 
 // ─── Helpers ──────────────────────────────────────────────────
 let _idCounter = 0;
@@ -80,6 +81,8 @@ const H0 = 580;
 export default function FloatingAITutor() {
   // Contul curent: conversatiile se salveaza separat pentru fiecare user.
   const { user, isAuthenticated } = useAuthContext();
+  // Cand un test blocheaza AI-ul, poarta e inchisa si widgetul dispare.
+  const aiBlocked = useSyncExternalStore(aiGate.subscribe, aiGate.isBlocked);
   const userKey = user?.user_id || user?.id || user?.username || null;
   const keyRef = useRef<string | null>(userKey);
   keyRef.current = userKey;
@@ -419,7 +422,7 @@ export default function FloatingAITutor() {
   );
 
   // AI-ul apare DOAR dupa autentificare (nu pe pagina de login/landing)
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || aiBlocked) return null;
 
   return createPortal(
     <>

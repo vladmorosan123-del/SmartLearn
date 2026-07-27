@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, FileText, Clock, Calendar, Link as LinkIcon } from 'lucide-react';
+import { X, FileText, Clock, Calendar, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,7 @@ interface UploadMaterialModalProps {
     oficiu?: number;
     itemPoints?: number[];
     timerMinutes?: number;
+    aiAllowed?: boolean;
     subject?: string;
     publishAt?: string;
     baremUrl?: string;
@@ -72,6 +73,7 @@ const UploadMaterialModal = ({
   const [itemPoints, setItemPoints] = useState<number[]>(Array(9).fill(1));
   const [oficiu, setOficiu] = useState<number>(0);
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
+  const [aiAllowed, setAiAllowed] = useState<boolean>(true);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
   const [publishTime, setPublishTime] = useState<string>('');
   const [uploadTab, setUploadTab] = useState<'file' | 'link'>('file');
@@ -113,6 +115,7 @@ const UploadMaterialModal = ({
     setItemPoints(Array(9).fill(1));
     setOficiu(0);
     setTimerMinutes(180);
+    setAiAllowed(true);
     setPublishDate(undefined);
     setPublishTime('');
     setUploadTab('file');
@@ -159,6 +162,7 @@ const UploadMaterialModal = ({
         oficiu: showAnswerKey ? oficiu : undefined,
         itemPoints: showAnswerKey ? itemPoints : undefined,
         timerMinutes: showTimer ? timerMinutes : undefined,
+        aiAllowed: showAnswerKey ? aiAllowed : undefined,
         subject: showSubjectSelector ? selectedSubject : undefined,
         publishAt,
         ...baremPayload,
@@ -177,6 +181,7 @@ const UploadMaterialModal = ({
           oficiu: showAnswerKey ? oficiu : undefined,
           itemPoints: showAnswerKey ? itemPoints : undefined,
           timerMinutes: showTimer ? timerMinutes : undefined,
+        aiAllowed: showAnswerKey ? aiAllowed : undefined,
           subject: showSubjectSelector ? selectedSubject : undefined,
           publishAt,
           ...baremPayload,
@@ -441,6 +446,29 @@ const UploadMaterialModal = ({
               <p className="text-xs text-muted-foreground">
                 Setează durata testului în minute (ex: 180 = 3 ore). La expirare, testul se trimite automat.
               </p>
+            </div>
+          )}
+
+          {/* Permite AI in timpul testului */}
+          {showAnswerKey && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={aiAllowed}
+                  onChange={(e) => setAiAllowed(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 accent-[hsl(var(--gold,45_80%_50%))]"
+                />
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-gold shrink-0" />
+                  <span>
+                    <span className="font-medium">Permite asistentul AI în timpul testului</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Dacă e debifat, chatul AI dispare cât timp elevul dă acest test.
+                    </span>
+                  </span>
+                </span>
+              </label>
             </div>
           )}
 

@@ -24,6 +24,7 @@ export interface Material {
   answer_key?: string[] | null;
   oficiu?: number | null;
   timer_minutes?: number | null;
+  ai_allowed?: boolean | null;
   has_answer_key?: boolean;
   publish_at?: string | null;
   chapter_id?: string | null;
@@ -175,12 +176,17 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
   const addMaterial = async (materialData: Omit<Material, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('materials')
         .insert([materialData])
         .select()
         .single();
 
+      // Daca coloana ai_allowed nu exista inca in DB, reincearca fara ea (nu bloca salvarea).
+      if (error && /ai_allowed/i.test(error.message || '') && 'ai_allowed' in (materialData as any)) {
+        const { ai_allowed, ...rest } = materialData as any;
+        ({ data, error } = await supabase.from('materials').insert([rest]).select().single());
+      }
       if (error) throw error;
       
       // Log activity
@@ -214,13 +220,18 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
 
   const updateMaterial = async (id: string, updates: Partial<Material>) => {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('materials')
         .update(updates)
         .eq('id', id)
         .select()
         .maybeSingle();
 
+      // Daca coloana ai_allowed nu exista inca in DB, reincearca fara ea.
+      if (error && /ai_allowed/i.test(error.message || '') && 'ai_allowed' in (updates as any)) {
+        const { ai_allowed, ...rest } = updates as any;
+        ({ data, error } = await supabase.from('materials').update(rest).eq('id', id).select().maybeSingle());
+      }
       if (error) throw error;
       
       if (data) {

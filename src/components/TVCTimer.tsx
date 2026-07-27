@@ -6,6 +6,7 @@ import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQui
 import { apiClient as supabase } from '@/lib/apiClient';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { aiGate } from '@/lib/aiGate';
 
 interface TVCTimerProps {
   subjectTitle: string;
@@ -15,6 +16,8 @@ interface TVCTimerProps {
   questionCount?: number;
   materialId?: string;
   timerMinutes?: number;
+  /** Daca profesorul a permis AI-ul in timpul testului (implicit da). */
+  aiAllowed?: boolean;
 }
 
 // Helper function to get PDF viewer URL using Google Docs Viewer
@@ -22,7 +25,7 @@ const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 };
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180 }: TVCTimerProps) => {
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180, aiAllowed = true }: TVCTimerProps) => {
   const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
   
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
@@ -36,6 +39,12 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
   const [autoSubmitQuiz, setAutoSubmitQuiz] = useState(false);
   
   const quizRef = useRef<TVCQuizInterfaceRef>(null);
+
+  // Ascunde tutorul AI cat timp testul e pornit, daca profesorul nu a permis AI.
+  useEffect(() => {
+    aiGate.setBlocked(aiAllowed === false && hasStarted && !hasSubmitted);
+    return () => aiGate.setBlocked(false);
+  }, [aiAllowed, hasStarted, hasSubmitted]);
 
   // Get signed URL for the PDF
   const { signedUrl: signedPdfUrl, isLoading: isPdfUrlLoading } = useSignedUrl(pdfUrl || null);
