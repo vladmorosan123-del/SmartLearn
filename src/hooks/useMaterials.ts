@@ -25,6 +25,7 @@ export interface Material {
   oficiu?: number | null;
   timer_minutes?: number | null;
   ai_allowed?: boolean | null;
+  allow_close?: boolean | null;
   has_answer_key?: boolean;
   publish_at?: string | null;
   chapter_id?: string | null;
@@ -183,8 +184,8 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .single();
 
       // Daca coloana ai_allowed nu exista inca in DB, reincearca fara ea (nu bloca salvarea).
-      if (error && /ai_allowed/i.test(error.message || '') && 'ai_allowed' in (materialData as any)) {
-        const { ai_allowed, ...rest } = materialData as any;
+      if (error && /ai_allowed|allow_close/i.test(error.message || '') && ("ai_allowed" in (materialData as any) || "allow_close" in (materialData as any))) {
+        const { ai_allowed, allow_close, ...rest } = materialData as any;
         ({ data, error } = await supabase.from('materials').insert([rest]).select().single());
       }
       if (error) throw error;
@@ -228,8 +229,8 @@ export const useMaterials = ({ subject, category }: UseMaterialsProps) => {
         .maybeSingle();
 
       // Daca coloana ai_allowed nu exista inca in DB, reincearca fara ea.
-      if (error && /ai_allowed/i.test(error.message || '') && 'ai_allowed' in (updates as any)) {
-        const { ai_allowed, ...rest } = updates as any;
+      if (error && /ai_allowed|allow_close/i.test(error.message || '') && ("ai_allowed" in (updates as any) || "allow_close" in (updates as any))) {
+        const { ai_allowed, allow_close, ...rest } = updates as any;
         ({ data, error } = await supabase.from('materials').update(rest).eq('id', id).select().maybeSingle());
       }
       if (error) throw error;

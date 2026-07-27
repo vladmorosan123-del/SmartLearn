@@ -177,6 +177,7 @@ export type Database = {
           subject_config: Json | null
           timer_minutes: number | null
           ai_allowed: boolean | null
+          allow_close: boolean | null
           title: string
           updated_at: string
           year: number | null
@@ -206,6 +207,7 @@ export type Database = {
           subject_config?: Json | null
           timer_minutes?: number | null
           ai_allowed?: boolean | null
+          allow_close?: boolean | null
           title: string
           updated_at?: string
           year?: number | null
@@ -235,6 +237,7 @@ export type Database = {
           subject_config?: Json | null
           timer_minutes?: number | null
           ai_allowed?: boolean | null
+          allow_close?: boolean | null
           title?: string
           updated_at?: string
           year?: number | null

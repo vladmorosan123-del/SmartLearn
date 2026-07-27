@@ -46,6 +46,8 @@ interface TVCTimerCompletProps {
   subjectConfig?: Record<string, SubjectConfig> | null;
   /** Daca profesorul a permis AI-ul in timpul testului (implicit da). */
   aiAllowed?: boolean;
+  /** Daca elevul poate inchide testul fara sa-l trimita (implicit da). */
+  allowClose?: boolean;
 }
 
 const getPdfViewerUrl = (url: string) => {
@@ -70,6 +72,7 @@ const TVCTimerComplet = ({
   timerMinutes = 1,
   subjectConfig,
   aiAllowed = true,
+  allowClose = true,
 }: TVCTimerCompletProps) => {
   const INITIAL_TIME = timerMinutes * 60;
 
@@ -87,6 +90,9 @@ const TVCTimerComplet = ({
     aiGate.setBlocked(aiAllowed === false && hasStarted && !hasSubmitted);
     return () => aiGate.setBlocked(false);
   }, [aiAllowed, hasStarted, hasSubmitted]);
+
+  // Ascunde butoanele de inchidere in timpul testului daca profesorul nu le permite.
+  const canClose = allowClose || !(hasStarted && !hasSubmitted);
   
   // Track active subject for file switching in multi-subject mode
   const [activeViewSubject, setActiveViewSubject] = useState<string>('matematica');
@@ -236,9 +242,11 @@ const TVCTimerComplet = ({
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
                 {/* Download removed for students */}
-                <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground">
-                  <X className="w-5 h-5" />
-                </Button>
+                {canClose && (
+                  <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground">
+                    <X className="w-5 h-5" />
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -452,9 +460,11 @@ const TVCTimerComplet = ({
             )}
           </div>
 
-          <div className="p-4 border-t border-border">
-            <Button variant="outline" onClick={handleClose} className="w-full">Închide testul</Button>
-          </div>
+          {canClose && (
+            <div className="p-4 border-t border-border">
+              <Button variant="outline" onClick={handleClose} className="w-full">Închide testul</Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -18,6 +18,8 @@ interface TVCTimerProps {
   timerMinutes?: number;
   /** Daca profesorul a permis AI-ul in timpul testului (implicit da). */
   aiAllowed?: boolean;
+  /** Daca elevul poate inchide testul fara sa-l trimita (implicit da). */
+  allowClose?: boolean;
 }
 
 // Helper function to get PDF viewer URL using Google Docs Viewer
@@ -25,7 +27,7 @@ const getPdfViewerUrl = (url: string) => {
   return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 };
 
-const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180, aiAllowed = true }: TVCTimerProps) => {
+const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: initialQuestionCount, materialId, timerMinutes = 180, aiAllowed = true, allowClose = true }: TVCTimerProps) => {
   const INITIAL_TIME = timerMinutes * 60; // Convert minutes to seconds
   
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
@@ -45,6 +47,9 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
     aiGate.setBlocked(aiAllowed === false && hasStarted && !hasSubmitted);
     return () => aiGate.setBlocked(false);
   }, [aiAllowed, hasStarted, hasSubmitted]);
+
+  // Cat timp testul e in desfasurare, ascunde butoanele de inchidere daca profesorul nu le permite.
+  const canClose = allowClose || !(hasStarted && !hasSubmitted);
 
   // Get signed URL for the PDF
   const { signedUrl: signedPdfUrl, isLoading: isPdfUrlLoading } = useSignedUrl(pdfUrl || null);
@@ -182,14 +187,16 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                   <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
                 </div>
                 {/* Download removed for students */}
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={handleClose}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
+                {canClose && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClose}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                )}
               </div>
             </div>
             
@@ -394,12 +401,14 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
             )}
           </div>
 
-          {/* Exit Button - always available */}
-          <div className="p-4 border-t border-border">
-            <Button variant="outline" onClick={handleClose} className="w-full">
-              Închide testul
-            </Button>
-          </div>
+          {/* Buton de inchidere - ascuns daca profesorul nu-l permite in timpul testului */}
+          {canClose && (
+            <div className="p-4 border-t border-border">
+              <Button variant="outline" onClick={handleClose} className="w-full">
+                Închide testul
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

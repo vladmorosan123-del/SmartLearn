@@ -130,6 +130,7 @@ const TesteAcademii = () => {
     itemPoints?: number[];
     timerMinutes?: number;
     aiAllowed?: boolean;
+    allowClose?: boolean;
     publishAt?: string;
   }) => {
     try {
@@ -150,6 +151,7 @@ const TesteAcademii = () => {
         oficiu: data.oficiu ?? 0,
         timer_minutes: data.timerMinutes ?? 180,
         ai_allowed: data.aiAllowed ?? true,
+        allow_close: data.allowClose ?? true,
         publish_at: data.publishAt || null,
         item_points: data.itemPoints || null,
       } as any);
@@ -172,6 +174,7 @@ const TesteAcademii = () => {
     itemPoints?: number[];
     timerMinutes?: number;
     aiAllowed?: boolean;
+    allowClose?: boolean;
     publishAt?: string | null;
     fileUrl?: string;
     fileName?: string;
@@ -190,6 +193,7 @@ const TesteAcademii = () => {
         item_points: data.itemPoints || null,
         timer_minutes: data.timerMinutes ?? 180,
         ai_allowed: data.aiAllowed ?? true,
+        allow_close: data.allowClose ?? true,
         publish_at: data.publishAt ?? null,
       };
 
@@ -477,6 +481,7 @@ const TesteAcademii = () => {
             materialId={timerMaterial.id}
             timerMinutes={timerMaterial.timer_minutes || 180}
             aiAllowed={timerMaterial.ai_allowed !== false}
+            allowClose={timerMaterial.allow_close !== false}
             onClose={() => setTimerMaterial(null)}
           />
         )}

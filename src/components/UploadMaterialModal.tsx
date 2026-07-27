@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, FileText, Clock, Calendar, Link as LinkIcon, Sparkles } from 'lucide-react';
+import { X, FileText, Clock, Calendar, Link as LinkIcon, Sparkles, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,7 @@ interface UploadMaterialModalProps {
     itemPoints?: number[];
     timerMinutes?: number;
     aiAllowed?: boolean;
+    allowClose?: boolean;
     subject?: string;
     publishAt?: string;
     baremUrl?: string;
@@ -74,6 +75,7 @@ const UploadMaterialModal = ({
   const [oficiu, setOficiu] = useState<number>(0);
   const [timerMinutes, setTimerMinutes] = useState<number>(180);
   const [aiAllowed, setAiAllowed] = useState<boolean>(true);
+  const [allowClose, setAllowClose] = useState<boolean>(true);
   const [publishDate, setPublishDate] = useState<Date | undefined>(undefined);
   const [publishTime, setPublishTime] = useState<string>('');
   const [uploadTab, setUploadTab] = useState<'file' | 'link'>('file');
@@ -116,6 +118,7 @@ const UploadMaterialModal = ({
     setOficiu(0);
     setTimerMinutes(180);
     setAiAllowed(true);
+    setAllowClose(true);
     setPublishDate(undefined);
     setPublishTime('');
     setUploadTab('file');
@@ -163,6 +166,7 @@ const UploadMaterialModal = ({
         itemPoints: showAnswerKey ? itemPoints : undefined,
         timerMinutes: showTimer ? timerMinutes : undefined,
         aiAllowed: showAnswerKey ? aiAllowed : undefined,
+        allowClose: showAnswerKey ? allowClose : undefined,
         subject: showSubjectSelector ? selectedSubject : undefined,
         publishAt,
         ...baremPayload,
@@ -182,6 +186,7 @@ const UploadMaterialModal = ({
           itemPoints: showAnswerKey ? itemPoints : undefined,
           timerMinutes: showTimer ? timerMinutes : undefined,
         aiAllowed: showAnswerKey ? aiAllowed : undefined,
+        allowClose: showAnswerKey ? allowClose : undefined,
           subject: showSubjectSelector ? selectedSubject : undefined,
           publishAt,
           ...baremPayload,
@@ -465,6 +470,29 @@ const UploadMaterialModal = ({
                     <span className="font-medium">Permite asistentul AI în timpul testului</span>
                     <span className="block text-xs text-muted-foreground">
                       Dacă e debifat, chatul AI dispare cât timp elevul dă acest test.
+                    </span>
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* Permite elevului sa inchida testul */}
+          {showAnswerKey && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allowClose}
+                  onChange={(e) => setAllowClose(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 accent-[hsl(var(--gold,45_80%_50%))]"
+                />
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-gold shrink-0" />
+                  <span>
+                    <span className="font-medium">Permite elevului să închidă testul</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Dacă e debifat, în timpul testului dispar butoanele de închidere (X și „Închide testul") — elevul poate doar să trimită.
                     </span>
                   </span>
                 </span>
