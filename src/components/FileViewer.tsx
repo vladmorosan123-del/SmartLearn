@@ -27,8 +27,28 @@ const getFileIcon = (fileType: string) => {
   return <File className="w-16 h-16 text-muted-foreground" />;
 };
 
+// Normalizeaza tipul: accepta si MIME-uri (ex. "application/pdf" -> "pdf")
+const normType = (ft: string): string => {
+  const t = (ft || '').toLowerCase().trim();
+  const map: Record<string, string> = {
+    'application/pdf': 'pdf',
+    'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg',
+    'video/mp4': 'mp4', 'video/webm': 'webm',
+    'text/plain': 'txt',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-excel': 'xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  };
+  if (map[t]) return map[t];
+  if (t.includes('/')) return t.split('/').pop() || t; // fallback: subtipul MIME
+  return t;
+};
+
 const canPreviewInBrowser = (fileType: string) => {
-  const type = fileType.toLowerCase();
+  const type = normType(fileType);
   return ['pdf', 'jpg', 'jpeg', 'png', 'txt', 'mp4', 'webm', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'].includes(type);
 };
 
@@ -100,7 +120,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
     );
   }
 
-  const type = fileType.toLowerCase();
+  const type = normType(fileType);
   const canPreview = canPreviewInBrowser(fileType);
   const isImage = ['jpg', 'jpeg', 'png'].includes(type);
   const isPdf = type === 'pdf';
@@ -114,6 +134,11 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
 
   const getGoogleViewerUrl = (url: string) => {
     return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+  };
+
+  // Viewer Microsoft pt Office (pptx/doc/xls) — mai stabil decat Google pt aceste formate
+  const getOfficeViewerUrl = (url: string) => {
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
   };
 
   const getVideoMimeType = (ext: string) => {
@@ -217,7 +242,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
                   {isPdf && !loadTimeout && !iframeError && (
                     <ZoomableWrapper>
                       <iframe
-                        src={getGoogleViewerUrl(safeFileUrl)}
+                        src={safeFileUrl}
                         className="w-full h-full rounded-lg border border-border bg-white"
                         title={fileName}
                         allow="autoplay"
@@ -256,7 +281,7 @@ const FileViewer = ({ isOpen, onClose, fileUrl, fileName, fileType, hideDownload
                   {isOfficeDoc && !loadTimeout && !iframeError && (
                     <ZoomableWrapper>
                       <iframe
-                        src={getGoogleViewerUrl(safeFileUrl)}
+                        src={getOfficeViewerUrl(safeFileUrl)}
                         className="w-full h-full rounded-lg border border-border bg-white"
                         title={fileName}
                         allow="autoplay"
