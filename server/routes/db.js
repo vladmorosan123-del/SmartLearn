@@ -21,6 +21,19 @@ const STUDENT_MATERIAL_COLUMNS = [
   'publish_at', 'subject_config', 'chapter_id', 'ai_allowed', 'allow_close', 'study_classes',
 ];
 
+// Student view of a materials column: subject_config without the per-subject answer keys
+const studentMaterialColumn = (col, prefix) =>
+  col === 'subject_config'
+    ? `CASE WHEN jsonb_typeof(${prefix}"subject_config") = 'object' THEN (
+         SELECT jsonb_object_agg(key, CASE WHEN jsonb_typeof(value) = 'object' THEN value - 'answerKey' ELSE value END)
+         FROM jsonb_each(${prefix}"subject_config")
+       ) END AS "subject_config"`
+    : `${prefix}"${col}"`;
+
+// Lets the UI know a test has a grila without sending it to students
+const hasAnswerKeyColumn = (prefix) =>
+  `COALESCE(jsonb_typeof(${prefix}"answer_key") = 'array' AND jsonb_array_length(${prefix}"answer_key") > 0, false) AS "has_answer_key"`;
+
 // Tables that belong to a user (students only ever touch their own rows)
 const OWNED_TABLES = ['tvc_submissions', 'lesson_views', 'profiles', 'user_roles', 'activity_logs'];
 
@@ -131,14 +144,20 @@ const buildSelect = (schema, table, select, user) => {
     for (const col of requested) {
       if (col === '*') {
         if (restrictMaterials(tbl)) {
-          out.push(...STUDENT_MATERIAL_COLUMNS.filter((c) => schema.columns[tbl].has(c)).map((c) => `${prefix}"${c}"`));
+          out.push(
+            ...STUDENT_MATERIAL_COLUMNS.filter((c) => schema.columns[tbl].has(c)).map((c) => studentMaterialColumn(c, prefix)),
+            hasAnswerKeyColumn(prefix)
+          );
         } else {
           out.push(`${prefix}*`);
         }
         continue;
       }
-      if (restrictMaterials(tbl) && !STUDENT_MATERIAL_COLUMNS.includes(col)) {
-        throw new BadRequest(`Column '${col}' is not available`);
+      if (restrictMaterials(tbl)) {
+        if (!STUDENT_MATERIAL_COLUMNS.includes(col)) throw new BadRequest(`Column '${col}' is not available`);
+        assertColumn(schema, tbl, col);
+        out.push(studentMaterialColumn(col, prefix));
+        continue;
       }
       out.push(`${prefix}${assertColumn(schema, tbl, col)}`);
     }

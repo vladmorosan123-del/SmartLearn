@@ -5,6 +5,7 @@ import { downloadFile } from '@/lib/downloadFile';
 import TVCQuizInterfaceSecure, { TVCQuizInterfaceRef } from '@/components/TVCQuizInterfaceSecure';
 import { apiClient as supabase } from '@/lib/apiClient';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
+import ImageZoomViewer from '@/components/ImageZoomViewer';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { aiGate } from '@/lib/aiGate';
 
@@ -53,6 +54,8 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
 
   // Get signed URL for the PDF
   const { signedUrl: signedPdfUrl, isLoading: isPdfUrlLoading } = useSignedUrl(pdfUrl || null);
+  // Images are shown directly; the Google viewer only handles documents
+  const isImage = /\.(jpe?g|png|gif|webp)$/i.test((pdfUrl || '').split('?')[0]);
 
   // Fetch question count if not provided (for students who don't have access to answer_key)
   useEffect(() => {
@@ -208,6 +211,8 @@ const TVCTimer = ({ subjectTitle, onClose, pdfUrl, hasAnswerKey, questionCount: 
                     <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
                     <p className="text-muted-foreground">Se pregătește documentul...</p>
                   </div>
+                ) : signedPdfUrl && isImage ? (
+                  <ImageZoomViewer src={signedPdfUrl} alt={subjectTitle} />
                 ) : signedPdfUrl ? (
                   <ZoomableWrapper>
                     <iframe 
