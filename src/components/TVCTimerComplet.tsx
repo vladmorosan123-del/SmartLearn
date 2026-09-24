@@ -7,6 +7,7 @@ import TVCQuizMultiSubject from '@/components/TVCQuizMultiSubject';
 import { apiClient as supabase } from '@/lib/apiClient';
 import ZoomableWrapper from '@/components/ZoomableWrapper';
 import ImageZoomViewer from '@/components/ImageZoomViewer';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { aiGate } from '@/lib/aiGate';
 
 interface SubjectFileInfo {
@@ -116,6 +117,7 @@ const TVCTimerComplet = ({
 
   const currentSubjectFiles = getCurrentSubjectFiles();
   const currentFile = currentSubjectFiles[activeFileIndex] || currentSubjectFiles[0] || { url: '', type: '', name: '' };
+  const { signedUrl: currentFileSignedUrl } = useSignedUrl(currentFile.url || null);
 
   // Reset file index when subject changes
   useEffect(() => {
@@ -305,14 +307,16 @@ const TVCTimerComplet = ({
             )}
             
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-              {currentFile.url ? (
+              {currentFile.url && !currentFileSignedUrl ? (
+                <p className="text-muted-foreground text-sm">Se încarcă...</p>
+              ) : currentFile.url ? (
                 isImage ? (
-                  <ImageZoomViewer src={currentFile.url} alt={currentFile.name || subjectTitle} />
+                  <ImageZoomViewer src={currentFileSignedUrl ?? ''} alt={currentFile.name || subjectTitle} />
                 ) : isPdf ? (
                   <ZoomableWrapper>
                     <iframe 
                       key={currentFile.url}
-                      src={getPdfViewerUrl(currentFile.url)} 
+                      src={getPdfViewerUrl(currentFileSignedUrl ?? '')} 
                       className="w-full h-full rounded-lg border border-border bg-white" 
                       title="TVC Subject PDF" 
                       allow="autoplay" 

@@ -1,7 +1,10 @@
 import { toast } from 'sonner';
+import { getSignedFileUrl } from '@/lib/storage';
 
-export const downloadFile = async (url: string, fileName: string) => {
+export const downloadFile = async (fileUrl: string, fileName: string) => {
+  let url = fileUrl;
   try {
+    url = await getSignedFileUrl(fileUrl);
     toast.info('Se descarcă...');
     const response = await fetch(url);
     if (!response.ok) throw new Error('Download failed');

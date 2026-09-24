@@ -42,8 +42,8 @@ app.use('/api/rpc', rpcRoutes);
 app.use('/api/functions', functionsRoutes);
 app.use('/api/storage', storageRoutes);
 
-// ─── Serve uploaded files statically ───────────────────────
-app.use('/files', express.static(storagePath));
+// ─── Serve uploaded files (signed links only) ──────────────
+app.use('/files', storageRoutes.verifyFileToken, express.static(storagePath));
 
 // ─── Error handler ─────────────────────────────────────────
 app.use((err, req, res, next) => {

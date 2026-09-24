@@ -74,6 +74,8 @@ router.post('/login', async (req, res) => {
 
 // ─── POST /api/auth/register ───────────────────────────────
 router.post('/register', async (req, res) => {
+  // Public sign-up is disabled: accounts are created by staff (create-user) or with an invitation code.
+  return res.status(403).json({ error: 'Inregistrarea publica este dezactivata' });
   try {
     const { email, password, username, fullName, role = 'student', studyYear, studyClass } = req.body;
     // password is already SHA-256 hashed by the client

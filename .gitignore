@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Server secrets, backups and data dumps
+server/.env
+server/.env.*
+server/data.sql
+server/users.sql
+*.dump
+!server/.env.example
