@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
 
     // Find user
     const { rows: users } = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
+      'SELECT * FROM users WHERE lower(email) = lower($1)',
       [email]
     );
 
@@ -86,7 +86,7 @@ router.post('/register', async (req, res) => {
 
     // Check if email exists
     const { rows: existing } = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM users WHERE lower(email) = lower($1)',
       [email]
     );
     if (existing.length > 0) {

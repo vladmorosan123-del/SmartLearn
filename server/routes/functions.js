@@ -242,7 +242,7 @@ router.post('/create-user', requireAuth, requireProfesor, async (req, res) => {
 
     // Check existing
     const { rows: existing } = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM users WHERE lower(email) = lower($1)',
       [email]
     );
     if (existing.length > 0) {
